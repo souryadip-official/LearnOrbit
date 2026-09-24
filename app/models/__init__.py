@@ -1,0 +1,236 @@
+"""
+LearnOrbit Database Models
+"""
+
+from app import db, login_manager
+from flask_login import UserMixin
+from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import datetime
+import json
+
+
+# ---------------------------------------------------------------------------
+# User
+# ---------------------------------------------------------------------------
+
+class User(UserMixin, db.Model):
+    __tablename__ = "users"
+
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(64), unique=True, nullable=False, index=True)
+    email = db.Column(db.String(128), unique=True, nullable=False, index=True)
+    password_hash = db.Column(db.String(256), nullable=False)
+    plan = db.Column(db.String(16), default="free")  # free | pro | team
+    theme = db.Column(db.String(8), default="light")  # light | dark
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    last_login = db.Column(db.DateTime)
+
+    # AI provider settings (stored per user)
+    ai_provider = db.Column(db.String(32), default="openai")
+    ai_model = db.Column(db.String(128), default="gpt-4o-mini")
+    ai_api_key_enc = db.Column(db.Text)  # encrypted in production; plaintext for demo
+
+    # Relationships
+    sessions = db.relationship("LearningSession", backref="user", lazy="dynamic", cascade="all, delete-orphan")
+    mastery_records = db.relationship("TopicMastery", backref="user", lazy="dynamic", cascade="all, delete-orphan")
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "username": self.username,
+            "email": self.email,
+            "plan": self.plan,
+            "theme": self.theme,
+            "ai_provider": self.ai_provider,
+            "ai_model": self.ai_model,
+        }
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
+
+# ---------------------------------------------------------------------------
+# Learning Session
+# ---------------------------------------------------------------------------
+
+class LearningSession(db.Model):
+    __tablename__ = "learning_sessions"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    topic = db.Column(db.String(256), nullable=False)
+    status = db.Column(db.String(32), default="active")  # active | completed | abandoned
+    started_at = db.Column(db.DateTime, default=datetime.utcnow)
+    ended_at = db.Column(db.DateTime)
+
+    # Learning analytics
+    messages_count = db.Column(db.Integer, default=0)
+    quiz_score = db.Column(db.Float)
+    mastery_score = db.Column(db.Float, default=0.0)
+    difficulty_level = db.Column(db.String(16), default="beginner")  # beginner | intermediate | advanced
+
+    # Stored conversation (JSON array of {role, content})
+    conversation_json = db.Column(db.Text, default="[]")
+
+    # Misconceptions detected
+    misconceptions_json = db.Column(db.Text, default="[]")
+
+    # Generated notes (markdown)
+    notes_md = db.Column(db.Text)
+
+    # Relationships
+    quiz_attempts = db.relationship("QuizAttempt", backref="session", lazy="dynamic", cascade="all, delete-orphan")
+
+    @property
+    def conversation(self):
+        return json.loads(self.conversation_json or "[]")
+
+    @conversation.setter
+    def conversation(self, value):
+        self.conversation_json = json.dumps(value)
+
+    @property
+    def misconceptions(self):
+        return json.loads(self.misconceptions_json or "[]")
+
+    @misconceptions.setter
+    def misconceptions(self, value):
+        self.misconceptions_json = json.dumps(value)
+
+    def add_message(self, role, content):
+        conv = self.conversation
+        conv.append({"role": role, "content": content, "ts": datetime.utcnow().isoformat()})
+        self.conversation = conv
+        self.messages_count = len(conv)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "topic": self.topic,
+            "status": self.status,
+            "started_at": self.started_at.isoformat() if self.started_at else None,
+            "ended_at": self.ended_at.isoformat() if self.ended_at else None,
+            "messages_count": self.messages_count,
+            "quiz_score": self.quiz_score,
+            "mastery_score": self.mastery_score,
+            "difficulty_level": self.difficulty_level,
+            "misconceptions": self.misconceptions,
+        }
+
+
+# ---------------------------------------------------------------------------
+# Quiz
+# ---------------------------------------------------------------------------
+
+class QuizAttempt(db.Model):
+    __tablename__ = "quiz_attempts"
+
+    id = db.Column(db.Integer, primary_key=True)
+    session_id = db.Column(db.Integer, db.ForeignKey("learning_sessions.id"), nullable=False)
+    attempted_at = db.Column(db.DateTime, default=datetime.utcnow)
+    score = db.Column(db.Float)
+    total_questions = db.Column(db.Integer)
+    correct_answers = db.Column(db.Integer)
+
+    # JSON: list of {question, options, correct, user_answer, explanation}
+    questions_json = db.Column(db.Text, default="[]")
+
+    @property
+    def questions(self):
+        return json.loads(self.questions_json or "[]")
+
+    @questions.setter
+    def questions(self, value):
+        self.questions_json = json.dumps(value)
+
+
+# ---------------------------------------------------------------------------
+# Topic Mastery
+# ---------------------------------------------------------------------------
+
+class TopicMastery(db.Model):
+    __tablename__ = "topic_mastery"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    topic = db.Column(db.String(256), nullable=False)
+    topic_slug = db.Column(db.String(256), nullable=False, index=True)
+
+    # Sub-scores 0–100
+    understanding = db.Column(db.Float, default=0.0)
+    application = db.Column(db.Float, default=0.0)
+    problem_solving = db.Column(db.Float, default=0.0)
+    retention = db.Column(db.Float, default=0.0)
+
+    overall = db.Column(db.Float, default=0.0)
+    sessions_count = db.Column(db.Integer, default=0)
+    last_studied = db.Column(db.DateTime, default=datetime.utcnow)
+
+    __table_args__ = (db.UniqueConstraint("user_id", "topic_slug", name="_user_topic_uc"),)
+
+    def recalculate_overall(self):
+        self.overall = round(
+            (self.understanding * 0.35 + self.application * 0.25
+             + self.problem_solving * 0.25 + self.retention * 0.15), 1
+        )
+
+    def to_dict(self):
+        return {
+            "topic": self.topic,
+            "understanding": self.understanding,
+            "application": self.application,
+            "problem_solving": self.problem_solving,
+            "retention": self.retention,
+            "overall": self.overall,
+            "sessions_count": self.sessions_count,
+            "last_studied": self.last_studied.isoformat() if self.last_studied else None,
+        }
+
+
+# ---------------------------------------------------------------------------
+# Learning Behavior Analytics
+# ---------------------------------------------------------------------------
+
+class LearningBehavior(db.Model):
+    __tablename__ = "learning_behavior"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, unique=True)
+
+    # Aggregated style inference
+    preferred_style = db.Column(db.String(32), default="balanced")  # visual | analytical | narrative | balanced
+    avg_session_duration_mins = db.Column(db.Float, default=0.0)
+    avg_questions_per_session = db.Column(db.Float, default=0.0)
+    total_sessions = db.Column(db.Integer, default=0)
+    total_topics = db.Column(db.Integer, default=0)
+    streak_days = db.Column(db.Integer, default=0)
+    last_active = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # JSON: {topics: [], weak_areas: [], strong_areas: []}
+    profile_json = db.Column(db.Text, default="{}")
+
+    @property
+    def profile(self):
+        return json.loads(self.profile_json or "{}")
+
+    @profile.setter
+    def profile(self, value):
+        self.profile_json = json.dumps(value)
+
+    def to_dict(self):
+        return {
+            "preferred_style": self.preferred_style,
+            "avg_session_duration_mins": self.avg_session_duration_mins,
+            "total_sessions": self.total_sessions,
+            "total_topics": self.total_topics,
+            "streak_days": self.streak_days,
+            "profile": self.profile,
+        }

@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}Notes — {{ session.topic }}{% endblock %}
+{% block topbar_title %}📝 Study Notes{% endblock %}
+{% block loader_text %}Generating your notes…{% endblock %}
+
+{% block topbar_actions %}
+<button class="btn-sm" id="export-pdf-btn">📄 Export PDF</button>
+{% endblock %}
+
+{% block content %}
+<div class="notes-page">
+  <div class="notes-header">
+    <h1>📝 {{ session.topic }}</h1>
+    <div class="notes-meta">
+      <span>Session {{ session.id }}</span>
+      <span>·</span>
+      <span>{{ session.started_at.strftime('%d %b %Y') }}</span>
+      <span>·</span>
+      <span class="diff-{{ session.difficulty_level }}">{{ session.difficulty_level }}</span>
+    </div>
+  </div>
+
+  {% if not session.notes_md %}
+  <div class="notes-empty">
+    <div class="empty-icon">📝</div>
+    <h3>No notes yet!</h3>
+    <p>Generate your AI-powered study notes for this session.</p>
+    <button class="btn-primary" id="generate-notes-btn">
+      <span class="btn-text">⚡ Generate Notes</span>
+      <span class="btn-spinner hidden">⏳ AI is writing…</span>
+    </button>
+  </div>
+  {% endif %}
+
+  <div class="notes-content {% if not session.notes_md %}hidden{% endif %}" id="notes-content">
+    <div class="notes-toolbar">
+      <button class="btn-sm" id="regenerate-btn">🔄 Regenerate</button>
+      <button class="btn-sm" id="export-pdf-btn-2">📄 Export PDF</button>
+    </div>
+    <div class="notes-body markdown-body" id="notes-body">
+      {% if session.notes_md %}
+        {{ session.notes_md }}
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const SESSION_ID = {{ session.id }};
+const CSRF = document.cookie.split('; ').find(r=>r.startsWith('csrf_'))?.split('=')?.[1]||'';
+
+function renderNotes(md) {
+  const body = document.getElementById('notes-body');
+  if (typeof marked !== 'undefined') {
+    marked.setOptions({breaks: true, gfm: true});
+    body.innerHTML = marked.parse(md);
+  } else {
+    body.textContent = md;
+  }
+  if (window.MathJax) MathJax.typesetPromise([body]);
+}
+
+// Render existing notes on load
+{% if session.notes_md %}
+renderNotes({{ session.notes_md | tojson }});
+{% endif %}
+
+async function generateNotes() {
+  const btn = document.getElementById('generate-notes-btn') || document.getElementById('regenerate-btn');
+  if (btn) {
+    const txt = btn.querySelector('.btn-text');
+    const sp = btn.querySelector('.btn-spinner');
+    if (txt) txt.classList.add('hidden');
+    if (sp) sp.classList.remove('hidden');
+    btn.disabled = true;
+  }
+  try {
+    const res = await fetch(`/notes/${SESSION_ID}/generate`, {
+      method: 'POST', headers: {'X-CSRFToken': CSRF}
+    });
+    const json = await res.json();
+    if (json.error) { showToast(json.error, 'error'); return; }
+    document.getElementById('notes-empty')?.classList.add('hidden');
+    document.getElementById('notes-content').classList.remove('hidden');
+    renderNotes(json.notes);
+    showToast('Notes generated! 📝', 'success');
+  } catch { showToast('Failed to generate notes', 'error'); }
+  finally {
+    if (btn) {
+      const txt = btn.querySelector('.btn-text');
+      const sp = btn.querySelector('.btn-spinner');
+      if (txt) txt.classList.remove('hidden');
+      if (sp) sp.classList.add('hidden');
+      btn.disabled = false;
+    }
+  }
+}
+
+document.getElementById('generate-notes-btn')?.addEventListener('click', generateNotes);
+document.getElementById('regenerate-btn')?.addEventListener('click', generateNotes);
+
+function exportPDF() {
+  {% if current_user.plan == 'free' %}
+    showToast('PDF export requires the Scholar plan. Upgrade to unlock! 🚀', 'warning');
+  {% else %}
+    showToast('Preparing your branded PDF…', 'info');
+    window.location = `/notes/${SESSION_ID}/export-pdf`;
+  {% endif %}
+}
+
+document.getElementById('export-pdf-btn')?.addEventListener('click', exportPDF);
+document.getElementById('export-pdf-btn-2')?.addEventListener('click', exportPDF);
+</script>
+{% endblock %}

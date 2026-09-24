@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}Snake{% endblock %}
+{% block topbar_title %}🐍 Snake{% endblock %}
+{% block content %}
+<div class="game-page">
+  <div class="game-wrapper">
+    <div class="game-header">
+      <h2>🐍 Snake</h2>
+      <div class="game-score-row">
+        <div class="score-box">Score<br><span id="score">0</span></div>
+        <div class="score-box">Best<br><span id="best">0</span></div>
+      </div>
+    </div>
+    <div class="snake-wrap">
+      <canvas id="snake-canvas" width="400" height="400"></canvas>
+      <div class="snake-overlay hidden" id="snake-overlay">
+        <div class="overlay-content">
+          <div id="overlay-icon">🐍</div>
+          <div id="overlay-msg">Press Start to play!</div>
+          <button class="btn-primary" id="snake-start">▶ Start</button>
+        </div>
+      </div>
+    </div>
+    <div class="snake-controls">
+      <button class="d-btn" id="d-up">↑</button>
+      <div class="d-row"><button class="d-btn" id="d-left">←</button><button class="d-btn" id="d-right">→</button></div>
+      <button class="d-btn" id="d-down">↓</button>
+    </div>
+    <a href="{{ url_for('games.index') }}" class="btn-ghost-link">← Back</a>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const canvas=document.getElementById('snake-canvas');
+const ctx=canvas.getContext('2d');
+const GRID=20, CELL=canvas.width/GRID;
+let snake,dir,food,score,best=0,loop,running=false;
+
+function init(){
+  snake=[{x:10,y:10},{x:9,y:10},{x:8,y:10}];
+  dir={x:1,y:0};food=randomFood();score=0;
+  document.getElementById('score').textContent=0;
+}
+
+function randomFood(){
+  let f;do{f={x:Math.floor(Math.random()*GRID),y:Math.floor(Math.random()*GRID)};}
+  while(snake.some(s=>s.x===f.x&&s.y===f.y));return f;
+}
+
+function draw(){
+  ctx.fillStyle='#1e1b4b'; ctx.fillRect(0,0,canvas.width,canvas.height);
+  // Grid dots
+  ctx.fillStyle='rgba(99,102,241,0.15)';
+  for(let x=0;x<GRID;x++)for(let y=0;y<GRID;y++)ctx.fillRect(x*CELL+CELL/2-1,y*CELL+CELL/2-1,2,2);
+  // Snake
+  snake.forEach((s,i)=>{
+    ctx.fillStyle=i===0?'#6366f1':'#818cf8';
+    ctx.beginPath();ctx.roundRect(s.x*CELL+1,s.y*CELL+1,CELL-2,CELL-2,4);ctx.fill();
+  });
+  // Food
+  ctx.font=`${CELL-4}px serif`;
+  ctx.fillText('🍎',food.x*CELL+1,food.y*CELL+CELL-2);
+}
+
+function tick(){
+  const head={x:(snake[0].x+dir.x+GRID)%GRID,y:(snake[0].y+dir.y+GRID)%GRID};
+  if(snake.some(s=>s.x===head.x&&s.y===head.y)){endGame();return;}
+  snake.unshift(head);
+  if(head.x===food.x&&head.y===food.y){score++;document.getElementById('score').textContent=score;food=randomFood();}
+  else snake.pop();
+  draw();
+}
+
+function endGame(){
+  clearInterval(loop);running=false;
+  if(score>best){best=score;document.getElementById('best').textContent=best;}
+  document.getElementById('overlay-icon').textContent='💀';
+  document.getElementById('overlay-msg').textContent=`Score: ${score}`;
+  document.getElementById('snake-start').textContent='▶ Play Again';
+  document.getElementById('snake-overlay').classList.remove('hidden');
+}
+
+document.getElementById('snake-start').addEventListener('click',()=>{
+  init();draw();
+  document.getElementById('snake-overlay').classList.add('hidden');
+  running=true;
+  loop=setInterval(tick,130);
+});
+
+document.addEventListener('keydown',e=>{
+  if(!running)return;
+  const map={'ArrowUp':{x:0,y:-1},'ArrowDown':{x:0,y:1},'ArrowLeft':{x:-1,y:0},'ArrowRight':{x:1,y:0}};
+  const nd=map[e.key];
+  if(nd&&!(nd.x===-dir.x&&nd.y===-dir.y)){dir=nd;e.preventDefault();}
+});
+
+['d-up','d-down','d-left','d-right'].forEach(id=>{
+  const map={'d-up':{x:0,y:-1},'d-down':{x:0,y:1},'d-left':{x:-1,y:0},'d-right':{x:1,y:0}};
+  document.getElementById(id).addEventListener('click',()=>{
+    if(!running)return;const nd=map[id];
+    if(!(nd.x===-dir.x&&nd.y===-dir.y))dir=nd;
+  });
+});
+
+init();draw();
+document.getElementById('snake-overlay').classList.remove('hidden');
+</script>
+{% endblock %}

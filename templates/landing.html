@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LearnOrbit — AI-Powered Adaptive Learning</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}" />
+</head>
+<body class="landing-body">
+
+  <!-- Animated starfield background -->
+  <canvas id="starfield" class="starfield-canvas"></canvas>
+
+  <!-- Navbar -->
+  <nav class="landing-nav" id="landing-nav">
+    <div class="nav-container">
+      <a href="/" class="nav-brand">
+        <span class="brand-icon-lg">⚡</span>
+        <span class="brand-text">LearnOrbit</span>
+      </a>
+      <div class="nav-links">
+        <a href="#features" class="nav-link">Features</a>
+        <a href="#how-it-works" class="nav-link">How it Works</a>
+        <a href="#pricing" class="nav-link">Pricing</a>
+        <a href="#games" class="nav-link">Brain Break</a>
+      </div>
+      <div class="nav-actions">
+        <button id="theme-btn" class="theme-btn-landing" title="Toggle theme">🌙</button>
+        <a href="{{ url_for('auth.login') }}" class="btn-ghost">Log In</a>
+        <a href="{{ url_for('auth.register') }}" class="btn-primary-landing">Start Free ✨</a>
+      </div>
+      <button class="nav-mobile-toggle" id="nav-mobile-toggle">☰</button>
+    </div>
+  </nav>
+
+  <!-- Mobile nav drawer -->
+  <div class="mobile-nav" id="mobile-nav">
+    <a href="#features">Features</a>
+    <a href="#pricing">Pricing</a>
+    <a href="{{ url_for('auth.login') }}">Log In</a>
+    <a href="{{ url_for('auth.register') }}" class="btn-primary-landing">Start Free ✨</a>
+  </div>
+
+  <!-- Hero -->
+  <section class="hero-section" id="hero">
+    <div class="hero-content">
+      <div class="hero-badge animate-in">🚀 AI-Powered · Adaptive · Personalized</div>
+      <h1 class="hero-title animate-in delay-1">
+        Learn anything.<br />
+        <span class="hero-highlight">Actually master it.</span>
+      </h1>
+      <p class="hero-sub animate-in delay-2">
+        LearnOrbit is your personal AI professor, tutor, examiner, and coach — all in one.
+        It doesn't just answer questions. It understands how <em>you</em> learn.
+      </p>
+      <div class="hero-actions animate-in delay-3">
+        <a href="{{ url_for('auth.register') }}" class="btn-hero-primary">
+          Start Learning Free
+          <span class="btn-arrow">→</span>
+        </a>
+        <a href="#how-it-works" class="btn-hero-ghost">See how it works ↓</a>
+      </div>
+      <div class="hero-stats animate-in delay-4">
+        <div class="stat-pill"><span class="stat-num">6</span><span class="stat-label">AI Providers</span></div>
+        <div class="stat-pill"><span class="stat-num">∞</span><span class="stat-label">Topics</span></div>
+        <div class="stat-pill"><span class="stat-num">6</span><span class="stat-label">Mini Games</span></div>
+        <div class="stat-pill"><span class="stat-num">100%</span><span class="stat-label">Adaptive</span></div>
+      </div>
+    </div>
+
+    <!-- Orbit animation -->
+    <div class="hero-visual">
+      <div class="orbit-system">
+        <div class="orbit-center">
+          <div class="orbit-center-inner">🧠</div>
+          <div class="orbit-center-ring"></div>
+        </div>
+        <div class="orbit-track orbit-1">
+          <div class="orbit-sat sat-1">📚</div>
+        </div>
+        <div class="orbit-track orbit-2">
+          <div class="orbit-sat sat-2">🎯</div>
+        </div>
+        <div class="orbit-track orbit-3">
+          <div class="orbit-sat sat-3">🏆</div>
+        </div>
+        <div class="orbit-track orbit-4">
+          <div class="orbit-sat sat-4">💡</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="features-section" id="features">
+    <div class="section-container">
+      <div class="section-header">
+        <h2 class="section-title">Everything you need to <em>actually</em> learn</h2>
+        <p class="section-sub">Not just chatting. Real teaching, real diagnostics, real mastery.</p>
+      </div>
+      <div class="features-grid">
+        <div class="feature-card feature-large">
+          <div class="feature-icon-wrap" style="--icon-bg:#eef2ff">🧠</div>
+          <h3>Adaptive AI Tutor</h3>
+          <p>Explains theory, derives formulas, builds intuition, and adjusts depth based on your responses — in real time.</p>
+          <div class="feature-tag">Core Engine</div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon-wrap" style="--icon-bg:#fef3c7">🔍</div>
+          <h3>Misconception Detector</h3>
+          <p>Spots why you're wrong, not just that you are. Fixes the root cause.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon-wrap" style="--icon-bg:#d1fae5">📊</div>
+          <h3>Mastery Tracking</h3>
+          <p>Scores your Understanding, Application, Problem-Solving, and Retention per topic.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon-wrap" style="--icon-bg:#fce7f3">🎮</div>
+          <h3>Brain Break Games</h3>
+          <p>6 built-in games to refresh your mind mid-session. Tic Tac Toe, Snake, Wordle &amp; more.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon-wrap" style="--icon-bg:#ede9fe">📝</div>
+          <h3>Smart Notes Export</h3>
+          <p>AI-generated structured notes with all formulas, mistakes, and insights — downloadable as PDF.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon-wrap" style="--icon-bg:#fee2e2">⚡</div>
+          <h3>6 AI Providers</h3>
+          <p>OpenAI, Gemini, Claude, Grok, or Hugging Face. Bring your own key, pick your model.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon-wrap" style="--icon-bg:#e0f2fe">🖥️</div>
+          <h3>Split Screen Mode</h3>
+          <p>Read a file on one side, chat with the tutor on the other. Study smarter.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon-wrap" style="--icon-bg:#f0fdf4">🧮</div>
+          <h3>LaTeX Math Rendering</h3>
+          <p>Every formula renders beautifully — inline and block. No more ambiguous math.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How it works -->
+  <section class="how-section" id="how-it-works">
+    <div class="section-container">
+      <div class="section-header">
+        <h2 class="section-title">From zero to mastery in one session</h2>
+      </div>
+      <div class="steps-flow">
+        <div class="step-item">
+          <div class="step-num">1</div>
+          <div class="step-icon">🔑</div>
+          <h4>Log In &amp; Set API Key</h4>
+          <p>Create your account, choose your AI provider and paste your API key.</p>
+        </div>
+        <div class="step-arrow">→</div>
+        <div class="step-item">
+          <div class="step-num">2</div>
+          <div class="step-icon">🎯</div>
+          <h4>Pick a Topic</h4>
+          <p>Type any topic — Fourier Transforms, Photosynthesis, Recursion, French Revolution…</p>
+        </div>
+        <div class="step-arrow">→</div>
+        <div class="step-item">
+          <div class="step-num">3</div>
+          <div class="step-icon">🧠</div>
+          <h4>Learn Deeply</h4>
+          <p>The AI tutor teaches it from theory to intuition. Ask anything. Get diagnosed.</p>
+        </div>
+        <div class="step-arrow">→</div>
+        <div class="step-item">
+          <div class="step-num">4</div>
+          <div class="step-icon">📋</div>
+          <h4>Take the Quiz</h4>
+          <p>10 adaptive MCQs. Get scored, explained, and guided on what to revisit.</p>
+        </div>
+        <div class="step-arrow">→</div>
+        <div class="step-item">
+          <div class="step-num">5</div>
+          <div class="step-icon">🏆</div>
+          <h4>Export &amp; Repeat</h4>
+          <p>Download your branded PDF notes. Your mastery score updates automatically.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Games section -->
+  <section class="games-preview-section" id="games">
+    <div class="section-container">
+      <div class="section-header">
+        <h2 class="section-title">🎮 Brain Break Zone</h2>
+        <p class="section-sub">Studying for 45 minutes straight? Bad idea. Take a 5-minute game break — science says it works.</p>
+      </div>
+      <div class="games-grid-preview">
+        <div class="game-preview-card" style="--gc:#6366f1">⭕<span>Tic Tac Toe</span></div>
+        <div class="game-preview-card" style="--gc:#8b5cf6">🃏<span>Memory Match</span></div>
+        <div class="game-preview-card" style="--gc:#10b981">🐍<span>Snake</span></div>
+        <div class="game-preview-card" style="--gc:#f59e0b">🔤<span>Wordle</span></div>
+        <div class="game-preview-card" style="--gc:#ef4444">🔢<span>2048</span></div>
+        <div class="game-preview-card" style="--gc:#06b6d4">🧱<span>Breakout</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pricing -->
+  <section class="pricing-section" id="pricing">
+    <div class="section-container">
+      <div class="section-header">
+        <h2 class="section-title">Simple pricing. No tricks.</h2>
+        <p class="section-sub">Start free. Scale when you need more.</p>
+      </div>
+      <div class="pricing-grid">
+        <div class="pricing-card">
+          <div class="plan-name">Explorer</div>
+          <div class="plan-price"><span class="price-num">$0</span><span class="price-period">/mo</span></div>
+          <ul class="plan-features">
+            <li>✅ 3 tutor sessions/day</li>
+            <li>✅ Unlimited Q&amp;A within sessions</li>
+            <li>✅ Quiz engine</li>
+            <li>✅ All 6 brain break games</li>
+            <li>✅ Mastery tracking</li>
+            <li>❌ PDF notes export</li>
+            <li>❌ Split screen mode</li>
+          </ul>
+          <a href="{{ url_for('auth.register') }}" class="btn-plan">Get Started Free</a>
+        </div>
+        <div class="pricing-card pricing-featured">
+          <div class="plan-badge">Most Popular</div>
+          <div class="plan-name">Scholar</div>
+          <div class="plan-price"><span class="price-num">$9.99</span><span class="price-period">/mo</span></div>
+          <ul class="plan-features">
+            <li>✅ Unlimited sessions</li>
+            <li>✅ Unlimited quizzes</li>
+            <li>✅ PDF export with branding</li>
+            <li>✅ Split screen mode</li>
+            <li>✅ All games</li>
+            <li>✅ Advanced mastery analytics</li>
+            <li>✅ Priority AI responses</li>
+          </ul>
+          <a href="{{ url_for('auth.register') }}" class="btn-plan btn-plan-featured">Start Scholar</a>
+        </div>
+        <div class="pricing-card">
+          <div class="plan-name">Academy</div>
+          <div class="plan-price"><span class="price-num">$24.99</span><span class="price-period">/mo</span></div>
+          <ul class="plan-features">
+            <li>✅ Everything in Scholar</li>
+            <li>✅ Up to 10 team members</li>
+            <li>✅ Shared mastery dashboards</li>
+            <li>✅ Curriculum builder (coming soon)</li>
+            <li>✅ Dedicated support</li>
+            <li>✅ Custom branding on PDFs</li>
+            <li>✅ API access</li>
+          </ul>
+          <a href="{{ url_for('auth.register') }}" class="btn-plan">Get Academy</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section">
+    <div class="cta-content">
+      <h2>Ready to actually learn?</h2>
+      <p>Join thousands of students who orbit knowledge with AI on their side.</p>
+      <a href="{{ url_for('auth.register') }}" class="btn-hero-primary">
+        Start for Free — No credit card needed ✨
+      </a>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="landing-footer">
+    <div class="footer-content">
+      <div class="footer-brand">
+        <span class="brand-icon-lg">⚡</span>
+        <span class="brand-text">LearnOrbit</span>
+      </div>
+      <p class="footer-tagline">Adaptive AI Learning Intelligence — because understanding beats memorising.</p>
+      <p class="footer-copy">© 2024 LearnOrbit. Built with ☕ and way too many late nights.</p>
+    </div>
+  </footer>
+
+  <div id="toast-container" aria-live="polite"></div>
+
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/landing.js') }}"></script>
+</body>
+</html>

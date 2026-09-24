@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+{% block title %}{{ session.topic }}{% endblock %}
+{% block topbar_title %}🧠 {{ session.topic[:40] }}{% endblock %}
+{% block loader_text %}Summoning your AI Professor…{% endblock %}
+
+{% block topbar_actions %}
+<span class="difficulty-badge" id="difficulty-badge">{{ session.difficulty_level }}</span>
+<button class="btn-sm-danger" id="end-session-btn" title="End Session">🏁 End</button>
+{% endblock %}
+
+{% block content %}
+<div class="chat-page">
+  <!-- Misconception alert (hidden by default) -->
+  <div class="misconception-alert hidden" id="misconception-alert">
+    <div class="misconception-inner">
+      <span class="misconception-icon">🔍</span>
+      <div class="misconception-text">
+        <strong>Heads up!</strong>
+        <p id="misconception-msg"></p>
+        <button class="btn-sm" id="dismiss-misconception">Got it! ✓</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chat messages -->
+  <div class="chat-messages" id="chat-messages">
+    <!-- Welcome message -->
+    <div class="msg msg-assistant animate__animated animate__fadeIn">
+      <div class="msg-avatar">⚡</div>
+      <div class="msg-body">
+        <div class="msg-content">
+          <p>👋 Hello! I'm your LearnOrbit AI tutor, powered by <strong>{{ current_user.ai_provider | title }}</strong>.</p>
+          <p>Today we're diving into: <strong>{{ session.topic }}</strong></p>
+          <p>Let me start with a solid foundation — theory, intuition, and examples. Ask me anything along the way!</p>
+          <p>Ready? Here we go! 🚀</p>
+        </div>
+        <div class="msg-time">Just now</div>
+      </div>
+    </div>
+
+    {% for msg in session.conversation %}
+    <div class="msg msg-{{ msg.role }} animate__animated animate__fadeIn">
+      {% if msg.role == 'assistant' %}
+      <div class="msg-avatar">⚡</div>
+      {% endif %}
+      <div class="msg-body">
+        <div class="msg-content markdown-body" data-raw="{{ msg.content | e }}"></div>
+        <div class="msg-time">{{ msg.ts[:16].replace('T',' ') if msg.ts else '' }}</div>
+      </div>
+      {% if msg.role == 'user' %}
+      <div class="msg-avatar user-avatar-chat">{{ current_user.username[0].upper() }}</div>
+      {% endif %}
+    </div>
+    {% endfor %}
+
+    <!-- Typing indicator -->
+    <div class="msg msg-assistant hidden" id="typing-indicator">
+      <div class="msg-avatar">⚡</div>
+      <div class="msg-body">
+        <div class="typing-dots">
+          <span></span><span></span><span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chat input -->
+  <div class="chat-input-bar">
+    <div class="chat-input-wrap">
+      <textarea
+        id="chat-input"
+        class="chat-textarea"
+        placeholder="Ask anything… 'Explain it differently', 'Give me an example', 'What's the formula for…'"
+        rows="1"
+        maxlength="2000"
+      ></textarea>
+      <div class="input-actions">
+        <button class="btn-suggest" id="suggest-btn" title="I'm stuck — help me!">💡</button>
+        <button class="btn-send" id="send-btn" title="Send (Ctrl+Enter)">
+          <span id="send-icon">➤</span>
+        </button>
+      </div>
+    </div>
+    <div class="input-hints">
+      <span>Ctrl+Enter to send</span>
+      <span id="char-count">0/2000</span>
+    </div>
+  </div>
+</div>
+
+<!-- End session confirm modal -->
+<div class="modal-overlay hidden" id="end-modal">
+  <div class="modal-card animate__animated animate__zoomIn">
+    <div class="modal-icon">🏁</div>
+    <h3>End this session?</h3>
+    <p>Your mastery score will be updated and you'll head to the quiz. Make sure you've covered everything you wanted!</p>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="cancel-end">Keep Learning</button>
+      <button class="btn-danger" id="confirm-end">End & Take Quiz →</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const SESSION_ID = {{ session.id }};
+const CSRF = document.cookie.split('; ').find(r=>r.startsWith('csrf_'))?.split('=')?.[1]||'';
+
+// Render existing markdown messages on load
+document.querySelectorAll('.markdown-body[data-raw]').forEach(el => {
+  el.innerHTML = renderContent(el.dataset.raw);
+});
+if (window.MathJax) MathJax.typesetPromise();
+
+// Auto-scroll to bottom
+function scrollToBottom() {
+  const msgs = document.getElementById('chat-messages');
+  msgs.scrollTop = msgs.scrollHeight;
+}
+scrollToBottom();
+
+// Auto-resize textarea
+const textarea = document.getElementById('chat-input');
+textarea.addEventListener('input', function() {
+  this.style.height = 'auto';
+  this.style.height = Math.min(this.scrollHeight, 160) + 'px';
+  document.getElementById('char-count').textContent = `${this.value.length}/2000`;
+});
+
+// Send on Ctrl+Enter
+textarea.addEventListener('keydown', e => {
+  if (e.ctrlKey && e.key === 'Enter') sendMessage();
+});
+
+document.getElementById('send-btn').addEventListener('click', sendMessage);
+
+async function sendMessage() {
+  const text = textarea.value.trim();
+  if (!text) return;
+
+  // Add user bubble immediately
+  addMessage('user', text);
+  textarea.value = '';
+  textarea.style.height = 'auto';
+  document.getElementById('char-count').textContent = '0/2000';
+
+  // Show typing indicator
+  document.getElementById('typing-indicator').classList.remove('hidden');
+  scrollToBottom();
+  document.getElementById('send-btn').disabled = true;
+  document.getElementById('send-icon').textContent = '⏳';
+
+  try {
+    const res = await fetch(`/tutor/${SESSION_ID}/message`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-CSRFToken':CSRF},
+      body: JSON.stringify({message: text})
+    });
+    const json = await res.json();
+
+    document.getElementById('typing-indicator').classList.add('hidden');
+
+    if (json.error) { showToast(json.error, 'error'); return; }
+
+    addMessage('assistant', json.reply);
+
+    // Update difficulty badge
+    if (json.difficulty) {
+      document.getElementById('difficulty-badge').textContent = json.difficulty;
+    }
+
+    // Show misconception alert
+    if (json.misconception && json.misconception.has_misconception) {
+      const alert = document.getElementById('misconception-alert');
+      document.getElementById('misconception-msg').textContent =
+        json.misconception.correction || json.misconception.misconception;
+      alert.classList.remove('hidden');
+    }
+
+  } catch(e) {
+    document.getElementById('typing-indicator').classList.add('hidden');
+    showToast('Failed to get response. Try again.', 'error');
+  } finally {
+    document.getElementById('send-btn').disabled = false;
+    document.getElementById('send-icon').textContent = '➤';
+  }
+}
+
+function addMessage(role, content) {
+  const msgs = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.className = `msg msg-${role} animate__animated animate__fadeIn`;
+  const now = new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+  if (role === 'assistant') {
+    div.innerHTML = `
+      <div class="msg-avatar">⚡</div>
+      <div class="msg-body">
+        <div class="msg-content markdown-body">${renderContent(content)}</div>
+        <div class="msg-time">${now}</div>
+      </div>`;
+  } else {
+    div.innerHTML = `
+      <div class="msg-body">
+        <div class="msg-content">${escapeHtml(content)}</div>
+        <div class="msg-time">${now}</div>
+      </div>
+      <div class="msg-avatar user-avatar-chat">{{ current_user.username[0].upper() }}</div>`;
+  }
+  // Insert before typing indicator
+  const indicator = document.getElementById('typing-indicator');
+  msgs.insertBefore(div, indicator);
+  if (window.MathJax) MathJax.typesetPromise([div]);
+  scrollToBottom();
+}
+
+function renderContent(text) {
+  if (typeof marked !== 'undefined') {
+    marked.setOptions({breaks: true, gfm: true});
+    return marked.parse(text);
+  }
+  return escapeHtml(text).replace(/\n/g,'<br>');
+}
+
+function escapeHtml(t) {
+  return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// Dismiss misconception
+document.getElementById('dismiss-misconception').addEventListener('click', () => {
+  document.getElementById('misconception-alert').classList.add('hidden');
+});
+
+// Suggest prompt
+const suggestions = [
+  "Can you explain that with a different analogy?",
+  "What's a real-world example of this?",
+  "Can you show me the mathematical derivation?",
+  "What are the most common mistakes people make with this?",
+  "How does this connect to what we covered earlier?",
+  "Give me an intuitive way to remember this.",
+  "What should I understand before going deeper?",
+];
+document.getElementById('suggest-btn').addEventListener('click', () => {
+  const s = suggestions[Math.floor(Math.random()*suggestions.length)];
+  textarea.value = s;
+  textarea.dispatchEvent(new Event('input'));
+  textarea.focus();
+});
+
+// End session
+document.getElementById('end-session-btn').addEventListener('click', () => {
+  document.getElementById('end-modal').classList.remove('hidden');
+});
+document.getElementById('cancel-end').addEventListener('click', () => {
+  document.getElementById('end-modal').classList.add('hidden');
+});
+document.getElementById('confirm-end').addEventListener('click', async () => {
+  document.getElementById('confirm-end').textContent = '⏳ Saving…';
+  document.getElementById('confirm-end').disabled = true;
+  try {
+    const res = await fetch(`/tutor/${SESSION_ID}/end`, {
+      method: 'POST', headers: {'X-CSRFToken': CSRF}
+    });
+    const json = await res.json();
+    if (json.success) {
+      showToast('Session complete! Heading to your quiz 🎯', 'success');
+      setTimeout(() => window.location = json.redirect, 800);
+    }
+  } catch { showToast('Error ending session', 'error'); }
+});
+</script>
+{% endblock %}

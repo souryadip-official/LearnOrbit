@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block topbar_title %}🏠 Dashboard{% endblock %}
+{% block loader_text %}Loading your learning universe…{% endblock %}
+
+{% block content %}
+<div class="dashboard-page">
+
+  <!-- Welcome banner -->
+  <div class="welcome-banner animate__animated animate__fadeIn">
+    <div class="welcome-text">
+      <h1>Hey, {{ current_user.username }}! 👋</h1>
+      <p>
+        {% if stats.streak > 0 %}
+          You're on a <strong>{{ stats.streak }}-day streak</strong>! 🔥 Keep it up!
+        {% else %}
+          Ready to learn something amazing today? 🚀
+        {% endif %}
+      </p>
+    </div>
+    <a href="{{ url_for('tutor.new_session') }}" class="btn-start-session">
+      ⚡ Start Learning
+    </a>
+  </div>
+
+  <!-- Stats row -->
+  <div class="stats-row">
+    <div class="stat-card animate__animated animate__fadeInUp">
+      <div class="stat-icon">📚</div>
+      <div class="stat-value">{{ stats.total_sessions }}</div>
+      <div class="stat-name">Total Sessions</div>
+    </div>
+    <div class="stat-card animate__animated animate__fadeInUp" style="animation-delay:.1s">
+      <div class="stat-icon">✅</div>
+      <div class="stat-value">{{ stats.completed_sessions }}</div>
+      <div class="stat-name">Completed</div>
+    </div>
+    <div class="stat-card animate__animated animate__fadeInUp" style="animation-delay:.2s">
+      <div class="stat-icon">🎯</div>
+      <div class="stat-value">{{ stats.topics_studied }}</div>
+      <div class="stat-name">Topics Studied</div>
+    </div>
+    <div class="stat-card animate__animated animate__fadeInUp" style="animation-delay:.3s">
+      <div class="stat-icon">⭐</div>
+      <div class="stat-value">{{ stats.avg_mastery }}%</div>
+      <div class="stat-name">Avg Mastery</div>
+    </div>
+    <div class="stat-card animate__animated animate__fadeInUp" style="animation-delay:.4s">
+      <div class="stat-icon">🔥</div>
+      <div class="stat-value">{{ stats.streak }}</div>
+      <div class="stat-name">Day Streak</div>
+    </div>
+  </div>
+
+  <div class="dashboard-grid">
+
+    <!-- Recent sessions -->
+    <div class="dash-card">
+      <div class="dash-card-title">📖 Recent Sessions</div>
+      {% if recent_sessions %}
+      <div class="session-list">
+        {% for s in recent_sessions %}
+        <div class="session-row">
+          <div class="session-info">
+            <span class="session-topic">{{ s.topic }}</span>
+            <span class="session-meta">{{ s.started_at.strftime('%d %b') }} · {{ s.difficulty_level }}</span>
+          </div>
+          <div class="session-right">
+            <span class="session-status status-{{ s.status }}">{{ s.status }}</span>
+            {% if s.status == 'completed' %}
+            <a href="{{ url_for('notes.view_notes', session_id=s.id) }}" class="session-link" title="View notes">📝</a>
+            {% else %}
+            <a href="{{ url_for('tutor.chat', session_id=s.id) }}" class="session-link" title="Continue">▶️</a>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <div class="empty-icon">🌱</div>
+        <p>No sessions yet! Start your first one.</p>
+        <a href="{{ url_for('tutor.new_session') }}" class="btn-secondary">Begin Learning →</a>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Mastery radar -->
+    <div class="dash-card">
+      <div class="dash-card-title">🏆 Topic Mastery</div>
+      {% if mastery_records %}
+      <div class="mastery-list">
+        {% for m in mastery_records %}
+        <div class="mastery-row">
+          <span class="mastery-topic">{{ m.topic[:30] }}</span>
+          <div class="mastery-bar-wrap">
+            <div class="mastery-bar" style="width: {{ m.overall }}%"></div>
+          </div>
+          <span class="mastery-pct">{{ m.overall|round(0)|int }}%</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <div class="empty-icon">📊</div>
+        <p>Complete sessions to build your mastery profile.</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Quick actions -->
+    <div class="dash-card quick-actions">
+      <div class="dash-card-title">⚡ Quick Actions</div>
+      <div class="action-grid">
+        <a href="{{ url_for('tutor.new_session') }}" class="action-btn" style="--ac:#6366f1">
+          <span>🧠</span><span>New Session</span>
+        </a>
+        <a href="{{ url_for('games.index') }}" class="action-btn" style="--ac:#10b981">
+          <span>🎮</span><span>Brain Break</span>
+        </a>
+        <a href="{{ url_for('auth.settings') }}" class="action-btn" style="--ac:#f59e0b">
+          <span>⚙️</span><span>Settings</span>
+        </a>
+        <a href="#" class="action-btn split-screen-toggle" style="--ac:#8b5cf6" id="split-screen-btn">
+          <span>🖥️</span><span>Split Screen</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Fun fact / tip -->
+    <div class="dash-card tip-card">
+      <div class="dash-card-title">💡 Learning Tip</div>
+      <div class="tip-content" id="tip-content">Loading your daily wisdom…</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Split screen overlay -->
+<div class="split-screen-modal hidden" id="split-screen-modal">
+  <div class="split-screen-container">
+    <div class="split-panel split-left">
+      <div class="split-toolbar">
+        <span>📄 File Viewer</span>
+        <input type="file" id="file-input" accept=".pdf,.txt,.md" class="hidden" />
+        <button class="btn-sm" onclick="document.getElementById('file-input').click()">Open File</button>
+        <button class="btn-sm-danger" id="close-split">✕ Close</button>
+      </div>
+      <div class="file-viewer" id="file-viewer">
+        <div class="file-placeholder">
+          <span>📂</span>
+          <p>Open a file to read it here while chatting with your tutor</p>
+          <button onclick="document.getElementById('file-input').click()" class="btn-secondary">Open File</button>
+        </div>
+      </div>
+    </div>
+    <div class="split-divider"></div>
+    <div class="split-panel split-right">
+      <div class="split-toolbar"><span>🧠 Quick Tutor Chat</span></div>
+      <iframe id="split-tutor-frame" src="{{ url_for('tutor.new_session') }}" class="split-iframe"></iframe>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Tips rotation
+const tips = [
+  "🧠 The Feynman Technique: Explain a concept as if teaching a child. LearnOrbit does this for you!",
+  "⏱️ Pomodoro power: 25 min study, 5 min break. Our games are perfect for that break!",
+  "📝 Writing notes by hand improves retention by 40% vs typing. Use our PDF export to review!",
+  "🔁 Spaced repetition: revisit a topic 1 day, 1 week, 1 month later. Track it with mastery scores.",
+  "❓ Questions beat passive reading. Keep asking your AI tutor 'why?' and 'how does this connect?'",
+  "🎯 One topic per session = deeper learning. Resist the urge to jump around!",
+  "😴 Sleep after studying seals memories. Don't pull all-nighters if you want to actually remember things.",
+];
+document.getElementById('tip-content').textContent = tips[Math.floor(Math.random()*tips.length)];
+
+// Split screen
+document.getElementById('split-screen-btn').addEventListener('click', e => {
+  e.preventDefault();
+  {% if current_user.plan == 'free' %}
+    showToast('Split screen requires Scholar or Academy plan. Upgrade to unlock! 🚀', 'warning');
+  {% else %}
+    document.getElementById('split-screen-modal').classList.toggle('hidden');
+  {% endif %}
+});
+document.getElementById('close-split').addEventListener('click', () => {
+  document.getElementById('split-screen-modal').classList.add('hidden');
+});
+
+// File viewer
+document.getElementById('file-input').addEventListener('change', function() {
+  const file = this.files[0];
+  if (!file) return;
+  const viewer = document.getElementById('file-viewer');
+  if (file.type === 'application/pdf') {
+    const url = URL.createObjectURL(file);
+    viewer.innerHTML = `<iframe src="${url}" class="file-iframe"></iframe>`;
+  } else {
+    const reader = new FileReader();
+    reader.onload = e => {
+      viewer.innerHTML = `<pre class="file-text">${e.target.result.replace(/</g,'&lt;')}</pre>`;
+    };
+    reader.readAsText(file);
+  }
+});
+</script>
+{% endblock %}

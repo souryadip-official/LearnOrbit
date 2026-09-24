@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}New Session{% endblock %}
+{% block topbar_title %}🧠 Start Learning{% endblock %}
+{% block loader_text %}Preparing your tutor…{% endblock %}
+
+{% block content %}
+<div class="new-session-page">
+  <div class="new-session-card animate__animated animate__fadeInUp">
+    <div class="session-hero-icon">🧠</div>
+    <h1>What do you want to learn today?</h1>
+    <p class="session-sub">Type any topic — from Quantum Mechanics to Renaissance Art to Python Decorators. Your AI professor is ready!</p>
+
+    <form id="new-session-form" class="session-form">
+      <div class="topic-input-wrap">
+        <span class="topic-icon">🎯</span>
+        <input type="text" id="topic-input" class="topic-input"
+               placeholder="e.g. Fourier Transform, Photosynthesis, Dynamic Programming…"
+               autocomplete="off" autofocus required />
+        <button type="submit" class="topic-submit" id="start-btn">
+          <span class="btn-text">Start →</span>
+          <span class="btn-spinner hidden">⏳</span>
+        </button>
+      </div>
+    </form>
+
+    <!-- Quick topic suggestions -->
+    <div class="topic-suggestions">
+      <p class="suggestions-label">Popular picks:</p>
+      <div class="suggestion-chips">
+        <button class="chip" data-topic="Neural Networks">🤖 Neural Networks</button>
+        <button class="chip" data-topic="Calculus - Derivatives">∂ Calculus</button>
+        <button class="chip" data-topic="The French Revolution">⚔️ French Revolution</button>
+        <button class="chip" data-topic="DNA Replication">🧬 DNA Replication</button>
+        <button class="chip" data-topic="Binary Trees">🌳 Binary Trees</button>
+        <button class="chip" data-topic="Thermodynamics">🌡️ Thermodynamics</button>
+        <button class="chip" data-topic="Shakespeare's Hamlet">📜 Hamlet</button>
+        <button class="chip" data-topic="Linear Algebra">📐 Linear Algebra</button>
+      </div>
+    </div>
+
+    <div class="session-info-row">
+      <div class="info-pill">🤖 {{ current_user.ai_provider | title }} · {{ current_user.ai_model }}</div>
+      <a href="{{ url_for('auth.settings') }}" class="info-link">Change →</a>
+    </div>
+
+    {% if not current_user.ai_api_key_enc %}
+    <div class="alert-warning">
+      ⚠️ No API key set. <a href="{{ url_for('auth.settings') }}">Add one in Settings</a> to use the AI tutor.
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Chip click → fill input
+document.querySelectorAll('.chip').forEach(c => {
+  c.addEventListener('click', () => {
+    document.getElementById('topic-input').value = c.dataset.topic;
+    document.getElementById('topic-input').focus();
+  });
+});
+
+document.getElementById('new-session-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const topic = document.getElementById('topic-input').value.trim();
+  if (!topic) { showToast('Enter a topic first!', 'warning'); return; }
+  const btn = document.getElementById('start-btn');
+  btn.querySelector('.btn-text').classList.add('hidden');
+  btn.querySelector('.btn-spinner').classList.remove('hidden');
+  btn.disabled = true;
+  try {
+    const res = await fetch('{{ url_for("tutor.new_session") }}', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json', 'X-CSRFToken': getCSRF()},
+      body: JSON.stringify({topic})
+    });
+    const json = await res.json();
+    if (json.success) {
+      showToast(`Starting session on "${topic}" 🚀`, 'success');
+      setTimeout(() => window.location = json.redirect, 500);
+    } else {
+      showToast(json.error || 'Failed to start session', 'error');
+      if (json.redirect) setTimeout(()=>window.location=json.redirect, 1500);
+    }
+  } catch { showToast('Network error', 'error'); }
+  finally { btn.querySelector('.btn-text').classList.remove('hidden'); btn.querySelector('.btn-spinner').classList.add('hidden'); btn.disabled=false; }
+});
+
+function getCSRF() {
+  return document.cookie.split('; ').find(r=>r.startsWith('csrf_'))?.split('=')?.[1] || '';
+}
+</script>
+{% endblock %}

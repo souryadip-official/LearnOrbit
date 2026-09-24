@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Create Account{% endblock %}
+{% block loader_text %}Setting up your orbit…{% endblock %}
+
+{% block public_content %}
+<div class="auth-page">
+  <div class="auth-card animate__animated animate__fadeInUp">
+    <div class="auth-brand">
+      <span class="brand-icon-lg">⚡</span>
+      <span class="brand-text">LearnOrbit</span>
+    </div>
+    <h2 class="auth-title">Start your learning journey 🚀</h2>
+    <p class="auth-sub">Free forever on the Explorer plan. No credit card needed.</p>
+
+    <form id="register-form" class="auth-form" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <div class="form-group">
+        <label class="form-label" for="username">Username</label>
+        <input class="form-input" type="text" id="username" name="username"
+               placeholder="coollearner42" autocomplete="username" required minlength="3" />
+        <span class="form-hint">Min 3 characters. This will appear on your notes!</span>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="email">Email</label>
+        <input class="form-input" type="email" id="email" name="email"
+               placeholder="you@example.com" autocomplete="email" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="password">Password</label>
+        <div class="input-wrap">
+          <input class="form-input" type="password" id="password" name="password"
+                 placeholder="Min 6 characters" autocomplete="new-password" required minlength="6" />
+          <button type="button" class="input-eye" data-target="password">👁</button>
+        </div>
+      </div>
+      <div class="password-strength" id="pwd-strength">
+        <div class="strength-bar"><div class="strength-fill" id="strength-fill"></div></div>
+        <span class="strength-label" id="strength-label">Enter a password</span>
+      </div>
+      <button type="submit" class="btn-auth" id="register-btn">
+        <span class="btn-text">Create Account ✨</span>
+        <span class="btn-spinner hidden">⏳</span>
+      </button>
+    </form>
+
+    <p class="auth-legal">By registering you agree to use this platform responsibly. No spam, promise. 🤝</p>
+    <div class="auth-divider">or</div>
+    <div class="auth-switch">
+      Already have an account? <a href="{{ url_for('auth.login') }}">Log in →</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Password strength meter
+document.getElementById('password').addEventListener('input', function(){
+  const v = this.value, fill = document.getElementById('strength-fill'), lbl = document.getElementById('strength-label');
+  let score = 0;
+  if (v.length >= 6) score++;
+  if (v.length >= 10) score++;
+  if (/[A-Z]/.test(v)) score++;
+  if (/[0-9]/.test(v)) score++;
+  if (/[^A-Za-z0-9]/.test(v)) score++;
+  const levels = ['','Weak 😬','Fair 😐','Good 😊','Strong 💪','Excellent 🔥'];
+  const colors = ['','#ef4444','#f59e0b','#10b981','#6366f1','#8b5cf6'];
+  fill.style.width = (score/5*100)+'%';
+  fill.style.background = colors[score]||'#e5e7eb';
+  lbl.textContent = levels[score]||'Enter a password';
+});
+
+document.getElementById('register-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const btn = document.getElementById('register-btn');
+  const fd = new FormData(e.target);
+  const data = Object.fromEntries(fd.entries());
+  btn.querySelector('.btn-text').classList.add('hidden');
+  btn.querySelector('.btn-spinner').classList.remove('hidden');
+  btn.disabled = true;
+  try {
+    const res = await fetch('{{ url_for("auth.register") }}', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(data)
+    });
+    const json = await res.json();
+    if (json.success) { showToast('Welcome aboard! 🚀 Setting up your orbit…', 'success'); setTimeout(()=>window.location=json.redirect, 900); }
+    else { (json.errors||['Registration failed']).forEach(e=>showToast(e,'error')); }
+  } catch { showToast('Network error. Try again.','error'); }
+  finally { btn.querySelector('.btn-text').classList.remove('hidden'); btn.querySelector('.btn-spinner').classList.add('hidden'); btn.disabled=false; }
+});
+
+document.querySelector('.input-eye').addEventListener('click', function(){
+  const inp = document.getElementById(this.dataset.target);
+  inp.type = inp.type==='password'?'text':'password';
+  this.textContent = inp.type==='password'?'👁':'🙈';
+});
+</script>
+{% endblock %}

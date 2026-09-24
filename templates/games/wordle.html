@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}Wordle{% endblock %}
+{% block topbar_title %}🔤 Wordle{% endblock %}
+{% block content %}
+<div class="game-page">
+  <div class="game-wrapper wordle-wrapper">
+    <div class="game-header"><h2>🔤 Wordle</h2><div class="game-status" id="wordle-status">Guess the 5-letter word!</div></div>
+    <div class="wordle-grid" id="wordle-grid"></div>
+    <div class="wordle-keyboard" id="wordle-keyboard"></div>
+    <div class="game-actions">
+      <button class="btn-secondary" id="wordle-reset">🔄 New Word</button>
+      <a href="{{ url_for('games.index') }}" class="btn-ghost-link">← Back</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const WORDS=['BRAIN','LEARN','ORBIT','STUDY','FOCUS','THINK','SMART','QUERY','LOGIC','PROOF','SOLVE','NOTES','GRASP','SKILL','TUTOR','REACH','QUEST','SHINE','SPARK','CLIMB'];
+const ROWS=6,COLS=5;
+let secret,guesses,current,gameOver;
+
+function init(){
+  secret=WORDS[Math.floor(Math.random()*WORDS.length)];
+  guesses=[];current='';gameOver=false;
+  document.getElementById('wordle-status').textContent='Guess the 5-letter word!';
+  buildGrid();buildKeyboard();
+}
+
+function buildGrid(){
+  const g=document.getElementById('wordle-grid');g.innerHTML='';
+  for(let r=0;r<ROWS;r++){
+    const row=document.createElement('div');row.className='wordle-row';row.id=`row-${r}`;
+    for(let c=0;c<COLS;c++){
+      const cell=document.createElement('div');cell.className='wordle-cell';cell.id=`cell-${r}-${c}`;
+      row.appendChild(cell);
+    }
+    g.appendChild(row);
+  }
+}
+
+function buildKeyboard(){
+  const rows=['QWERTYUIOP','ASDFGHJKL','⌫ZXCVBNM↵'];
+  const kb=document.getElementById('wordle-keyboard');kb.innerHTML='';
+  rows.forEach(r=>{
+    const row=document.createElement('div');row.className='kb-row';
+    [...r].forEach(k=>{
+      const btn=document.createElement('button');btn.className='kb-key';btn.textContent=k;btn.dataset.key=k;
+      btn.addEventListener('click',()=>handleKey(k));row.appendChild(btn);
+    });
+    kb.appendChild(row);
+  });
+}
+
+function handleKey(k){
+  if(gameOver)return;
+  if(k==='⌫'){current=current.slice(0,-1);}
+  else if(k==='↵'){submitGuess();}
+  else if(current.length<5&&/^[A-Z]$/.test(k)){current+=k;}
+  updateCurrentRow();
+}
+
+function updateCurrentRow(){
+  const r=guesses.length;
+  for(let c=0;c<COLS;c++){
+    const cell=document.getElementById(`cell-${r}-${c}`);
+    cell.textContent=current[c]||'';
+    cell.className='wordle-cell'+(current[c]?' filled':'');
+  }
+}
+
+function submitGuess(){
+  if(current.length!==5){showToast('5 letters needed!','warning');return;}
+  const r=guesses.length;
+  const result=evaluate(current,secret);
+  guesses.push(current);
+  result.forEach((state,c)=>{
+    const cell=document.getElementById(`cell-${r}-${c}`);
+    setTimeout(()=>{
+      cell.classList.add('flip');
+      setTimeout(()=>{cell.className=`wordle-cell ${state}`;cell.textContent=current[c];updateKey(current[c],state);},250);
+    },c*80);
+  });
+  if(current===secret){setTimeout(()=>{showToast('🏆 Brilliant! You got it!','success');gameOver=true;document.getElementById('wordle-status').textContent='🎉 Correct!';},600);}
+  else if(guesses.length===ROWS){setTimeout(()=>{showToast(`The word was ${secret}`,'error');gameOver=true;document.getElementById('wordle-status').textContent=`The word was ${secret}`;},600);}
+  current='';
+}
+
+function evaluate(guess,secret){
+  const res=Array(5).fill('absent');
+  const sc=[...secret],gc=[...guess];
+  gc.forEach((l,i)=>{if(l===sc[i]){res[i]='correct';sc[i]=null;gc[i]=null;}});
+  gc.forEach((l,i)=>{if(l!==null){const j=sc.indexOf(l);if(j!==-1){res[i]='present';sc[j]=null;}}});
+  return res;
+}
+
+function updateKey(letter,state){
+  const btn=document.querySelector(`.kb-key[data-key="${letter}"]`);
+  if(!btn)return;
+  const priority={correct:3,present:2,absent:1};
+  const cur=btn.dataset.state||'';
+  if((priority[state]||0)>(priority[cur]||0)){btn.dataset.state=state;btn.className=`kb-key kb-${state}`;}
+}
+
+document.addEventListener('keydown',e=>{
+  if(e.ctrlKey||e.metaKey||e.altKey)return;
+  if(e.key==='Backspace')handleKey('⌫');
+  else if(e.key==='Enter')handleKey('↵');
+  else if(/^[a-zA-Z]$/.test(e.key))handleKey(e.key.toUpperCase());
+});
+document.getElementById('wordle-reset').addEventListener('click',init);
+init();
+</script>
+{% endblock %}

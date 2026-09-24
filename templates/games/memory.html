@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Memory Match{% endblock %}
+{% block topbar_title %}🃏 Memory Match{% endblock %}
+{% block content %}
+<div class="game-page">
+  <div class="game-wrapper">
+    <div class="game-header">
+      <h2>🃏 Memory Match</h2>
+      <div class="game-score-row">
+        <div class="score-box">Moves<br><span id="moves">0</span></div>
+        <div class="score-box">Matched<br><span id="matched">0</span>/8</div>
+        <div class="score-box">Time<br><span id="timer">0s</span></div>
+      </div>
+    </div>
+    <div class="memory-grid" id="memory-grid"></div>
+    <div class="game-actions">
+      <button class="btn-secondary" id="reset-btn">🔄 New Game</button>
+      <a href="{{ url_for('games.index') }}" class="btn-ghost-link">← Back</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const EMOJIS=['🧠','⚡','📚','🎯','🚀','💡','🏆','🔬'];
+let cards=[...EMOJIS,...EMOJIS], flipped=[], matched=0, moves=0, lock=false, seconds=0, timer=null;
+
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a;}
+
+function initGame(){
+  cards=shuffle([...EMOJIS,...EMOJIS]);
+  flipped=[];matched=0;moves=0;lock=false;
+  document.getElementById('moves').textContent=0;
+  document.getElementById('matched').textContent=0;
+  if(timer)clearInterval(timer);seconds=0;
+  document.getElementById('timer').textContent='0s';
+  timer=setInterval(()=>{seconds++;document.getElementById('timer').textContent=seconds+'s';},1000);
+  const grid=document.getElementById('memory-grid');
+  grid.innerHTML='';
+  cards.forEach((emoji,i)=>{
+    const card=document.createElement('div');
+    card.className='memory-card';
+    card.dataset.index=i;
+    card.dataset.emoji=emoji;
+    card.innerHTML=`<div class="card-inner"><div class="card-front">?</div><div class="card-back">${emoji}</div></div>`;
+    card.addEventListener('click',()=>flipCard(card));
+    grid.appendChild(card);
+  });
+}
+
+function flipCard(card){
+  if(lock||card.classList.contains('revealed')||card.classList.contains('matched'))return;
+  card.classList.add('revealed');
+  flipped.push(card);
+  if(flipped.length===2){
+    lock=true;moves++;
+    document.getElementById('moves').textContent=moves;
+    if(flipped[0].dataset.emoji===flipped[1].dataset.emoji){
+      flipped.forEach(c=>c.classList.add('matched'));
+      matched++;document.getElementById('matched').textContent=matched;
+      flipped=[];lock=false;
+      if(matched===8){clearInterval(timer);showToast(`🏆 Completed in ${moves} moves & ${seconds}s!`,'success');}
+    } else {
+      setTimeout(()=>{flipped.forEach(c=>c.classList.remove('revealed'));flipped=[];lock=false;},1000);
+    }
+  }
+}
+document.getElementById('reset-btn').addEventListener('click',initGame);
+initGame();
+</script>
+{% endblock %}

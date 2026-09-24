@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="{{ current_user.theme if current_user.is_authenticated else 'light' }}">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}LearnOrbit{% endblock %} — AI Learning Intelligence</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <!-- MathJax for LaTeX rendering -->
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [['$','$'], ['\\(','\\)']], displayMath: [['$$','$$'], ['\\[','\\]']], processEscapes: true },
+      svg: { fontCache: 'global' },
+      options: { skipHtmlTags: ['script','noscript','style','textarea','pre'] }
+    };
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.min.js" crossorigin="anonymous"></script>
+
+  <!-- Marked.js for markdown rendering -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js" crossorigin="anonymous"></script>
+
+  <!-- Animate.css -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}" />
+  {% block head %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+
+  <!-- Loading overlay -->
+  <div id="page-loader" class="page-loader">
+    <div class="loader-orbit">
+      <div class="orbit-ring"></div>
+      <div class="orbit-planet"></div>
+      <div class="orbit-core">⚡</div>
+    </div>
+    <p class="loader-text">{% block loader_text %}Orbiting Knowledge…{% endblock %}</p>
+  </div>
+
+  <!-- Toast container -->
+  <div id="toast-container" aria-live="polite"></div>
+
+  {% if current_user.is_authenticated %}
+  <!-- Sidebar nav -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <span class="brand-icon">⚡</span>
+      <span class="brand-name">LearnOrbit</span>
+      <button class="sidebar-close" id="sidebar-close" aria-label="Close sidebar">✕</button>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="{{ url_for('dashboard.home') }}" class="nav-item {% if request.endpoint == 'dashboard.home' %}active{% endif %}">
+        <span class="nav-icon">🏠</span><span class="nav-label">Home</span>
+      </a>
+      <a href="{{ url_for('tutor.new_session') }}" class="nav-item {% if 'tutor' in request.endpoint %}active{% endif %}">
+        <span class="nav-icon">🧠</span><span class="nav-label">AI Tutor</span>
+      </a>
+      <a href="{{ url_for('games.index') }}" class="nav-item {% if 'games' in request.endpoint %}active{% endif %}">
+        <span class="nav-icon">🎮</span><span class="nav-label">Brain Break</span>
+      </a>
+      <a href="{{ url_for('auth.settings') }}" class="nav-item {% if 'settings' in request.endpoint %}active{% endif %}">
+        <span class="nav-icon">⚙️</span><span class="nav-label">Settings</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="user-pill">
+        <span class="user-avatar">{{ current_user.username[0].upper() }}</span>
+        <div class="user-info">
+          <span class="user-name">{{ current_user.username }}</span>
+          <span class="user-plan plan-{{ current_user.plan }}">{{ current_user.plan.title() }}</span>
+        </div>
+      </div>
+      <button class="theme-toggle" id="theme-toggle" title="Toggle dark mode">
+        <span id="theme-icon">{% if current_user.theme == 'dark' %}☀️{% else %}🌙{% endif %}</span>
+      </button>
+      <a href="{{ url_for('auth.logout') }}" class="logout-btn" title="Logout">🚪</a>
+    </div>
+  </aside>
+
+  <!-- Sidebar overlay -->
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+  <!-- Main layout -->
+  <div class="app-layout">
+    <!-- Top bar -->
+    <header class="topbar">
+      <button class="topbar-menu" id="sidebar-toggle" aria-label="Open menu">☰</button>
+      <div class="topbar-center">{% block topbar_title %}{% endblock %}</div>
+      <div class="topbar-right">
+        {% block topbar_actions %}{% endblock %}
+        <button class="theme-toggle-top" id="theme-toggle-top" title="Toggle theme">
+          <span id="theme-icon-top">{% if current_user.theme == 'dark' %}☀️{% else %}🌙{% endif %}</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="main-content">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+          <script>document.addEventListener('DOMContentLoaded',()=>showToast({{ message|tojson }}, {{ category|tojson }}));</script>
+        {% endfor %}
+      {% endwith %}
+
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+  {% else %}
+  <!-- Unauthenticated layout -->
+  <main>
+    {% block public_content %}{% endblock %}
+  </main>
+  {% endif %}
+
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

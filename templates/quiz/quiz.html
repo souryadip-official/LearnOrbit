@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+{% block title %}Quiz — {{ session.topic }}{% endblock %}
+{% block topbar_title %}📋 Quiz Time{% endblock %}
+{% block loader_text %}Crafting your quiz…{% endblock %}
+
+{% block content %}
+<div class="quiz-page">
+
+  <!-- Pre-quiz screen -->
+  <div class="quiz-intro" id="quiz-intro">
+    <div class="quiz-intro-card animate__animated animate__fadeInUp">
+      <div class="quiz-icon">📋</div>
+      <h1>Ready to test yourself?</h1>
+      <p class="quiz-sub">Topic: <strong>{{ session.topic }}</strong></p>
+      <p>10 adaptive MCQ questions — mix of easy, medium, and hard. No pressure, just learning! 😊</p>
+      <div class="quiz-meta-row">
+        <div class="quiz-meta-item">📊 10 Questions</div>
+        <div class="quiz-meta-item">⏱️ No time limit</div>
+        <div class="quiz-meta-item">♾️ Unlimited attempts</div>
+      </div>
+      <button class="btn-primary btn-large" id="generate-quiz-btn">
+        <span class="btn-text">Generate My Quiz ⚡</span>
+        <span class="btn-spinner hidden">⏳ Building questions…</span>
+      </button>
+      <a href="{{ url_for('dashboard.home') }}" class="btn-ghost-link">Skip for now →</a>
+    </div>
+  </div>
+
+  <!-- Quiz questions (hidden until generated) -->
+  <div class="quiz-container hidden" id="quiz-container">
+    <div class="quiz-header">
+      <div class="quiz-progress-wrap">
+        <div class="quiz-progress-bar" id="quiz-progress-bar"></div>
+      </div>
+      <div class="quiz-counter" id="quiz-counter">Q 1 / 10</div>
+    </div>
+
+    <div id="questions-list"></div>
+
+    <div class="quiz-footer">
+      <button class="btn-primary btn-large" id="submit-quiz-btn" disabled>
+        Submit Answers →
+      </button>
+    </div>
+  </div>
+
+  <!-- Results screen (hidden until submitted) -->
+  <div class="quiz-results hidden" id="quiz-results">
+    <div class="results-card animate__animated animate__zoomIn">
+      <div class="score-circle" id="score-circle">
+        <div class="score-num" id="score-num">-</div>
+        <div class="score-label">Score</div>
+      </div>
+      <h2 id="result-title">Great work!</h2>
+      <p id="result-msg"></p>
+
+      <div class="result-actions">
+        <button class="btn-secondary" id="review-btn">📝 Review Answers</button>
+        <button class="btn-primary" id="retry-btn">🔄 Retry Quiz</button>
+        <a class="btn-primary" id="notes-btn" href="{{ url_for('notes.view_notes', session_id=session.id) }}">
+          📖 View Notes →
+        </a>
+      </div>
+    </div>
+
+    <!-- Answer review (hidden until Review clicked) -->
+    <div class="answer-review hidden" id="answer-review"></div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const SESSION_ID = {{ session.id }};
+const CSRF = document.cookie.split('; ').find(r=>r.startsWith('csrf_'))?.split('=')?.[1]||'';
+let questions = [];
+let userAnswers = {};
+
+document.getElementById('generate-quiz-btn').addEventListener('click', async () => {
+  const btn = document.getElementById('generate-quiz-btn');
+  btn.querySelector('.btn-text').classList.add('hidden');
+  btn.querySelector('.btn-spinner').classList.remove('hidden');
+  btn.disabled = true;
+
+  try {
+    const res = await fetch(`/quiz/${SESSION_ID}/generate`, {
+      method: 'POST', headers: {'X-CSRFToken': CSRF}
+    });
+    const json = await res.json();
+    if (json.error) { showToast(json.error, 'error'); return; }
+    questions = json.questions;
+    renderQuiz();
+    document.getElementById('quiz-intro').classList.add('hidden');
+    document.getElementById('quiz-container').classList.remove('hidden');
+    scrollToTop();
+  } catch { showToast('Failed to generate quiz. Try again.', 'error'); }
+  finally { btn.querySelector('.btn-text').classList.remove('hidden'); btn.querySelector('.btn-spinner').classList.add('hidden'); btn.disabled=false; }
+});
+
+function renderQuiz() {
+  const list = document.getElementById('questions-list');
+  list.innerHTML = '';
+  questions.forEach((q, i) => {
+    const card = document.createElement('div');
+    card.className = 'question-card animate__animated animate__fadeIn';
+    card.style.animationDelay = `${i*0.05}s`;
+    card.innerHTML = `
+      <div class="q-header">
+        <span class="q-num">Q${i+1}</span>
+        <span class="q-diff diff-${q.difficulty}">${q.difficulty}</span>
+      </div>
+      <div class="q-text markdown-body">${renderMd(q.question)}</div>
+      <div class="q-options">
+        ${Object.entries(q.options).map(([k,v])=>`
+          <label class="option-label" data-qid="${q.id}" data-key="${k}">
+            <input type="radio" name="q_${q.id}" value="${k}" class="option-radio" />
+            <span class="option-key">${k}</span>
+            <span class="option-text">${v}</span>
+          </label>
+        `).join('')}
+      </div>`;
+    list.appendChild(card);
+  });
+
+  if (window.MathJax) MathJax.typesetPromise([list]);
+
+  // Track answers
+  document.querySelectorAll('.option-radio').forEach(radio => {
+    radio.addEventListener('change', function() {
+      const qid = this.closest('[data-qid]')?.dataset.qid || this.name.replace('q_','');
+      userAnswers[qid] = this.value;
+      updateProgress();
+    });
+  });
+}
+
+function updateProgress() {
+  const answered = Object.keys(userAnswers).length;
+  const total = questions.length;
+  const pct = (answered/total*100).toFixed(0);
+  document.getElementById('quiz-progress-bar').style.width = pct+'%';
+  document.getElementById('quiz-counter').textContent = `${answered} / ${total} answered`;
+  document.getElementById('submit-quiz-btn').disabled = answered < total;
+}
+
+function renderMd(text) {
+  if (typeof marked !== 'undefined') {
+    marked.setOptions({breaks: true});
+    return marked.parse(text);
+  }
+  return text;
+}
+
+document.getElementById('submit-quiz-btn').addEventListener('click', async () => {
+  const btn = document.getElementById('submit-quiz-btn');
+  btn.textContent = '⏳ Evaluating…'; btn.disabled = true;
+  try {
+    const res = await fetch(`/quiz/${SESSION_ID}/submit`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-CSRFToken': CSRF},
+      body: JSON.stringify({answers: userAnswers, questions})
+    });
+    const json = await res.json();
+    showResults(json);
+  } catch { showToast('Submission failed. Try again.', 'error'); }
+  finally { btn.textContent = 'Submit Answers →'; btn.disabled=false; }
+});
+
+function showResults(data) {
+  document.getElementById('quiz-container').classList.add('hidden');
+  document.getElementById('quiz-results').classList.remove('hidden');
+  scrollToTop();
+
+  const score = data.score;
+  const circle = document.getElementById('score-circle');
+  document.getElementById('score-num').textContent = score+'%';
+
+  // Color the circle
+  if (score >= 80) { circle.style.borderColor = '#10b981'; circle.style.color = '#10b981'; }
+  else if (score >= 50) { circle.style.borderColor = '#f59e0b'; circle.style.color = '#f59e0b'; }
+  else { circle.style.borderColor = '#ef4444'; circle.style.color = '#ef4444'; }
+
+  const titles = score>=90?'🏆 Outstanding!':score>=70?'🎉 Well done!':score>=50?'👍 Good effort!':'📚 Keep studying!';
+  const msgs = [
+    `You got ${data.correct} out of ${data.total} questions right.`,
+    score>=80?' Your mastery of this topic is solid! 💪':score>=50?' Review the ones you missed and try again!':' Don\'t worry — revisit the material and try again. That\'s how learning works! 🌱'
+  ];
+  document.getElementById('result-title').textContent = titles;
+  document.getElementById('result-msg').textContent = msgs.join('');
+
+  // Build review
+  const review = document.getElementById('answer-review');
+  review.innerHTML = data.evaluated.map(q => `
+    <div class="review-card ${q.is_correct?'review-correct':'review-wrong'}">
+      <div class="review-header">
+        <span class="review-icon">${q.is_correct?'✅':'❌'}</span>
+        <div class="review-q markdown-body">${renderMd(q.question)}</div>
+      </div>
+      <div class="review-answers">
+        <div class="review-row"><span class="lbl">Your answer:</span><span class="${q.is_correct?'ans-correct':'ans-wrong'}">${q.options[q.user_answer]||'(not answered)'}</span></div>
+        ${!q.is_correct?`<div class="review-row"><span class="lbl">Correct:</span><span class="ans-correct">${q.options[q.correct]}</span></div>`:''}
+      </div>
+      <div class="review-explanation">💡 ${q.explanation}</div>
+    </div>`).join('');
+
+  if (window.MathJax) MathJax.typesetPromise([review]);
+}
+
+document.getElementById('review-btn').addEventListener('click', () => {
+  document.getElementById('answer-review').classList.toggle('hidden');
+});
+
+document.getElementById('retry-btn').addEventListener('click', () => {
+  userAnswers = {};
+  document.getElementById('quiz-results').classList.add('hidden');
+  document.getElementById('answer-review').classList.add('hidden');
+  document.getElementById('quiz-intro').classList.remove('hidden');
+});
+
+function scrollToTop() { window.scrollTo({top:0,behavior:'smooth'}); }
+</script>
+{% endblock %}

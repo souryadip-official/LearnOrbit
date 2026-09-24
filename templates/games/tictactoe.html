@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}Tic Tac Toe{% endblock %}
+{% block topbar_title %}⭕ Tic Tac Toe{% endblock %}
+{% block content %}
+<div class="game-page">
+  <div class="game-wrapper">
+    <div class="game-header">
+      <h2>⭕ Tic Tac Toe</h2>
+      <div class="game-status" id="status">Your turn — X</div>
+      <div class="game-score-row">
+        <div class="score-box">You (X)<br><span id="score-x">0</span></div>
+        <div class="score-box draws">Draws<br><span id="score-d">0</span></div>
+        <div class="score-box">AI (O)<br><span id="score-o">0</span></div>
+      </div>
+    </div>
+
+    <div class="ttt-board" id="board">
+      {% for i in range(9) %}
+      <button class="ttt-cell" data-index="{{ i }}"></button>
+      {% endfor %}
+    </div>
+
+    <div class="game-actions">
+      <button class="btn-secondary" id="reset-btn">🔄 New Game</button>
+      <a href="{{ url_for('games.index') }}" class="btn-ghost-link">← Back to games</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let board = Array(9).fill('');
+let scores = {X:0,O:0,D:0};
+let gameOver = false;
+
+const WIN = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+
+function checkWinner(b, p) { return WIN.some(c=>c.every(i=>b[i]===p)); }
+function checkDraw(b) { return b.every(c=>c!==''); }
+
+function aiMove() {
+  // Minimax-lite: try to win, then block, then center, then corner, then any
+  for (let i=0;i<9;i++) { if(!board[i]){board[i]='O'; if(checkWinner(board,'O')){board[i]='';return i;} board[i]='';} }
+  for (let i=0;i<9;i++) { if(!board[i]){board[i]='X'; if(checkWinner(board,'X')){board[i]='';return i;} board[i]='';} }
+  if (!board[4]) return 4;
+  const corners=[0,2,6,8].filter(i=>!board[i]);
+  if (corners.length) return corners[Math.floor(Math.random()*corners.length)];
+  return board.findIndex(c=>!c);
+}
+
+function render() {
+  document.querySelectorAll('.ttt-cell').forEach((cell,i)=>{
+    cell.textContent = board[i];
+    cell.className = 'ttt-cell' + (board[i]==='X'?' cell-x':board[i]==='O'?' cell-o':'');
+  });
+}
+
+function handleClick(i) {
+  if (gameOver || board[i]) return;
+  board[i]='X';
+  render();
+  if (checkWinner(board,'X')) { endGame('🎉 You win!','X'); return; }
+  if (checkDraw(board)) { endGame("It's a draw! 🤝",'D'); return; }
+  document.getElementById('status').textContent = "AI thinking…";
+  setTimeout(()=>{
+    const ai = aiMove();
+    if (ai===-1) { endGame("It's a draw! 🤝",'D'); return; }
+    board[ai]='O';
+    render();
+    if (checkWinner(board,'O')) { endGame('😅 AI wins!','O'); return; }
+    if (checkDraw(board)) { endGame("It's a draw! 🤝",'D'); return; }
+    document.getElementById('status').textContent = "Your turn — X";
+  }, 400);
+}
+
+function endGame(msg, winner) {
+  gameOver=true;
+  document.getElementById('status').textContent=msg;
+  scores[winner]++;
+  document.getElementById('score-x').textContent=scores.X;
+  document.getElementById('score-o').textContent=scores.O;
+  document.getElementById('score-d').textContent=scores.D;
+  // Highlight winning cells
+  if (winner!=='D') {
+    const p = winner==='X'?'X':'O';
+    WIN.forEach(combo=>{ if(combo.every(i=>board[i]===p)) combo.forEach(i=>document.querySelectorAll('.ttt-cell')[i].classList.add('cell-win')); });
+  }
+}
+
+function reset() {
+  board=Array(9).fill('');
+  gameOver=false;
+  render();
+  document.getElementById('status').textContent='Your turn — X';
+}
+
+document.querySelectorAll('.ttt-cell').forEach((cell,i)=>cell.addEventListener('click',()=>handleClick(i)));
+document.getElementById('reset-btn').addEventListener('click',reset);
+</script>
+{% endblock %}

@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Breakout{% endblock %}
+{% block topbar_title %}🧱 Breakout{% endblock %}
+{% block content %}
+<div class="game-page">
+  <div class="game-wrapper">
+    <div class="game-header">
+      <h2>🧱 Breakout</h2>
+      <div class="game-score-row">
+        <div class="score-box">Score<br><span id="score-br">0</span></div>
+        <div class="score-box">Lives<br><span id="lives-br">3</span></div>
+        <div class="score-box">Level<br><span id="level-br">1</span></div>
+      </div>
+    </div>
+    <canvas id="breakout-canvas" width="480" height="360" style="border-radius:12px;cursor:none;"></canvas>
+    <div class="game-actions">
+      <button class="btn-secondary" id="reset-br">🔄 New Game</button>
+      <a href="{{ url_for('games.index') }}" class="btn-ghost-link">← Back</a>
+    </div>
+    <p style="text-align:center;font-size:.85rem;opacity:.6;margin-top:.5rem">Move mouse / finger to control the paddle. Click/tap to launch!</p>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const c=document.getElementById('breakout-canvas'),ctx=c.getContext('2d');
+const W=c.width,H=c.height;
+let paddle,ball,bricks,score,lives,level,running,launched,animId;
+
+function makeBricks(l){
+  const rows=3+l,cols=10;const bw=(W-20)/(cols),bh=20;
+  const bricks=[];
+  const COLORS=['#6366f1','#8b5cf6','#a78bfa','#c4b5fd','#ddd6fe'];
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++)bricks.push({x:10+c*bw,y:40+r*(bh+4),w:bw-4,h:bh,alive:true,color:COLORS[r%COLORS.length]});
+  return bricks;
+}
+
+function init(){
+  paddle={x:W/2-40,y:H-20,w:80,h:10};
+  ball={x:W/2,y:H-35,r:7,dx:3,dy:-3};
+  bricks=makeBricks(level=1);
+  score=0;lives=3;running=true;launched=false;
+  document.getElementById('score-br').textContent=0;
+  document.getElementById('lives-br').textContent=3;
+  document.getElementById('level-br').textContent=1;
+}
+
+function draw(){
+  ctx.fillStyle='#1e1b4b';ctx.fillRect(0,0,W,H);
+  // Bricks
+  bricks.filter(b=>b.alive).forEach(b=>{
+    ctx.fillStyle=b.color;ctx.beginPath();ctx.roundRect(b.x,b.y,b.w,b.h,4);ctx.fill();
+  });
+  // Paddle
+  const pg=ctx.createLinearGradient(paddle.x,paddle.y,paddle.x,paddle.y+paddle.h);
+  pg.addColorStop(0,'#818cf8');pg.addColorStop(1,'#4f46e5');
+  ctx.fillStyle=pg;ctx.beginPath();ctx.roundRect(paddle.x,paddle.y,paddle.w,paddle.h,5);ctx.fill();
+  // Ball
+  ctx.fillStyle='#c7d2fe';ctx.beginPath();ctx.arc(ball.x,ball.y,ball.r,0,Math.PI*2);ctx.fill();
+  // Launch hint
+  if(!launched){ctx.fillStyle='rgba(255,255,255,.5)';ctx.font='14px Plus Jakarta Sans,sans-serif';ctx.textAlign='center';ctx.fillText('Click to launch!',W/2,H/2);}
+}
+
+function update(){
+  if(!launched)return;
+  ball.x+=ball.dx;ball.y+=ball.dy;
+  if(ball.x<ball.r||ball.x>W-ball.r)ball.dx*=-1;
+  if(ball.y<ball.r)ball.dy*=-1;
+  // Paddle collision
+  if(ball.y+ball.r>=paddle.y&&ball.x>=paddle.x&&ball.x<=paddle.x+paddle.w){
+    ball.dy=Math.abs(ball.dy)*-1;
+    const hit=(ball.x-(paddle.x+paddle.w/2))/(paddle.w/2);
+    ball.dx=hit*5;
+  }
+  // Brick collision
+  bricks.filter(b=>b.alive).forEach(b=>{
+    if(ball.x>b.x&&ball.x<b.x+b.w&&ball.y-ball.r<b.y+b.h&&ball.y+ball.r>b.y){
+      b.alive=false;ball.dy*=-1;score+=10;
+      document.getElementById('score-br').textContent=score;
+    }
+  });
+  // Out of bounds
+  if(ball.y>H+ball.r){lives--;document.getElementById('lives-br').textContent=lives;
+    if(!lives){running=false;ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(0,0,W,H);ctx.fillStyle='#fff';ctx.font='bold 28px Plus Jakarta Sans,sans-serif';ctx.textAlign='center';ctx.fillText('Game Over 😢',W/2,H/2);return;}
+    ball={x:W/2,y:H-35,r:7,dx:3,dy:-3};launched=false;
+  }
+  // Level up
+  if(bricks.every(b=>!b.alive)){level++;document.getElementById('level-br').textContent=level;
+    bricks=makeBricks(level);ball={x:W/2,y:H-35,r:7,dx:3+level*0.3,dy:-(3+level*0.3)};launched=false;
+    showToast(`Level ${level}! 🔥`,'success');
+  }
+}
+
+function loop(){if(running){draw();update();animId=requestAnimationFrame(loop);}}
+
+c.addEventListener('mousemove',e=>{const r=c.getBoundingClientRect();paddle.x=e.clientX-r.left-paddle.w/2;paddle.x=Math.max(0,Math.min(W-paddle.w,paddle.x));});
+c.addEventListener('touchmove',e=>{e.preventDefault();const r=c.getBoundingClientRect();paddle.x=e.touches[0].clientX-r.left-paddle.w/2;paddle.x=Math.max(0,Math.min(W-paddle.w,paddle.x));},{passive:false});
+c.addEventListener('click',()=>{if(!launched&&running)launched=true;});
+
+document.getElementById('reset-br').addEventListener('click',()=>{cancelAnimationFrame(animId);init();loop();});
+init();loop();
+</script>
+{% endblock %}

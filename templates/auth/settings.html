@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+{% block title %}Settings{% endblock %}
+{% block topbar_title %}⚙️ Settings{% endblock %}
+{% block loader_text %}Loading your preferences…{% endblock %}
+
+{% block content %}
+<div class="settings-page">
+  <div class="settings-header">
+    <h1>Settings ⚙️</h1>
+    <p>Configure your AI provider, appearance, and account preferences.</p>
+  </div>
+
+  <!-- AI Provider Card -->
+  <div class="settings-card">
+    <div class="card-title">🤖 AI Provider & Model</div>
+    <p class="card-desc">Choose your AI backend. You provide the API key — we never store it in plain text for production. <a href="#" class="link">Why?</a></p>
+
+    <div class="provider-grid" id="provider-grid">
+      {% for pid, pdata in providers.items() %}
+      <button class="provider-btn {% if current_user.ai_provider == pid %}active{% endif %}"
+              data-provider="{{ pid }}"
+              data-models="{{ pdata.models | tojson | e }}">
+        <span class="provider-icon">
+          {% if pid == 'openai' %}🟢{% elif pid == 'google' %}🔵{% elif pid == 'anthropic' %}🟣{% elif pid == 'xai' %}⚫{% else %}🤗{% endif %}
+        </span>
+        <span class="provider-name">{{ pdata.name }}</span>
+      </button>
+      {% endfor %}
+    </div>
+
+    <div class="model-select-wrap" id="model-wrap">
+      <label class="form-label">Model</label>
+      <select class="form-select" id="model-select">
+        {% for pid, pdata in providers.items() %}
+          {% if current_user.ai_provider == pid %}
+            {% for m in pdata.models %}
+            <option value="{{ m }}" {% if m == current_user.ai_model %}selected{% endif %}>{{ m }}</option>
+            {% endfor %}
+          {% endif %}
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="form-group mt-4">
+      <label class="form-label" for="api-key-input">
+        API Key
+        <span class="key-badge" id="key-status">
+          {% if current_user.ai_api_key_enc %}✅ Saved{% else %}❌ Not set{% endif %}
+        </span>
+      </label>
+      <div class="input-wrap">
+        <input class="form-input" type="password" id="api-key-input"
+               placeholder="Paste your API key here…"
+               value="{{ current_user.ai_api_key_enc or '' }}" />
+        <button type="button" class="input-eye" data-target="api-key-input">👁</button>
+      </div>
+      <button class="btn-secondary mt-2" id="validate-key-btn">🔍 Validate Key</button>
+      <span class="validate-result" id="validate-result"></span>
+    </div>
+
+    <button class="btn-primary mt-4" id="save-ai-btn">💾 Save AI Settings</button>
+  </div>
+
+  <!-- Appearance -->
+  <div class="settings-card">
+    <div class="card-title">🎨 Appearance</div>
+    <div class="theme-toggle-row">
+      <span>Theme</span>
+      <div class="theme-switch-wrap">
+        <button class="theme-option {% if current_user.theme == 'light' %}active{% endif %}" data-theme="light">☀️ Light</button>
+        <button class="theme-option {% if current_user.theme == 'dark' %}active{% endif %}" data-theme="dark">🌙 Dark</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Plan -->
+  <div class="settings-card">
+    <div class="card-title">💎 Your Plan</div>
+    <div class="plan-status">
+      <span class="plan-badge-large plan-{{ current_user.plan }}">{{ current_user.plan.title() }}</span>
+      {% if current_user.plan == 'free' %}
+      <p>You're on the free Explorer plan. <a href="#pricing" class="link">Upgrade to Scholar</a> to unlock PDF exports, split screen, and unlimited sessions.</p>
+      {% else %}
+      <p>You're on the {{ current_user.plan.title() }} plan. Thank you for supporting LearnOrbit! 🙏</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Account -->
+  <div class="settings-card">
+    <div class="card-title">👤 Account</div>
+    <div class="account-info">
+      <div class="info-row"><span class="info-label">Username</span><span>{{ current_user.username }}</span></div>
+      <div class="info-row"><span class="info-label">Email</span><span>{{ current_user.email }}</span></div>
+      <div class="info-row"><span class="info-label">Member since</span><span>{{ current_user.created_at.strftime('%d %b %Y') }}</span></div>
+    </div>
+    <a href="{{ url_for('auth.logout') }}" class="btn-danger mt-4">🚪 Log Out</a>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const PROVIDERS = {{ providers | tojson }};
+let selectedProvider = '{{ current_user.ai_provider }}';
+
+// Provider selection
+document.querySelectorAll('.provider-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.provider-btn').forEach(b=>b.classList.remove('active'));
+    this.classList.add('active');
+    selectedProvider = this.dataset.provider;
+    const models = JSON.parse(this.dataset.models);
+    const sel = document.getElementById('model-select');
+    sel.innerHTML = models.map(m=>`<option value="${m}">${m}</option>`).join('');
+  });
+});
+
+// Validate key
+document.getElementById('validate-key-btn').addEventListener('click', async () => {
+  const key = document.getElementById('api-key-input').value.trim();
+  const result = document.getElementById('validate-result');
+  const model = document.getElementById('model-select').value;
+  result.textContent = '⏳ Validating…';
+  try {
+    const res = await fetch('/api/validate-key', {
+      method: 'POST', headers: {'Content-Type':'application/json','X-CSRFToken': getCSRF()},
+      body: JSON.stringify({provider: selectedProvider, model, api_key: key})
+    });
+    const json = await res.json();
+    result.textContent = json.message;
+    result.style.color = json.valid ? '#10b981' : '#ef4444';
+  } catch { result.textContent = '❌ Error'; }
+});
+
+// Save AI settings
+document.getElementById('save-ai-btn').addEventListener('click', async () => {
+  const key = document.getElementById('api-key-input').value.trim();
+  const model = document.getElementById('model-select').value;
+  const res = await fetch('/auth/settings', {
+    method: 'POST', headers: {'Content-Type':'application/json','X-CSRFToken': getCSRF()},
+    body: JSON.stringify({ai_provider: selectedProvider, ai_model: model, api_key: key})
+  });
+  const json = await res.json();
+  if (json.success) {
+    showToast(json.message, 'success');
+    document.getElementById('key-status').textContent = '✅ Saved';
+  }
+});
+
+// Theme toggle
+document.querySelectorAll('.theme-option').forEach(btn => {
+  btn.addEventListener('click', async function() {
+    const theme = this.dataset.theme;
+    document.querySelectorAll('.theme-option').forEach(b=>b.classList.remove('active'));
+    this.classList.add('active');
+    document.documentElement.setAttribute('data-theme', theme);
+    await fetch('/api/theme', {
+      method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':getCSRF()},
+      body: JSON.stringify({theme})
+    });
+    document.querySelectorAll('#theme-icon,#theme-icon-top').forEach(el=>{el.textContent=theme==='dark'?'☀️':'🌙';});
+    showToast(`${theme==='dark'?'🌙 Dark':'☀️ Light'} mode activated!`, 'success');
+  });
+});
+
+// Eye toggle
+document.querySelector('.input-eye').addEventListener('click', function(){
+  const inp = document.getElementById(this.dataset.target);
+  inp.type = inp.type==='password'?'text':'password';
+  this.textContent = inp.type==='password'?'👁':'🙈';
+});
+
+function getCSRF() {
+  return document.cookie.split('; ').find(r=>r.startsWith('csrf_'))?.split('=')?.[1] || '';
+}
+</script>
+{% endblock %}
