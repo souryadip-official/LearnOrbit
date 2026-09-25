@@ -69,6 +69,7 @@
             <span class="session-status status-{{ s.status }}">{{ s.status }}</span>
             <a href="{{ url_for('tutor.chat', session_id=s.id) }}" class="session-link" title="{% if s.status == 'completed' %}Review conversation{% else %}Continue session{% endif %}"><i data-lucide="{% if s.status == 'completed' %}message-square-text{% else %}play{% endif %}" aria-hidden="true"></i><span>{% if s.status == 'completed' %}Review{% else %}Continue{% endif %}</span></a>
             {% if s.status == 'completed' %}
+            <a href="{{ url_for('quiz.quiz_page', session_id=s.id) }}" class="session-link" title="Take or retry quiz"><i data-lucide="clipboard-check" aria-hidden="true"></i><span>{% if s.quiz_score is not none %}Retry quiz{% else %}Take quiz{% endif %}</span></a>
             <a href="{{ url_for('notes.view_notes', session_id=s.id) }}" class="session-link" title="View notes"><i data-lucide="notebook-text" aria-hidden="true"></i><span>Notes</span></a>
             {% endif %}
           </div>
@@ -130,10 +131,16 @@
     <div class="dash-card tip-card">
       <div class="dash-card-title"><i data-lucide="lightbulb" aria-hidden="true"></i> Learning Tip</div>
       <div class="tip-content" id="tip-content">Loading your daily wisdom…</div>
-    </div>
-
   </div>
+
+  <section class="dash-card learning-insights"><div class="insight-heading"><div><div class="dash-card-title"><i data-lucide="calendar-check"></i> Learning attendance</div><p>You showed up {{ stats.attendance_month }} days this month and {{ stats.attendance_year }} days this year.</p></div><a class="session-link" href="{{ url_for('features.calendar') }}">Open calendar <i data-lucide="arrow-up-right"></i></a></div><div class="attendance-dots" aria-label="Attendance this month">{% for day in range(1,stats.month_days+1) %}<span class="{% if day in stats.attendance_days %}attended{% endif %}" title="{{ day }} attendance mark">{% if day in stats.attendance_days %}✓{% else %}·{% endif %}</span>{% endfor %}</div></section>
+
+  <section class="dash-card learning-map-card"><div class="insight-heading"><div><div class="dash-card-title"><i data-lucide="orbit"></i> Your learning universe</div><p>See which topics connect, which ideas contain others, and where new knowledge is growing.</p></div><button class="btn-secondary" id="build-topic-map"><i data-lucide="network"></i>Explore connections</button></div><div class="learning-map-preview" id="learning-map-preview"><div class="learning-map-bubbles">{% for topic in mastery_records[:6] %}<span>{{ topic.topic }}</span>{% else %}<p class="small-muted">Complete a learning session to grow your map.</p>{% endfor %}</div></div></section>
+
 </div>
+</div>
+
+<div class="topic-map-modal hidden" id="topic-map-modal" role="dialog" aria-modal="true" aria-labelledby="topic-map-title"><section class="topic-map-dialog"><button class="topic-map-close" id="close-topic-map" aria-label="Close topic map"><i data-lucide="x"></i></button><h2 id="topic-map-title">Your learning universe</h2><p id="topic-map-caption">Ideas connected across your learning history.</p><div id="topic-map-large" class="learning-map-graph"></div></section></div>
 
 <!-- Split screen overlay -->
 <div class="split-screen-modal hidden" id="split-screen-modal">
@@ -175,6 +182,8 @@ const tips = [
   "Sleep after studying helps seal memories. Avoid all-nighters if you want to remember what you learned.",
 ];
 document.getElementById('tip-content').textContent = tips[Math.floor(Math.random()*tips.length)];
+
+const csrfToken=document.querySelector('meta[name="csrf-token"]')?.content||'';const mapModal=document.getElementById('topic-map-modal');function buildMapSvg(topics,edges){const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg');svg.setAttribute('viewBox','0 0 900 360');svg.setAttribute('role','img');svg.setAttribute('aria-label','Map of connected learning topics');const points=topics.slice(0,16).map((topic,index)=>({topic,x:115+(index%4)*225,y:76+Math.floor(index/4)*112}));edges.forEach(edge=>{const a=points.find(p=>p.topic===edge.source),b=points.find(p=>p.topic===edge.target);if(!a||!b)return;const line=document.createElementNS(ns,'path');line.setAttribute('d',`M ${a.x} ${a.y+25} C ${(a.x+b.x)/2} ${a.y+85}, ${(a.x+b.x)/2} ${b.y-55}, ${b.x} ${b.y-25}`);line.setAttribute('class',`map-edge ${edge.kind}`);svg.append(line)});points.forEach((point,index)=>{const group=document.createElementNS(ns,'g');group.setAttribute('transform',`translate(${point.x} ${point.y})`);const oval=document.createElementNS(ns,'ellipse');oval.setAttribute('rx',Math.min(98,Math.max(60,point.topic.length*4.2)));oval.setAttribute('ry','29');oval.setAttribute('class',`map-node node-${index%5}`);group.append(oval);const label=document.createElementNS(ns,'text');label.setAttribute('text-anchor','middle');label.setAttribute('dominant-baseline','middle');label.textContent=point.topic.length>26?point.topic.slice(0,25)+'…':point.topic;group.append(label);svg.append(group)});return svg}function showTopicMap(data){const preview=document.getElementById('learning-map-preview');preview.replaceChildren();if(!data.topics.length){preview.textContent='Study a topic with your tutor first, then connections will grow here.';return}const svg=buildMapSvg(data.topics.slice(0,8),data.edges);svg.classList.add('mini-map-svg');preview.append(svg);if(data.message)document.getElementById('topic-map-caption').textContent=data.message;else document.getElementById('topic-map-caption').textContent=`${data.topics.length} topics · ${data.edges.length} AI-suggested connections`;document.getElementById('topic-map-large').replaceChildren(buildMapSvg(data.topics,data.edges));mapModal.classList.remove('hidden');window.refreshIcons?.()}document.getElementById('build-topic-map').onclick=async e=>{const button=e.currentTarget;button.disabled=true;button.dataset.label=button.textContent;button.textContent='Mapping ideas…';try{const res=await fetch('/dashboard/api/topic-map',{method:'POST',headers:{'X-CSRFToken':csrfToken}});const data=await res.json();if(!res.ok)throw Error(data.error||'Could not build the topic map.');showTopicMap(data)}catch(error){showToast(error.message,'error')}finally{button.disabled=false;button.innerHTML='<i data-lucide="network"></i>Explore connections';window.refreshIcons?.()}};document.getElementById('close-topic-map').onclick=()=>mapModal.classList.add('hidden');mapModal.addEventListener('click',e=>{if(e.target===mapModal)mapModal.classList.add('hidden')});document.addEventListener('keydown',e=>{if(e.key==='Escape')mapModal.classList.add('hidden')});
 
 // Split screen
 document.getElementById('split-screen-btn').addEventListener('click', e => {

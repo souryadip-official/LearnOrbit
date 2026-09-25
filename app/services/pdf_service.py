@@ -12,7 +12,19 @@ from datetime import datetime
 def _md_to_text_blocks(md_text: str) -> list:
     """Parse the Markdown constructs used by the notes generator."""
     blocks = []
-    for raw_line in md_text.splitlines():
+    lines = md_text.splitlines(); index = 0
+    while index < len(lines):
+        raw_line = lines[index]
+        if raw_line.strip().startswith("|"):
+            table = []
+            while index < len(lines) and lines[index].strip().startswith("|"):
+                cells = [cell.strip() for cell in lines[index].strip().strip("|").split("|")]
+                if not all(re.fullmatch(r":?-{2,}:?", cell) for cell in cells):
+                    table.append(cells)
+                index += 1
+            if table: blocks.append(("table", table))
+            continue
+        index += 1
         line = raw_line.strip()
         if line.startswith("### "):
             blocks.append(("h3", line[4:].strip()))
@@ -54,6 +66,7 @@ def _plain_markdown(text: str) -> str:
     # converting frequent LaTeX commands before unsupported glyphs are removed.
     text = re.sub(r"\\(?:\[|\]|\(|\))", "", text)
     text = text.replace("$$", "").replace("\\$", "$")
+    text = text.replace(r"\*", " * ")
     text = re.sub(r"\\frac\s*\{([^{}]*)\}\s*\{([^{}]*)\}", r"(\1)/ (\2)", text)
     text = re.sub(r"\\sqrt\s*\{([^{}]*)\}", r"sqrt(\1)", text)
     text = re.sub(r"\\(?:text|mathrm|mathbf|mathit)\s*\{([^{}]*)\}", r"\1", text)
@@ -86,23 +99,23 @@ def export_notes_pdf(notes_md: str, topic: str, username: str, output_dir: str) 
         class NotesPDF(FPDF):
             def header(self):
                 # A restrained brand accent replaces the old page-sized watermark.
-                self.set_fill_color(79, 70, 229)
+                self.set_fill_color(40, 107, 91)
                 self.rect(0, 0, 210, 3, "F")
                 self.set_y(8)
                 self.set_font("Helvetica", "B", 9)
-                self.set_text_color(67, 56, 202)
+                self.set_text_color(40, 107, 91)
                 self.cell(95, 6, "LEARNORBIT  /  STUDY NOTES")
                 self.set_font("Helvetica", "", 8)
                 self.set_text_color(107, 114, 128)
                 self.cell(0, 6, _pdf_safe(topic), align="R")
-                self.set_draw_color(226, 232, 240)
+                self.set_draw_color(191, 220, 209)
                 self.set_line_width(0.3)
                 self.line(self.l_margin, 17, 210 - self.r_margin, 17)
                 self.set_y(23)
 
             def footer(self):
                 self.set_y(-14)
-                self.set_draw_color(226, 232, 240)
+                self.set_draw_color(191, 220, 209)
                 self.set_line_width(0.3)
                 self.line(self.l_margin, self.get_y(), 210 - self.r_margin, self.get_y())
                 self.set_y(-11)
@@ -118,14 +131,14 @@ def export_notes_pdf(notes_md: str, topic: str, username: str, output_dir: str) 
 
         # Clear, compact title treatment with useful metadata.
         pdf.set_font("Helvetica", "B", 22)
-        pdf.set_text_color(31, 41, 55)
+        pdf.set_text_color(32, 43, 38)
         pdf.multi_cell(0, 10, _pdf_safe(topic), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
         pdf.set_font("Helvetica", "", 9)
         pdf.set_text_color(107, 114, 128)
         pdf.cell(0, 6, f"STUDY GUIDE  |  {datetime.utcnow().strftime('%d %B %Y')}",
                  new_x=XPos.LMARGIN, new_y=YPos.NEXT)
         pdf.ln(3)
-        pdf.set_fill_color(79, 70, 229)
+        pdf.set_fill_color(40, 107, 91)
         pdf.rect(pdf.l_margin, pdf.get_y(), 22, 1.2, "F")
         pdf.ln(6)
 
@@ -139,7 +152,7 @@ def export_notes_pdf(notes_md: str, topic: str, username: str, output_dir: str) 
             if btype == "h1":
                 pdf.ln(5)
                 pdf.set_font("Helvetica", "B", 16)
-                pdf.set_text_color(49, 46, 129)
+                pdf.set_text_color(31, 91, 77)
                 pdf.multi_cell(0, 8, _plain_markdown(content), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
                 pdf.ln(1)
             elif btype == "h2":
@@ -147,15 +160,15 @@ def export_notes_pdf(notes_md: str, topic: str, username: str, output_dir: str) 
                     pdf.add_page()
                 pdf.ln(4)
                 pdf.set_font("Helvetica", "B", 11)
-                pdf.set_text_color(55, 48, 163)
-                pdf.set_fill_color(238, 242, 255)
+                pdf.set_text_color(31, 91, 77)
+                pdf.set_fill_color(226, 243, 235)
                 pdf.multi_cell(body_width, 7.5, "  " + _plain_markdown(content),
                                fill=True, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
                 pdf.ln(1.5)
             elif btype == "h3":
                 pdf.ln(2)
                 pdf.set_font("Helvetica", "B", 10)
-                pdf.set_text_color(67, 56, 202)
+                pdf.set_text_color(40, 107, 91)
                 pdf.multi_cell(0, 6, _plain_markdown(content), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
             elif btype in ("bullet", "ordered", "checkbox"):
                 pdf.set_font("Helvetica", "", 9.5)
@@ -184,6 +197,26 @@ def export_notes_pdf(notes_md: str, topic: str, username: str, output_dir: str) 
                 pdf.set_draw_color(203, 213, 225)
                 pdf.line(pdf.l_margin, pdf.get_y(), 210 - pdf.r_margin, pdf.get_y())
                 pdf.ln(3)
+            elif btype == "table":
+                pdf.ln(2)
+                rows = content
+                columns = max(len(row) for row in rows)
+                widths = [body_width * (0.22 if col == 0 else 0.33 if col < columns - 1 else 0.45) for col in range(columns)]
+                if columns == 3: widths = [body_width * .19, body_width * .27, body_width * .54]
+                for row_index, row in enumerate(rows):
+                    cells = (row + [""] * columns)[:columns]
+                    y_start = pdf.get_y(); heights = []
+                    clean_cells = [_plain_markdown(cell) for cell in cells]
+                    for col, value in enumerate(clean_cells):
+                        pdf.set_xy(pdf.l_margin + sum(widths[:col]), y_start)
+                        pdf.set_font("Helvetica", "B" if row_index == 0 else "", 8.5)
+                        pdf.set_text_color(32, 43, 38)
+                        pdf.set_fill_color(226, 243, 235 if row_index == 0 else 248)
+                        pdf.multi_cell(widths[col], 5.5, value, border=1, fill=True)
+                        heights.append(pdf.get_y() - y_start)
+                    pdf.set_y(y_start + max(heights or [6]))
+                    if pdf.get_y() > 265: pdf.add_page()
+                pdf.ln(2)
             elif btype == "para":
                 clean = _plain_markdown(content)
                 if clean.strip():

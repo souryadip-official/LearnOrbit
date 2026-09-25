@@ -8,7 +8,7 @@ from app import db
 from app.models import LearningSession, LearningBehavior
 from app.models import SessionDocument
 from app.services.ai_service import (
-    call_ai, build_tutor_system, detect_misconception, infer_learning_style
+    call_ai, build_tutor_system, detect_misconception, infer_learning_style, supports_temperature
 )
 from app.services.mastery_service import recalculate_topic_mastery, topic_slug
 from datetime import datetime
@@ -58,7 +58,8 @@ def new_session():
 def chat(session_id):
     session_obj = LearningSession.query.filter_by(
         id=session_id, user_id=current_user.id).first_or_404()
-    return render_template("tutor/chat.html", session=session_obj)
+    return render_template("tutor/chat.html", session=session_obj,
+                           temperature_supported=supports_temperature(current_user.ai_provider, current_user.ai_model))
 
 
 @tutor_bp.route("/<int:session_id>/message", methods=["POST"])
@@ -103,7 +104,12 @@ def send_message(session_id):
         if passages:
             system += "\n\nSTUDENT-PROVIDED SOURCE NOTES (use as grounding, cite the filename in your answer; tell the student when notes do not support a claim):\n" + "\n\n".join(passages[:4])
 
-    ai_reply = call_ai(provider, model, api_key, messages_for_ai, system=system, max_tokens=2048)
+    try:
+        temperature = max(0.0, min(2.0, float(data.get("temperature", 0.7))))
+    except (TypeError, ValueError):
+        temperature = 0.7
+    ai_reply = call_ai(provider, model, api_key, messages_for_ai, system=system,
+                       temperature=temperature if supports_temperature(provider, model) else None)
 
     # Detect [ADAPT: level] tag from AI response
     adapt_match = re.search(r'\[ADAPT:\s*(beginner|intermediate|advanced)\]', ai_reply, re.IGNORECASE)

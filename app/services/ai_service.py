@@ -14,8 +14,8 @@ from typing import Optional
 # ---------------------------------------------------------------------------
 
 def _call_openai_compatible(base_url: str, api_key: str, model: str, messages: list,
-                             system: str = None, temperature: float = 0.7,
-                             max_tokens: int = 2048) -> str:
+                             system: str = None, temperature: Optional[float] = 0.7,
+                             max_tokens: int = None) -> str:
     """Works for OpenAI, xAI Grok (same REST shape)."""
     payload_messages = []
     if system:
@@ -23,8 +23,9 @@ def _call_openai_compatible(base_url: str, api_key: str, model: str, messages: l
     payload_messages.extend(messages)
 
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
-    payload = {"model": model, "messages": payload_messages,
-                "temperature": temperature, "max_tokens": max_tokens}
+    payload = {"model": model, "messages": payload_messages}
+    if temperature is not None: payload["temperature"] = temperature
+    if max_tokens is not None: payload["max_tokens"] = max_tokens
 
     resp = requests.post(f"{base_url}/chat/completions", headers=headers,
                          json=payload, timeout=60)
@@ -33,13 +34,14 @@ def _call_openai_compatible(base_url: str, api_key: str, model: str, messages: l
 
 
 def _call_anthropic(api_key: str, model: str, messages: list,
-                    system: str = None, max_tokens: int = 2048) -> str:
+                    system: str = None, max_tokens: int = 8192, temperature: Optional[float] = 0.7) -> str:
     headers = {
         "x-api-key": api_key,
         "anthropic-version": "2023-06-01",
         "Content-Type": "application/json",
     }
     payload = {"model": model, "messages": messages, "max_tokens": max_tokens}
+    if temperature is not None: payload["temperature"] = temperature
     if system:
         payload["system"] = system
 
@@ -50,7 +52,7 @@ def _call_anthropic(api_key: str, model: str, messages: list,
 
 
 def _call_gemini(api_key: str, model: str, messages: list,
-                 system: str = None, max_tokens: int = 2048) -> str:
+                 system: str = None, max_tokens: int = None, temperature: Optional[float] = 0.7) -> str:
     """Google Gemini via REST."""
     parts = []
     if system:
@@ -66,15 +68,17 @@ def _call_gemini(api_key: str, model: str, messages: list,
     headers = {"x-goog-api-key": api_key, "Content-Type": "application/json"}
     payload = {
         "contents": contents,
-        "generationConfig": {"maxOutputTokens": max_tokens, "temperature": 0.7},
+        "generationConfig": {},
     }
+    if temperature is not None: payload["generationConfig"]["temperature"] = temperature
+    if max_tokens is not None: payload["generationConfig"]["maxOutputTokens"] = max_tokens
     resp = requests.post(url, headers=headers, json=payload, timeout=60)
     resp.raise_for_status()
     return resp.json()["candidates"][0]["content"]["parts"][0]["text"]
 
 
 def _call_huggingface(api_key: str, model: str, messages: list,
-                      system: str = None, max_tokens: int = 1024) -> str:
+                      system: str = None, max_tokens: int = None, temperature: Optional[float] = 0.7) -> str:
     """Call Hugging Face's current OpenAI-compatible Inference Providers API."""
     payload_messages = []
     if system:
@@ -86,9 +90,9 @@ def _call_huggingface(api_key: str, model: str, messages: list,
     payload = {
         "model": model,
         "messages": payload_messages,
-        "max_tokens": max_tokens,
-        "temperature": 0.7,
     }
+    if temperature is not None: payload["temperature"] = temperature
+    if max_tokens is not None: payload["max_tokens"] = max_tokens
     resp = requests.post("https://router.huggingface.co/v1/chat/completions",
                          headers=headers, json=payload, timeout=90)
     resp.raise_for_status()
@@ -101,22 +105,22 @@ def _call_huggingface(api_key: str, model: str, messages: list,
 # ---------------------------------------------------------------------------
 
 def call_ai(provider: str, model: str, api_key: str, messages: list,
-            system: str = None, max_tokens: int = 2048) -> str:
+            system: str = None, max_tokens: int = None, temperature: float = 0.7) -> str:
     """Route to correct provider and return assistant reply string."""
     provider = provider.lower()
     try:
         if provider == "openai":
             return _call_openai_compatible(
-                "https://api.openai.com/v1", api_key, model, messages, system, max_tokens=max_tokens)
+                "https://api.openai.com/v1", api_key, model, messages, system, temperature=temperature, max_tokens=max_tokens)
         elif provider == "xai":
             return _call_openai_compatible(
-                "https://api.x.ai/v1", api_key, model, messages, system, max_tokens=max_tokens)
+                "https://api.x.ai/v1", api_key, model, messages, system, temperature=temperature, max_tokens=max_tokens)
         elif provider == "anthropic":
-            return _call_anthropic(api_key, model, messages, system, max_tokens)
+            return _call_anthropic(api_key, model, messages, system, max_tokens or 8192, temperature=temperature)
         elif provider == "google":
-            return _call_gemini(api_key, model, messages, system, max_tokens)
+            return _call_gemini(api_key, model, messages, system, max_tokens, temperature=temperature)
         elif provider == "huggingface":
-            return _call_huggingface(api_key, model, messages, system, max_tokens)
+            return _call_huggingface(api_key, model, messages, system, max_tokens, temperature=temperature)
         else:
             return f"[LearnOrbit] Unknown AI provider: {provider}"
     except requests.exceptions.HTTPError as e:
@@ -146,6 +150,15 @@ def call_ai(provider: str, model: str, api_key: str, messages: list,
             return f"API error ({status}): {detail[:500]}"
     except Exception as e:
         return f"Unexpected error: {str(e)[:300]}"
+
+
+def supports_temperature(provider: str, model: str) -> bool:
+    """Whether the selected API/model accepts a temperature parameter."""
+    provider = (provider or "").lower()
+    model = (model or "").lower()
+    if provider == "openai" and model.startswith(("o1", "o3", "o4", "gpt-5")):
+        return False
+    return provider in {"openai", "xai", "anthropic", "google"}
 
 
 # ---------------------------------------------------------------------------

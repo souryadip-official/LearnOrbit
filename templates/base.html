@@ -45,7 +45,7 @@
       });
       marked.setOptions({breaks: true, gfm: true});
       let html = marked.parse(protectedText);
-      math.forEach((formula, index) => { html = html.replace(`MATHJAXFORMULATOKEN${index}END`, formula); });
+      math.forEach((formula, index) => { html = html.replace(`MATHJAXFORMULATOKEN${index}END`, formula.replace(/\\\*/g, '\\cdot ')); });
       return html;
     };
     window.typesetMath = function (root = document.body) {
@@ -75,6 +75,11 @@
 
   <!-- Toast container -->
   <div id="toast-container" aria-live="polite"></div>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <script>document.addEventListener('DOMContentLoaded',()=>showToast({{ message|tojson }}, {{ category|tojson }}));</script>
+    {% endfor %}
+  {% endwith %}
 
   {% if current_user.is_authenticated %}
   <audio id="global-focus-audio" preload="metadata"></audio>
@@ -96,14 +101,14 @@
       <a href="{{ url_for('games.index') }}" class="nav-item {% if 'games' in request.endpoint %}active{% endif %}">
         <span class="nav-icon"><i data-lucide="gamepad-2" aria-hidden="true"></i></span><span class="nav-label">Brain Games</span>
       </a>
-      <a href="{{ url_for('features.relax') }}" class="nav-item"><span class="nav-icon"><i data-lucide="timer"></i></span><span class="nav-label">Relax & Break</span></a>
-      <a href="{{ url_for('features.music') }}" class="nav-item"><span class="nav-icon"><i data-lucide="audio-lines"></i></span><span class="nav-label">Focus Music</span></a>
-      <a href="{{ url_for('features.calendar') }}" class="nav-item"><span class="nav-icon"><i data-lucide="calendar-days"></i></span><span class="nav-label">Calendar</span></a>
+      <a href="{{ url_for('features.relax') }}" class="nav-item {% if request.endpoint == 'features.relax' %}active{% endif %}"><span class="nav-icon"><i data-lucide="timer"></i></span><span class="nav-label">Relax & Break</span></a>
+      <a href="{{ url_for('features.music') }}" class="nav-item {% if request.endpoint == 'features.music' %}active{% endif %}"><span class="nav-icon"><i data-lucide="audio-lines"></i></span><span class="nav-label">Focus Music</span></a>
+      <a href="{{ url_for('features.calendar') }}" class="nav-item {% if request.endpoint == 'features.calendar' %}active{% endif %}"><span class="nav-icon"><i data-lucide="calendar-days"></i></span><span class="nav-label">Calendar</span></a>
       <a href="{{ url_for('features.profile') }}" class="nav-item {% if 'features.profile' == request.endpoint %}active{% endif %}"><span class="nav-icon"><i data-lucide="user-round"></i></span><span class="nav-label">My Profile</span>
       </a>
-      <a href="{{ url_for('features.video') }}" class="nav-item"><span class="nav-icon"><i data-lucide="clapperboard"></i></span><span class="nav-label">Video Study</span></a>
-      <a href="{{ url_for('features.practice_code') }}" class="nav-item"><span class="nav-icon"><i data-lucide="square-terminal"></i></span><span class="nav-label">Practice Code</span></a>
-      <a href="{{ url_for('features.pricing') }}" class="nav-item"><span class="nav-icon"><i data-lucide="badge-dollar-sign"></i></span><span class="nav-label">Plans & Billing</span></a>
+      <a href="{{ url_for('features.video') }}" class="nav-item {% if request.endpoint == 'features.video' %}active{% endif %}"><span class="nav-icon"><i data-lucide="clapperboard"></i></span><span class="nav-label">Video Study</span></a>
+      <a href="{{ url_for('features.practice_code') }}" class="nav-item {% if request.endpoint == 'features.practice_code' %}active{% endif %}"><span class="nav-icon"><i data-lucide="square-terminal"></i></span><span class="nav-label">Practice Code</span></a>
+      <a href="{{ url_for('features.pricing') }}" class="nav-item {% if request.endpoint in ('features.pricing','features.checkout','features.checkout_page') %}active{% endif %}"><span class="nav-icon"><i data-lucide="badge-dollar-sign"></i></span><span class="nav-label">Plans & Billing</span></a>
       <a href="{{ url_for('auth.settings') }}" class="nav-item {% if 'settings' in request.endpoint %}active{% endif %}">
         <span class="nav-icon"><i data-lucide="settings-2" aria-hidden="true"></i></span><span class="nav-label">Settings</span>
       </a>
@@ -144,20 +149,16 @@
     </header>
 
     <main class="main-content">
-      {% with messages = get_flashed_messages(with_categories=true) %}
-        {% for category, message in messages %}
-          <script>document.addEventListener('DOMContentLoaded',()=>showToast({{ message|tojson }}, {{ category|tojson }}));</script>
-        {% endfor %}
-      {% endwith %}
-
       {% block content %}{% endblock %}
     </main>
+    <footer class="app-footer"><a class="footer-brand-link" href="{{ url_for('index') }}">LearnOrbit</a><span>Built by Souryadip Mallick</span><a href="https://www.linkedin.com/in/souryadip-mallick-03b303294/" target="_blank" rel="noopener noreferrer">LinkedIn</a><a href="https://github.com/souryadip-official/" target="_blank" rel="noopener noreferrer"><i data-lucide="coffee"></i> Buy me a coffee</a><small>AI providers: OpenAI, Google Gemini, Anthropic, xAI, Hugging Face · Code runner: Judge0 · Icons: Lucide · Math: MathJax</small></footer>
   </div>
   {% else %}
   <!-- Unauthenticated layout -->
   <main>
     {% block public_content %}{% endblock %}
   </main>
+  {% if request.endpoint != 'index' %}<footer class="app-footer public-app-footer"><a class="footer-brand-link" href="{{ url_for('index') }}">LearnOrbit</a><span>Built by Souryadip Mallick</span><a href="https://www.linkedin.com/in/souryadip-mallick-03b303294/" target="_blank" rel="noopener noreferrer">LinkedIn</a><a href="https://github.com/souryadip-official/" target="_blank" rel="noopener noreferrer"><i data-lucide="coffee"></i> Buy me a coffee</a><small>AI providers: OpenAI, Google Gemini, Anthropic, xAI, Hugging Face · Code runner: Judge0 · Icons: Lucide · Math: MathJax</small></footer>{% endif %}
   {% endif %}
 
   <script src="{{ url_for('static', filename='js/main.js') }}"></script>

@@ -65,7 +65,7 @@
   onScroll();
 })();
 
-// Fold landing-page content backward as it reaches the floating navbar edge.
+// Fade and blur each card as it passes beneath the sticky navigation.
 (function initLandingRoll() {
   const nav = document.getElementById('landing-nav');
   if (!nav || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -82,10 +82,8 @@
       const distance = edge - bounds.top;
       const range = Math.min(220, Math.max(90, bounds.height * 1.2));
       const progress = Math.max(0, Math.min(1, distance / range));
-      item.style.setProperty('--roll-angle', `${-11 * progress}deg`);
-      item.style.setProperty('--roll-y', `${-7 * progress}px`);
-      item.style.setProperty('--roll-blur', `${2.2 * progress}px`);
-      item.style.setProperty('--roll-opacity', `${1 - 0.28 * progress}`);
+      item.style.setProperty('--roll-blur', `${3 * progress}px`);
+      item.style.setProperty('--roll-opacity', `${1 - 0.45 * progress}`);
     });
   }
   function requestUpdate() {

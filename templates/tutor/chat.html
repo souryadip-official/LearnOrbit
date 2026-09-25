@@ -17,10 +17,11 @@
   <div class="byob-toolbar">
     <div><strong>BYOB · Bring Your Own Book</strong><small>Upload topic notes as a text PDF to ground your tutor's answers.</small></div>
     {% if session.status == 'active' %}<label class="btn-secondary byob-upload"><i data-lucide="paperclip"></i><span id="byob-label">Attach PDF</span><input id="byob-file" type="file" accept="application/pdf,.pdf" hidden></label>{% endif %}
-    <button class="btn-sm hidden" id="open-pdf"><i data-lucide="panel-right-open"></i><span>Open notes</span></button>
+    <button class="btn-sm hidden" id="open-pdf"><i data-lucide="panel-right-open"></i><span>Open preview</span></button>
   </div>
+  <section class="document-library hidden" id="document-library" aria-label="Documents for this session"><strong><i data-lucide="files"></i> Session documents</strong><div id="document-list"></div></section>
   <div class="chat-workspace" id="chat-workspace">
-  <aside class="pdf-pane hidden" id="pdf-pane"><div class="pdf-pane-head"><strong id="pdf-title">Study notes</strong><label class="sr-only" for="pdf-width">Document pane width</label><input id="pdf-width" type="range" min="28" max="65" value="42" aria-label="Adjust document pane width"><button class="btn-sm" id="close-pdf" aria-label="Close notes"><i data-lucide="x"></i><span>Close</span></button></div><iframe id="pdf-frame" title="Uploaded study notes"></iframe></aside>
+  <aside class="pdf-pane hidden" id="pdf-pane"><div class="pdf-pane-head"><strong id="pdf-title">Study notes</strong><button class="btn-sm" id="pdf-narrow" aria-label="Narrow preview"><i data-lucide="minus"></i></button><button class="btn-sm" id="pdf-widen" aria-label="Widen preview"><i data-lucide="plus"></i></button><button class="btn-sm" id="close-pdf" aria-label="Close notes"><i data-lucide="x"></i><span>Close</span></button></div><iframe id="pdf-frame" title="Uploaded study notes"></iframe></aside>
   <div class="chat-column">
   <!-- Misconception alert (hidden by default) -->
   <div class="misconception-alert hidden" id="misconception-alert">
@@ -78,6 +79,7 @@
 
   <!-- Chat input -->
   {% if session.status == 'active' %}<div class="chat-input-bar">
+    <div class="chat-compose-tools">{% if temperature_supported %}<details class="temperature-control"><summary class="btn-secondary"><i data-lucide="sliders-horizontal"></i><span>Creativity</span><b id="temperature-value">0.7</b></summary><label for="temperature-slider">Response creativity <span>Focused ↔ imaginative</span><input id="temperature-slider" type="range" min="0" max="2" step="0.1" value="0.7"></label></details>{% else %}<span class="temperature-unavailable" title="This model does not accept a temperature setting."><i data-lucide="sliders-horizontal"></i> Creativity is not supported by this model</span>{% endif %}</div>
     <div class="chat-input-wrap">
       <textarea
         id="chat-input"
@@ -107,7 +109,7 @@
   <div class="modal-card animate__animated animate__zoomIn">
     <div class="modal-icon"><i data-lucide="flag" aria-hidden="true"></i></div>
     <h3>End this session?</h3>
-    <p>Your mastery score will be updated and you'll head to the quiz. Make sure you've covered everything you wanted!</p>
+    <p>You can finish the learning session now and take the optional quiz here or later from your session list. Mastery updates after you submit it.</p>
     <div class="modal-actions">
       <button class="btn-secondary" id="cancel-end">Keep Learning</button>
       <button class="btn-danger" id="confirm-end">End & Take Quiz →</button>
@@ -119,12 +121,19 @@
 {% block scripts %}
 <script>
 const SESSION_ID = {{ session.id }};
+const MODEL_TEMP_KEY = {{ ('learnorbit-temperature-' ~ current_user.ai_provider ~ '-' ~ current_user.ai_model)|tojson }};
+const temperatureSlider=document.getElementById('temperature-slider');
+let chatTemperature=Number(localStorage.getItem(MODEL_TEMP_KEY)||0.7);
+if(temperatureSlider){temperatureSlider.value=chatTemperature;document.getElementById('temperature-value').textContent=chatTemperature.toFixed(1);temperatureSlider.addEventListener('input',()=>{chatTemperature=Number(temperatureSlider.value);document.getElementById('temperature-value').textContent=chatTemperature.toFixed(1);localStorage.setItem(MODEL_TEMP_KEY,String(chatTemperature))})}
 // Flask-WTF exposes its request token in the base template meta tag.
 const CSRF = document.querySelector('meta[name="csrf-token"]')?.content || '';
 const docInput = document.getElementById('byob-file');
 const openPdf = document.getElementById('open-pdf');
 const pdfPane = document.getElementById('pdf-pane');
 let currentPdf = null;
+const documentList=document.getElementById('document-list');
+function renderDocuments(docs){document.getElementById('document-library').classList.toggle('hidden',!docs.length);openPdf.classList.toggle('hidden',!docs.length);documentList.replaceChildren();docs.forEach(doc=>{const row=document.createElement('div');row.className='document-row';const name=document.createElement('span');name.textContent=doc.filename;const button=document.createElement('button');button.type='button';button.className='btn-sm';button.innerHTML='<i data-lucide="eye"></i><span>Preview</span>';button.onclick=()=>previewDocument(doc);row.append(name,button);documentList.append(row)});window.refreshIcons?.()}
+function previewDocument(doc){currentPdf=doc;if(!doc.can_preview){showToast('PDF preview is a Scholar/Academy feature. Your document is still attached to this tutor session.','info');return}document.getElementById('pdf-title').textContent=doc.filename;document.getElementById('pdf-frame').src=doc.url;pdfPane.classList.remove('hidden')}
 docInput?.addEventListener('change', async () => {
   const file = docInput.files?.[0]; if (!file) return;
   const form = new FormData(); form.append('file', file);
@@ -133,18 +142,17 @@ docInput?.addEventListener('change', async () => {
     const response = await fetch(`/features/session/${SESSION_ID}/documents`, {method:'POST',headers:{'X-CSRFToken':CSRF},body:form});
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || 'Could not upload the PDF.');
-    currentPdf = data.document; document.getElementById('pdf-title').textContent = currentPdf.filename;
-    document.getElementById('pdf-frame').src = currentPdf.url;
-    openPdf.classList.remove('hidden'); pdfPane.classList.remove('hidden');
+    currentPdf = data.document;
+    fetch(`/features/session/${SESSION_ID}/documents`).then(r=>r.json()).then(renderDocuments);
     document.getElementById('byob-label').textContent = 'Add another PDF';
     showToast('PDF checked and added as tutor context.', 'success');
   } catch(error) { showToast(error.message, 'error'); document.getElementById('byob-label').textContent='Attach PDF'; }
   finally { docInput.value=''; }
 });
-openPdf?.addEventListener('click', () => pdfPane.classList.remove('hidden'));
+openPdf?.addEventListener('click', () => currentPdf&&previewDocument(currentPdf));
 document.getElementById('close-pdf')?.addEventListener('click', () => pdfPane.classList.add('hidden'));
-document.getElementById('pdf-width')?.addEventListener('input', e => {pdfPane.style.flexBasis=`${e.target.value}%`;pdfPane.style.width=`${e.target.value}%`;});
-fetch(`/features/session/${SESSION_ID}/documents`).then(r=>r.json()).then(docs=>{if(!docs.length)return;currentPdf=docs[0];document.getElementById('pdf-title').textContent=currentPdf.filename;document.getElementById('pdf-frame').src=currentPdf.url;openPdf?.classList.remove('hidden');const label=document.getElementById('byob-label');if(label)label.textContent='Add another PDF';}).catch(()=>{});
+let paneWidth=42;document.getElementById('pdf-narrow')?.addEventListener('click',()=>{paneWidth=Math.max(28,paneWidth-5);pdfPane.style.flexBasis=`${paneWidth}%`});document.getElementById('pdf-widen')?.addEventListener('click',()=>{paneWidth=Math.min(65,paneWidth+5);pdfPane.style.flexBasis=`${paneWidth}%`});
+fetch(`/features/session/${SESSION_ID}/documents`).then(r=>r.json()).then(docs=>{renderDocuments(docs);if(docs.length){currentPdf=docs[docs.length-1];const label=document.getElementById('byob-label');if(label)label.textContent='Add another PDF';}}).catch(()=>{});
 
 // Render existing markdown messages on load
 document.querySelectorAll('.markdown-body[data-raw]').forEach(el => {
@@ -195,7 +203,7 @@ async function sendMessage() {
     const res = await fetch(`/tutor/${SESSION_ID}/message`, {
       method: 'POST',
       headers: {'Content-Type':'application/json','X-CSRFToken':CSRF},
-      body: JSON.stringify({message: text})
+      body: JSON.stringify({message: text, temperature: chatTemperature})
     });
     const json = await res.json();
 

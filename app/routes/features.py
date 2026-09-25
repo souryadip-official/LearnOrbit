@@ -5,12 +5,13 @@ import re
 import math
 import mimetypes
 from collections import Counter
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
+import calendar as pycalendar
 from werkzeug.utils import secure_filename
 from flask import Blueprint, current_app, render_template, request, jsonify, send_file, abort, session
 from flask_login import login_required, current_user
 from app import db
-from app.models import UserProfile, LearningSession, SessionDocument, CalendarEvent, Subscription, PaymentRecord, CodeSnippet, LearningBehavior, TopicMastery, EmailOTP
+from app.models import UserProfile, LearningSession, SessionDocument, CalendarEvent, Subscription, PaymentRecord, CodeSnippet, LearningBehavior, TopicMastery, EmailOTP, AttendanceStamp
 
 features_bp = Blueprint("features", __name__)
 AVATARS = [f"orbit-{i}" for i in range(1, 16)]
@@ -115,6 +116,9 @@ def profile():
         record.date_of_birth = request.form.get("date_of_birth", "")[:10]
         record.grade = request.form.get("grade", "")[:40]
         record.teaching_style = request.form.get("teaching_style", "balanced")[:32]
+        behavior = LearningBehavior.query.filter_by(user_id=current_user.id).first()
+        if behavior:
+            behavior.preferred_style = record.teaching_style
         chosen = request.form.get("avatar", "orbit-1")
         if chosen in AVATARS: record.avatar = chosen
         picture = request.files.get("picture")
@@ -175,6 +179,7 @@ def delete_account():
     EmailOTP.query.filter_by(user_id=user.id).delete(synchronize_session=False)
     LearningBehavior.query.filter_by(user_id=user.id).delete(synchronize_session=False)
     TopicMastery.query.filter_by(user_id=user.id).delete(synchronize_session=False)
+    AttendanceStamp.query.filter_by(user_id=user.id).delete(synchronize_session=False)
     UserProfile.query.filter_by(user_id=user.id).delete(synchronize_session=False)
     for folder in (os.path.join(current_app.instance_path, "documents", str(user.id)), os.path.join(current_app.instance_path, "avatars", str(user.id))):
         if os.path.isdir(folder):
@@ -189,7 +194,7 @@ def delete_account():
 def session_documents(session_id):
     study = LearningSession.query.filter_by(id=session_id, user_id=current_user.id).first_or_404()
     if request.method == "GET":
-        return jsonify([{"id": d.id, "filename": d.filename, "url": f"/features/documents/{d.id}"} for d in SessionDocument.query.filter_by(session_id=study.id, user_id=current_user.id).all()])
+        return jsonify([{"id": d.id, "filename": d.filename, "url": f"/features/documents/{d.id}", "can_preview": current_user.plan in {"pro", "team"}} for d in SessionDocument.query.filter_by(session_id=study.id, user_id=current_user.id).all()])
     upload = request.files.get("file")
     if not upload or not upload.filename.lower().endswith(".pdf"):
         return jsonify({"error": "Upload a PDF file."}), 400
@@ -228,13 +233,15 @@ def session_documents(session_id):
     doc = SessionDocument(session_id=study.id, user_id=current_user.id, filename=filename, storage_path=path, extracted_text=text,
                           embedding_provider=current_user.ai_provider, embeddings_json=json.dumps(stored_vectors) if stored_vectors else None)
     db.session.add(doc); db.session.commit()
-    return jsonify({"success": True, "document": {"id": doc.id, "filename": filename, "url": f"/features/documents/{doc.id}"}})
+    return jsonify({"success": True, "document": {"id": doc.id, "filename": filename, "url": f"/features/documents/{doc.id}", "can_preview": current_user.plan in {"pro", "team"}}})
 
 
 @features_bp.route("/documents/<int:document_id>")
 @login_required
 def open_document(document_id):
     doc = SessionDocument.query.filter_by(id=document_id, user_id=current_user.id).first_or_404()
+    if current_user.plan not in {"pro", "team"}:
+        return jsonify({"error": "Split-screen PDF preview is available on Scholar and Academy. Your uploaded document remains available to ground this session."}), 403
     return send_file(doc.storage_path, mimetype=mimetypes.guess_type(doc.filename)[0] or "application/octet-stream", as_attachment=False, download_name=doc.filename)
 
 
@@ -259,8 +266,29 @@ def calendar():
         if not event.title: return jsonify({"error": "Event title is required."}), 400
         db.session.add(event); db.session.commit()
         return jsonify({"success": True, "id": event.id})
+    now = datetime.utcnow()
+    year = request.args.get("year", now.year, type=int); month = request.args.get("month", now.month, type=int)
+    if month < 1 or month > 12: month, year = now.month, now.year
+    first = date(year, month, 1); start = first - timedelta(days=first.weekday())
+    grid = [start + timedelta(days=i) for i in range(42)]
+    attendance = {row.attended_on for row in AttendanceStamp.query.filter(
+        AttendanceStamp.user_id == current_user.id,
+        AttendanceStamp.attended_on >= date(year, 1, 1),
+        AttendanceStamp.attended_on <= date(year, 12, 31)).all()}
+    event_days = {row.starts_at.date() for row in CalendarEvent.query.filter_by(user_id=current_user.id).all()}
     rows = CalendarEvent.query.filter_by(user_id=current_user.id).order_by(CalendarEvent.starts_at).all()
-    return render_template("features/calendar.html", events=rows)
+    prev_month = (first - timedelta(days=1)); next_month = (date(year, month, pycalendar.monthrange(year, month)[1]) + timedelta(days=1))
+    month_attendance = sum(1 for day in attendance if day.month == month)
+    return render_template("features/calendar.html", events=rows, grid=grid, view_year=year,
+        view_month=month, month_name=pycalendar.month_name[month], today=date.today(), attendance=attendance,
+        event_days=event_days, month_attendance=month_attendance, year_attendance=len(attendance),
+        prev_month=prev_month, next_month=next_month)
+
+
+@features_bp.route("/calculator")
+@login_required
+def calculator():
+    return render_template("features/calculator.html")
 
 
 @features_bp.route("/video")
@@ -339,6 +367,13 @@ def pricing():
     return render_template("features/pricing.html", plans=PLANS, subscription=active)
 
 
+@features_bp.route("/checkout/<plan>")
+@login_required
+def checkout_page(plan):
+    if plan not in PLANS: abort(404)
+    return render_template("features/checkout.html", plan=plan, plan_name=PLANS[plan][1], amount=PLANS[plan][0])
+
+
 @features_bp.route("/checkout", methods=["POST"])
 @login_required
 def checkout():
@@ -380,10 +415,23 @@ def _invoice_pdf(payment):
     from fpdf import FPDF
     import unicodedata
     def plain(value): return unicodedata.normalize("NFKD", str(value)).encode("ascii", "ignore").decode()
-    pdf = FPDF(); pdf.add_page(); pdf.set_font("Helvetica", "B", 22); pdf.cell(0, 14, "LearnOrbit - Demo Invoice", new_x="LMARGIN", new_y="NEXT")
-    pdf.set_font("Helvetica", size=11); pdf.set_x(pdf.l_margin)
-    for line in [f"Reference: {payment.reference}", f"Student: {current_user.username} ({current_user.email})", f"Plan: {PLANS[payment.plan][1]}", f"Amount: USD {payment.amount:.2f}", f"Date: {payment.created_at.strftime('%Y-%m-%d')}", "Status: DEMO ONLY - no real charge processed"]:
-        pdf.set_x(pdf.l_margin); pdf.multi_cell(pdf.w - pdf.l_margin - pdf.r_margin, 9, plain(line))
+    pdf = FPDF(); pdf.add_page(); pdf.set_auto_page_break(auto=False)
+    pdf.set_fill_color(40,107,91);pdf.rect(0,0,210,12,"F")
+    pdf.set_xy(18,25);pdf.set_font("Helvetica","B",24);pdf.set_text_color(32,43,38);pdf.cell(112,13,"LearnOrbit",new_x="RIGHT",new_y="TOP")
+    pdf.set_font("Helvetica","B",11);pdf.set_text_color(40,107,91);pdf.cell(0,13,"DEMO INVOICE",align="R",new_x="LMARGIN",new_y="NEXT")
+    pdf.set_draw_color(40,107,91);pdf.set_line_width(.8);pdf.line(18,45,192,45)
+    pdf.set_xy(18,55);pdf.set_font("Helvetica","",10);pdf.set_text_color(90,104,96);pdf.cell(0,7,"PAYMENT REFERENCE",new_x="LMARGIN",new_y="NEXT")
+    pdf.set_font("Helvetica","B",13);pdf.set_text_color(32,43,38);pdf.cell(0,9,plain(payment.reference),new_x="LMARGIN",new_y="NEXT")
+    pdf.set_fill_color(226,243,235);pdf.set_draw_color(186,214,201);pdf.rect(18,83,174,74,"DF")
+    details=[("STUDENT",f"{current_user.username} ({current_user.email})"),("PLAN",PLANS[payment.plan][1]),("ISSUED",payment.created_at.strftime('%d %B %Y')),("STATUS","DEMO ONLY - no real charge processed")]
+    y=92
+    for label,value in details:
+        pdf.set_xy(26,y);pdf.set_font("Helvetica","B",8);pdf.set_text_color(40,107,91);pdf.cell(35,7,label)
+        pdf.set_font("Helvetica","",10);pdf.set_text_color(32,43,38);pdf.cell(0,7,plain(value));y+=14
+    pdf.set_draw_color(40,107,91);pdf.set_line_width(1.5);pdf.ellipse(139,174,48,30,"D");pdf.set_font("Helvetica","B",10);pdf.set_text_color(40,107,91);pdf.set_xy(141,182);pdf.cell(44,6,"LEARNORBIT",align="C",new_x="LMARGIN",new_y="NEXT");pdf.set_font("Helvetica","B",7);pdf.set_xy(141,189);pdf.cell(44,5,"DEMO PAYMENT",align="C")
+    pdf.set_xy(18,173);pdf.set_font("Helvetica","B",10);pdf.set_text_color(90,104,96);pdf.cell(45,9,"TOTAL",new_x="LMARGIN",new_y="NEXT");pdf.set_font("Helvetica","B",22);pdf.set_text_color(32,43,38);pdf.cell(100,15,plain(f"USD {payment.amount:.2f}"))
+    pdf.set_xy(18,230);pdf.set_font("Helvetica","I",9);pdf.set_text_color(90,104,96);pdf.multi_cell(130,6,"This document records a LearnOrbit demonstration checkout. No real payment was processed.")
+    pdf.set_fill_color(40,107,91);pdf.rect(0,285,210,12,"F")
     return bytes(pdf.output())
 
 

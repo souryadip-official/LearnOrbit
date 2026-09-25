@@ -124,7 +124,7 @@ document.getElementById('register-form').addEventListener('submit', async e => {
   finally { btn.querySelector('.btn-text').classList.remove('hidden'); btn.querySelector('.btn-spinner').classList.add('hidden'); btn.disabled=false; }
 });
 
-document.getElementById('otp-form').addEventListener('submit',async e=>{e.preventDefault();const r=await fetch('{{ url_for("auth.verify_otp") }}',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':document.querySelector('meta[name="csrf-token"]')?.content||''},body:JSON.stringify({code:document.getElementById('otp-code').value})});const d=await r.json();if(d.success)location.href=d.redirect;else showToast(d.error,'error')});
+document.getElementById('otp-form').addEventListener('submit',async e=>{e.preventDefault();const r=await fetch('{{ url_for("auth.verify_otp") }}',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':document.querySelector('meta[name="csrf-token"]')?.content||''},body:JSON.stringify({code:document.getElementById('otp-code').value})});const d=await r.json();if(d.success){showToast(d.message||'Email verified. Please log in.','success');setTimeout(()=>location.href=d.redirect,800)}else showToast(d.error,'error')});
 document.getElementById('resend-otp').onclick=async()=>{const r=await fetch('{{ url_for("auth.resend_otp") }}',{method:'POST',headers:{'X-CSRFToken':document.querySelector('meta[name="csrf-token"]')?.content||''}});const d=await r.json();showToast(d.message||d.error,r.ok?'success':'error')};
 
 document.querySelector('.input-eye').addEventListener('click', function(){

@@ -62,6 +62,17 @@ def create_app(config_name=None):
             row.current_period_end = row.current_period_end + timedelta(days=30)
         db.session.commit()
 
+    @app.before_request
+    def record_daily_attendance():
+        from flask_login import current_user
+        from datetime import date
+        if not current_user.is_authenticated or request.endpoint == "static":
+            return
+        from .models import AttendanceStamp
+        if not AttendanceStamp.query.filter_by(user_id=current_user.id, attended_on=date.today()).first():
+            db.session.add(AttendanceStamp(user_id=current_user.id, attended_on=date.today()))
+            db.session.commit()
+
     @app.errorhandler(CSRFError)
     def handle_csrf_error(error):
         # AJAX callers expect JSON; Flask-WTF's default HTML 400 obscures the cause.

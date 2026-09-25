@@ -912,13 +912,13 @@ html[data-theme="dark"] .theme-btn-landing { background: #384452; color: #f5f2e9
 .landing-nav { z-index: 1000; }
 .landing-nav .nav-container { position: relative; z-index: 2; }
 .landing-roll-item {
-  transform-origin: 50% 0%;
-  transform: perspective(900px) rotateX(var(--roll-angle, 0deg)) translateY(var(--roll-y, 0px));
+  transform: none !important;
   opacity: var(--roll-opacity, 1);
   filter: blur(var(--roll-blur, 0px));
   backface-visibility: hidden;
-  will-change: transform, opacity, filter;
+  will-change: opacity, filter;
 }
+.hero-section, .features-section, .how-section, .games-section, .games-preview-section, .pricing-section, .cta-section { overflow: clip; }
 .landing-nav.scrolled .nav-container { background: #fffdf6; }
 html[data-theme="dark"] .landing-nav.scrolled .nav-container { background: #27313e; }
 .cta-section { color: #20372e; }
