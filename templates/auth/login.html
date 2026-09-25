@@ -4,12 +4,30 @@
 
 {% block public_content %}
 <div class="auth-page">
+  <a href="{{ url_for('index') }}" class="auth-back-link"><i data-lucide="arrow-left" aria-hidden="true"></i><span>Back to home</span></a>
+  <div class="auth-layout">
+  <aside class="auth-aside auth-aside-login" aria-label="A note from your study buddy">
+    <svg class="auth-student-art" viewBox="0 0 360 300" role="img" aria-label="A cheerful student ready to study">
+      <path d="M27 222c18-52 56-81 117-75 43 5 75-23 111-15 49 11 77 48 77 91v43H27z" fill="#c9c0ef" stroke="currentColor" stroke-width="5"/>
+      <path d="M105 119c0-45 31-78 75-78s75 33 75 78v56H105z" fill="#f3bd8e" stroke="currentColor" stroke-width="5"/>
+      <path d="M101 119c-3-58 29-93 83-93 45 0 72 25 79 67-28-20-53-26-78-21-25 5-44 18-84 47" fill="#3c3935" stroke="currentColor" stroke-width="5" stroke-linejoin="round"/>
+      <path d="M140 124h23m31 0h23" stroke="currentColor" stroke-width="7" stroke-linecap="round"/><circle cx="151" cy="124" r="5" fill="#202b26"/><circle cx="207" cy="124" r="5" fill="#202b26"/>
+      <path d="M158 150c13 14 31 14 44 0" fill="none" stroke="#202b26" stroke-width="5" stroke-linecap="round"/>
+      <path d="M103 203c20-24 47-35 77-35s57 11 77 35v66H103z" fill="#83d2be" stroke="currentColor" stroke-width="5"/>
+      <rect x="143" y="213" width="75" height="57" rx="8" fill="#fffdf6" stroke="currentColor" stroke-width="4"/><path d="M157 229h46m-46 12h37m-37 12h27" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+      <path d="m49 75 8 15 17 3-13 11 3 17-15-8-15 8 3-17-13-11 17-3z" fill="#f3d66b" stroke="currentColor" stroke-width="3"/>
+      <path d="M289 68c15 2 23 12 22 25-2 12-12 19-25 17 9-6 12-18 3-26z" fill="#f3d66b" stroke="currentColor" stroke-width="3"/>
+    </svg>
+    <p class="auth-aside-kicker">Your ideas missed you</p>
+    <h2>Pick up where your brain left off.</h2>
+    <p class="auth-joke">What did the notebook say after a nap? “I’m refreshed and ready to take notes.”</p>
+  </aside>
   <div class="auth-card animate__animated animate__fadeInUp">
     <div class="auth-brand">
-      <span class="brand-icon-lg">⚡</span>
+      <span class="brand-icon-lg"><i data-lucide="orbit" aria-hidden="true"></i></span>
       <span class="brand-text">LearnOrbit</span>
     </div>
-    <h2 class="auth-title">Welcome back, learner! 👋</h2>
+    <h2 class="auth-title">Welcome back, learner.</h2>
     <p class="auth-sub">Your orbit awaits. Let's pick up where you left off.</p>
 
     <form id="login-form" class="auth-form" novalidate>
@@ -24,7 +42,7 @@
         <div class="input-wrap">
           <input class="form-input" type="password" id="password" name="password"
                  placeholder="••••••••" autocomplete="current-password" required />
-          <button type="button" class="input-eye" data-target="password">👁</button>
+          <button type="button" class="input-eye" data-target="password" aria-label="Show password"><i data-lucide="eye" aria-hidden="true"></i><span>Show</span></button>
         </div>
       </div>
       <div class="form-row">
@@ -35,14 +53,16 @@
       </div>
       <button type="submit" class="btn-auth" id="login-btn">
         <span class="btn-text">Log In →</span>
-        <span class="btn-spinner hidden">⏳</span>
+        <span class="btn-spinner hidden"><i data-lucide="loader-circle" aria-hidden="true"></i><span>Signing in…</span></span>
       </button>
     </form>
+    <form id="otp-form" class="auth-form hidden" novalidate><h3>Verify it’s you</h3><p>Enter the six-digit code sent to your email. It expires in ten minutes.</p><label class="form-label" for="otp-code">Verification code</label><input class="form-input" id="otp-code" inputmode="numeric" maxlength="6" autocomplete="one-time-code"><button class="btn-auth" type="submit">Verify and log in</button><button class="btn-secondary" id="resend-otp" type="button">Send a new code</button></form>
 
     <div class="auth-divider">or</div>
     <div class="auth-switch">
-      New here? <a href="{{ url_for('auth.register') }}">Create your account ✨</a>
+      New here? <a href="{{ url_for('auth.register') }}">Create your account</a>
     </div>
+  </div>
   </div>
 </div>
 {% endblock %}
@@ -59,20 +79,26 @@ document.getElementById('login-form').addEventListener('submit', async e => {
   btn.disabled = true;
   try {
     const res = await fetch('{{ url_for("auth.login") }}', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
+      method: 'POST', headers: {'Content-Type':'application/json','X-CSRFToken':document.querySelector('meta[name="csrf-token"]')?.content||''},
       body: JSON.stringify(data)
     });
     const json = await res.json();
-    if (json.success) { showToast('Welcome back! 🚀', 'success'); setTimeout(()=>window.location=json.redirect, 600); }
+    if (json.otp_required) { document.getElementById('login-form').classList.add('hidden'); document.getElementById('otp-form').classList.remove('hidden'); showToast(json.message,'success'); }
+    else if (json.success) { showToast('Welcome back!', 'success'); setTimeout(()=>window.location=json.redirect, 600); }
     else { (json.errors||['Login failed']).forEach(e=>showToast(e,'error')); }
   } catch { showToast('Network error. Try again.','error'); }
   finally { btn.querySelector('.btn-text').classList.remove('hidden'); btn.querySelector('.btn-spinner').classList.add('hidden'); btn.disabled=false; }
 });
 
+document.getElementById('otp-form').addEventListener('submit',async e=>{e.preventDefault();const r=await fetch('{{ url_for("auth.verify_otp") }}',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':document.querySelector('meta[name="csrf-token"]')?.content||''},body:JSON.stringify({code:document.getElementById('otp-code').value})});const d=await r.json();if(d.success)location.href=d.redirect;else showToast(d.error,'error')});
+document.getElementById('resend-otp').onclick=async()=>{const r=await fetch('{{ url_for("auth.resend_otp") }}',{method:'POST',headers:{'X-CSRFToken':document.querySelector('meta[name="csrf-token"]')?.content||''}});const d=await r.json();showToast(d.message||d.error,r.ok?'success':'error')};
+
 document.querySelector('.input-eye').addEventListener('click', function(){
   const inp = document.getElementById(this.dataset.target);
   inp.type = inp.type==='password'?'text':'password';
-  this.textContent = inp.type==='password'?'👁':'🙈';
+  this.setAttribute('aria-label', inp.type==='password'?'Show password':'Hide password');
+  this.innerHTML = `<i data-lucide="${inp.type==='password'?'eye':'eye-off'}" aria-hidden="true"></i><span>${inp.type==='password'?'Show':'Hide'}</span>`;
+  window.refreshIcons?.();
 });
 </script>
 {% endblock %}

@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const status = await requestJson(`/api/provider-key-status/${encodeURIComponent(provider)}`);
       if (provider === selectedProvider && !dirtyKeys.has(provider)) {
-        keyBadge.textContent = status.has_key ? '✅ Saved' : '❌ Not set';
+        keyBadge.textContent = status.has_key ? 'Saved' : 'Not set';
       }
     } catch {
       if (provider === selectedProvider) keyBadge.textContent = 'Key status unavailable';
@@ -155,7 +155,7 @@ document.addEventListener('DOMContentLoaded', () => {
       showToast(data.message || 'AI settings saved.', 'success');
       keyValues.set(selectedProvider, keyInput.value);
       dirtyKeys.delete(selectedProvider);
-      if (keyInput.value.trim()) keyBadge.textContent = '✅ Saved';
+      if (keyInput.value.trim()) keyBadge.textContent = 'Saved';
       else refreshKeyStatus(selectedProvider);
       page.dataset.currentProvider = selectedProvider;
       page.dataset.savedModel = model;
@@ -180,8 +180,9 @@ document.addEventListener('DOMContentLoaded', () => {
           item.classList.toggle('active', item.dataset.theme === data.theme));
         document.documentElement.setAttribute('data-theme', data.theme);
         document.querySelectorAll('#theme-icon,#theme-icon-top').forEach(icon => {
-          icon.textContent = data.theme === 'dark' ? '☀️' : '🌙';
+          window.setLucideIcon?.(icon, data.theme === 'dark' ? 'sun' : 'moon');
         });
+        window.refreshIcons?.();
         showToast(`${data.theme === 'dark' ? 'Dark' : 'Light'} mode activated.`, 'success');
       } catch (error) {
         showToast(`Could not save theme: ${error.message}`, 'error');
@@ -195,6 +196,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const button = event.currentTarget;
     const input = document.getElementById(button.dataset.target);
     input.type = input.type === 'password' ? 'text' : 'password';
-    button.textContent = input.type === 'password' ? '👁' : '🙈';
+    button.setAttribute('aria-label', input.type === 'password' ? 'Show API key' : 'Hide API key');
+    button.innerHTML = `<i data-lucide="${input.type === 'password' ? 'eye' : 'eye-off'}" aria-hidden="true"></i><span>${input.type === 'password' ? 'Show' : 'Hide'}</span>`;
+    window.refreshIcons?.();
   });
 });

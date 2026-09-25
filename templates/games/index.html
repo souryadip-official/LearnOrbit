@@ -1,44 +1,47 @@
 {% extends "base.html" %}
-{% block title %}Brain Break Zone{% endblock %}
-{% block topbar_title %}🎮 Brain Break Zone{% endblock %}
+{% block title %}Brain Games{% endblock %}
+{% block topbar_title %}<i data-lucide="gamepad-2" aria-hidden="true"></i> Brain Games{% endblock %}
 {% block loader_text %}Loading the fun stuff…{% endblock %}
 
 {% block content %}
 <div class="games-page">
   <div class="games-header">
-    <h1>🎮 Brain Break Zone</h1>
-    <p>Studying hard? Science says short breaks improve retention. Pick a game, breathe, and come back refreshed!</p>
-    <div class="games-joke" id="games-joke">Loading a study joke… 🤔</div>
+    <h1><i data-lucide="gamepad-2" aria-hidden="true"></i> Brain Games</h1>
+    <p>A short, limited play window keeps games a break between focused study sessions.</p>
+    <div class="feature-card"><strong>Time left this hour: <span id="game-time-left">{{ (game_seconds_left // 60) }}m {{ (game_seconds_left % 60) }}s</span></strong><p>15 minutes of play time in a rolling hour.</p></div>
+    <div class="games-joke" id="games-joke">Loading a study joke…</div>
   </div>
 
   <div class="games-grid">
     {% for game in games %}
     <a href="{{ url_for('games.play', game_id=game.id) }}" class="game-card" style="--gc:{{ game.color }}">
-      <div class="game-emoji">{{ game.emoji }}</div>
+      <div class="game-emoji"><i data-lucide="{{ game.icon }}" aria-hidden="true"></i><span>{{ game.name }}</span></div>
       <div class="game-name">{{ game.name }}</div>
       <div class="game-desc">{{ game.desc }}</div>
-      <div class="game-play-btn">Play →</div>
+      <div class="game-play-btn"><i data-lucide="play" aria-hidden="true"></i><span>Play game</span></div>
     </a>
     {% endfor %}
   </div>
 
   <div class="games-tip">
-    💡 <strong>Pro tip:</strong> Take a 5-10 minute game break after every 45 minutes of studying. Your brain will thank you!
+    <i data-lucide="lightbulb" aria-hidden="true"></i><strong>Pro tip:</strong> Take a 5-10 minute game break after every 45 minutes of studying.
   </div>
+  <section class="feature-card"><h2>Your best scores</h2><div class="mastery-list" id="game-scores">Loading saved scores…</div></section>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
 const jokes = [
-  "Why did the student eat his homework? Because the teacher told him it was a piece of cake! 🎂",
-  "Why is math book always stressed? Because it has too many problems. 📚",
-  "What do you call a fish without eyes? A fsh. 🐟",
-  "Why did the math teacher look so sad? She had too many problems. ➕",
-  "I asked the library if they had books about paranoia. They whispered: 'They're right behind you!' 📖",
-  "Why don't scientists trust atoms? Because they make up everything! ⚛️",
-  "I told my physics teacher I had potential energy. She said I needed to convert it to kinetic! ⚡",
+  "Why did the student eat his homework? Because the teacher told him it was a piece of cake!",
+  "Why is math book always stressed? Because it has too many problems.",
+  "What do you call a fish without eyes? A fsh.",
+  "Why did the math teacher look so sad? She had too many problems.",
+  "I asked the library if they had books about paranoia. They whispered: 'They're right behind you!'",
+  "Why don't scientists trust atoms? Because they make up everything!",
+  "I told my physics teacher I had potential energy. She said I needed to convert it to kinetic!",
 ];
 document.getElementById('games-joke').textContent = jokes[Math.floor(Math.random()*jokes.length)];
+fetch('/games/scores').then(r=>r.json()).then(scores=>{const el=document.getElementById('game-scores');el.innerHTML='';for(const [id,value] of Object.entries(scores)){const label=document.createElement('div');label.className='calendar-event';label.textContent=`${id.replaceAll('-',' ')} · best ${value}`;el.appendChild(label)}if(!Object.keys(scores).length)el.textContent='Play a game and your best scores will be saved here.'}).catch(()=>{});
 </script>
 {% endblock %}

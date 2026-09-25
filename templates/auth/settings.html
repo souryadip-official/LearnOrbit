@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Settings{% endblock %}
-{% block topbar_title %}⚙️ Settings{% endblock %}
+{% block topbar_title %}<i data-lucide="settings-2" aria-hidden="true"></i> Settings{% endblock %}
 {% block loader_text %}Loading your preferences…{% endblock %}
 
 {% block content %}
@@ -8,13 +8,13 @@
      data-current-provider="{{ current_user.ai_provider }}"
      data-saved-model="{{ current_user.ai_model }}">
   <div class="settings-header">
-    <h1>Settings ⚙️</h1>
+    <h1>Settings</h1>
     <p>Configure your AI provider, appearance, and account preferences.</p>
   </div>
 
   <!-- AI Provider Card -->
   <div class="settings-card">
-    <div class="card-title">🤖 AI Provider & Model</div>
+    <div class="card-title"><i data-lucide="bot" aria-hidden="true"></i> AI Provider &amp; Model</div>
     <p class="card-desc">Choose your AI backend. You provide the API key — we never store it in plain text for production. <a href="#" class="link">Why?</a></p>
 
     <div class="provider-grid" id="provider-grid">
@@ -22,9 +22,7 @@
       <button type="button" class="provider-btn {% if current_user.ai_provider == pid %}active{% endif %}"
               data-provider="{{ pid }}"
               data-models="{{ pdata.models | tojson | e }}">
-        <span class="provider-icon">
-          {% if pid == 'openai' %}🟢{% elif pid == 'google' %}🔵{% elif pid == 'anthropic' %}🟣{% elif pid == 'xai' %}⚫{% else %}🤗{% endif %}
-        </span>
+        <span class="provider-icon"><i data-lucide="{% if pid == 'openai' %}brain{% elif pid == 'google' %}sparkles{% elif pid == 'anthropic' %}message-circle{% elif pid == 'xai' %}orbit{% else %}cloud{% endif %}" aria-hidden="true"></i></span>
         <span class="provider-name">{{ pdata.name }}</span>
       </button>
       {% endfor %}
@@ -47,57 +45,57 @@
       <label class="form-label" for="api-key-input">
         API Key
         <span class="key-badge" id="key-status">
-          {% if current_user.get_ai_api_key() %}✅ Saved{% else %}❌ Not set{% endif %}
+          {% if current_user.get_ai_api_key() %}Saved{% else %}Not set{% endif %}
         </span>
       </label>
       <div class="input-wrap">
         <input class="form-input" type="password" id="api-key-input"
                placeholder="Paste your API key here…"
                value="{{ current_user.get_ai_api_key() or '' }}" />
-        <button type="button" class="input-eye" data-target="api-key-input">👁</button>
+        <button type="button" class="input-eye" data-target="api-key-input" aria-label="Show API key"><i data-lucide="eye" aria-hidden="true"></i><span>Show</span></button>
       </div>
       <p class="card-desc">Each provider has its own saved key. A blank field uses that provider’s saved key; enter a new key to replace it.</p>
-      <button type="button" class="btn-secondary mt-2" id="validate-key-btn">🔍 Validate Key</button>
+      <button type="button" class="btn-secondary mt-2" id="validate-key-btn"><i data-lucide="key-round" aria-hidden="true"></i><span>Validate Key</span></button>
       <span class="validate-result" id="validate-result"></span>
     </div>
 
-    <button type="button" class="btn-primary mt-4" id="save-ai-btn">💾 Save AI Settings</button>
+    <button type="button" class="btn-primary mt-4" id="save-ai-btn"><i data-lucide="save" aria-hidden="true"></i><span>Save AI Settings</span></button>
   </div>
 
   <!-- Appearance -->
   <div class="settings-card">
-    <div class="card-title">🎨 Appearance</div>
+    <div class="card-title"><i data-lucide="palette" aria-hidden="true"></i> Appearance</div>
     <div class="theme-toggle-row">
       <span>Theme</span>
       <div class="theme-switch-wrap">
-        <button type="button" class="theme-option {% if current_user.theme == 'light' %}active{% endif %}" data-theme="light">☀️ Light</button>
-        <button type="button" class="theme-option {% if current_user.theme == 'dark' %}active{% endif %}" data-theme="dark">🌙 Dark</button>
+        <button type="button" class="theme-option {% if current_user.theme == 'light' %}active{% endif %}" data-theme="light"><i data-lucide="sun" aria-hidden="true"></i><span>Light</span></button>
+        <button type="button" class="theme-option {% if current_user.theme == 'dark' %}active{% endif %}" data-theme="dark"><i data-lucide="moon" aria-hidden="true"></i><span>Dark</span></button>
       </div>
     </div>
   </div>
 
   <!-- Plan -->
   <div class="settings-card">
-    <div class="card-title">💎 Your Plan</div>
+    <div class="card-title"><i data-lucide="badge-check" aria-hidden="true"></i> Your Plan</div>
     <div class="plan-status">
       <span class="plan-badge-large plan-{{ current_user.plan }}">{{ current_user.plan.title() }}</span>
       {% if current_user.plan == 'free' %}
       <p>You're on the free Explorer plan. <a href="#pricing" class="link">Upgrade to Scholar</a> to unlock PDF exports, split screen, and unlimited sessions.</p>
       {% else %}
-      <p>You're on the {{ current_user.plan.title() }} plan. Thank you for supporting LearnOrbit! 🙏</p>
+      <p>You're on the {{ current_user.plan.title() }} plan. Thank you for supporting LearnOrbit.</p>
       {% endif %}
     </div>
   </div>
 
   <!-- Account -->
   <div class="settings-card">
-    <div class="card-title">👤 Account</div>
+    <div class="card-title"><i data-lucide="user-round" aria-hidden="true"></i> Account</div>
     <div class="account-info">
       <div class="info-row"><span class="info-label">Username</span><span>{{ current_user.username }}</span></div>
       <div class="info-row"><span class="info-label">Email</span><span>{{ current_user.email }}</span></div>
       <div class="info-row"><span class="info-label">Member since</span><span>{{ current_user.created_at.strftime('%d %b %Y') }}</span></div>
     </div>
-    <a href="{{ url_for('auth.logout') }}" class="btn-danger mt-4">🚪 Log Out</a>
+    <a href="{{ url_for('auth.logout') }}" class="btn-danger mt-4"><i data-lucide="log-out" aria-hidden="true"></i><span>Log Out</span></a>
   </div>
 </div>
 {% endblock %}

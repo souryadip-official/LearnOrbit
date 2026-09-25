@@ -4,16 +4,51 @@
 
 {% block public_content %}
 <div class="auth-page">
+  <a href="{{ url_for('index') }}" class="auth-back-link"><i data-lucide="arrow-left" aria-hidden="true"></i><span>Back to home</span></a>
+  <div class="auth-layout">
+  <aside class="auth-aside" aria-label="A note from your study buddy">
+    <svg class="auth-student-art" viewBox="0 0 360 300" role="img" aria-label="A cheerful student holding a book">
+      <path d="M27 222c18-52 56-81 117-75 43 5 75-23 111-15 49 11 77 48 77 91v43H27z" fill="#bcebd9" stroke="currentColor" stroke-width="5"/>
+      <path d="M105 119c0-45 31-78 75-78s75 33 75 78v56H105z" fill="#f3bd8e" stroke="currentColor" stroke-width="5"/>
+      <path d="M101 119c-3-58 29-93 83-93 45 0 72 25 79 67-28-20-53-26-78-21-25 5-44 18-84 47" fill="#3c3935" stroke="currentColor" stroke-width="5" stroke-linejoin="round"/>
+      <circle cx="151" cy="124" r="5" fill="#202b26"/><circle cx="207" cy="124" r="5" fill="#202b26"/>
+      <path d="M158 150c13 14 31 14 44 0" fill="none" stroke="#202b26" stroke-width="5" stroke-linecap="round"/>
+      <path d="M103 203c20-24 47-35 77-35s57 11 77 35v66H103z" fill="#f3d66b" stroke="currentColor" stroke-width="5"/>
+      <path d="M130 215h99v58h-49l-50-10z" fill="#fffdf6" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/><path d="M180 215v55" stroke="currentColor" stroke-width="3"/>
+      <path d="m49 75 8 15 17 3-13 11 3 17-15-8-15 8 3-17-13-11 17-3z" fill="#f3d66b" stroke="currentColor" stroke-width="3"/>
+      <circle cx="298" cy="83" r="18" fill="#c5b2ef" stroke="currentColor" stroke-width="4"/><path d="M291 83h14m-7-7v14" stroke="currentColor" stroke-width="3"/>
+    </svg>
+    <p class="auth-aside-kicker">Your study buddy is ready</p>
+    <h2>Curiosity looks good on you.</h2>
+    <p class="auth-joke">Why did the student eat their homework? They wanted a byte of knowledge. We recommend learning it first.</p>
+  </aside>
   <div class="auth-card animate__animated animate__fadeInUp">
     <div class="auth-brand">
-      <span class="brand-icon-lg">⚡</span>
+      <span class="brand-icon-lg"><i data-lucide="orbit" aria-hidden="true"></i></span>
       <span class="brand-text">LearnOrbit</span>
     </div>
-    <h2 class="auth-title">Start your learning journey 🚀</h2>
+    <h2 class="auth-title">Start your learning journey</h2>
     <p class="auth-sub">Free forever on the Explorer plan. No credit card needed.</p>
 
-    <form id="register-form" class="auth-form" novalidate>
+    <form id="register-form" class="auth-form auth-form-grid" novalidate>
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <div class="form-group">
+        <label class="form-label" for="full_name">Full name</label>
+        <input class="form-input" type="text" id="full_name" name="full_name" placeholder="Your name" autocomplete="name" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="date_of_birth">Date of birth</label>
+        <input class="form-input" type="date" id="date_of_birth" name="date_of_birth" />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="grade">Current study level</label>
+        <select class="form-select" id="grade" name="grade"><option value="">Choose a level</option><option>Primary school</option><option>Middle school</option><option>High school</option><option>Undergraduate</option><option>Masters</option><option>Doctorate / PhD</option></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="teaching_style">How should your tutor explain things?</label>
+        <select class="form-select" id="teaching_style" name="teaching_style"><option value="balanced">Balanced</option><option value="visual">Visual and analogy-led</option><option value="analytical">Step-by-step and analytical</option><option value="narrative">Stories and examples</option></select>
+      </div>
+      <div class="form-group"><label class="form-label" for="desired_plan">Plan you’re interested in</label><select class="form-select" id="desired_plan" name="desired_plan"><option value="free">Explorer · Free</option><option value="pro">Scholar · $9.99/month demo</option><option value="team">Academy · $24.99/month demo</option></select><span class="form-hint">Choosing a paid plan here does not charge you. You can review it after sign-up.</span></div>
       <div class="form-group">
         <label class="form-label" for="username">Username</label>
         <input class="form-input" type="text" id="username" name="username"
@@ -29,45 +64,43 @@
         <label class="form-label" for="password">Password</label>
         <div class="input-wrap">
           <input class="form-input" type="password" id="password" name="password"
-                 placeholder="Min 6 characters" autocomplete="new-password" required minlength="6" />
-          <button type="button" class="input-eye" data-target="password">👁</button>
+                 placeholder="At least 10 characters" autocomplete="new-password" required minlength="10" />
+          <button type="button" class="input-eye" data-target="password" aria-label="Show password"><i data-lucide="eye" aria-hidden="true"></i><span>Show</span></button>
         </div>
       </div>
       <div class="password-strength" id="pwd-strength">
         <div class="strength-bar"><div class="strength-fill" id="strength-fill"></div></div>
         <span class="strength-label" id="strength-label">Enter a password</span>
+        <ul class="password-checks" id="password-checks"><li data-check="length">10+ characters</li><li data-check="mix">Upper and lowercase</li><li data-check="number">A number</li><li data-check="symbol">A symbol</li><li data-check="pattern">No obvious repeats or sequences</li></ul>
       </div>
       <button type="submit" class="btn-auth" id="register-btn">
-        <span class="btn-text">Create Account ✨</span>
-        <span class="btn-spinner hidden">⏳</span>
+        <span class="btn-text">Create Account</span>
+        <span class="btn-spinner hidden"><i data-lucide="loader-circle" aria-hidden="true"></i><span>Creating account…</span></span>
       </button>
     </form>
+    <form id="otp-form" class="auth-form hidden" novalidate><h3>Check your inbox</h3><p>Enter the six-digit code sent to your email. It expires in ten minutes.</p><label class="form-label" for="otp-code">Verification code</label><input class="form-input" id="otp-code" inputmode="numeric" maxlength="6" autocomplete="one-time-code"><button class="btn-auth" type="submit">Verify email</button><button class="btn-secondary" id="resend-otp" type="button">Send a new code</button></form>
 
-    <p class="auth-legal">By registering you agree to use this platform responsibly. No spam, promise. 🤝</p>
+    <p class="auth-legal">By registering you agree to use this platform responsibly. No spam, promise.</p>
     <div class="auth-divider">or</div>
     <div class="auth-switch">
       Already have an account? <a href="{{ url_for('auth.login') }}">Log in →</a>
     </div>
+  </div>
   </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-// Password strength meter
+// Password strength meter with explicit criteria and pattern warnings.
 document.getElementById('password').addEventListener('input', function(){
   const v = this.value, fill = document.getElementById('strength-fill'), lbl = document.getElementById('strength-label');
-  let score = 0;
-  if (v.length >= 6) score++;
-  if (v.length >= 10) score++;
-  if (/[A-Z]/.test(v)) score++;
-  if (/[0-9]/.test(v)) score++;
-  if (/[^A-Za-z0-9]/.test(v)) score++;
-  const levels = ['','Weak 😬','Fair 😐','Good 😊','Strong 💪','Excellent 🔥'];
-  const colors = ['','#ef4444','#f59e0b','#10b981','#6366f1','#8b5cf6'];
-  fill.style.width = (score/5*100)+'%';
-  fill.style.background = colors[score]||'#e5e7eb';
-  lbl.textContent = levels[score]||'Enter a password';
+  const checks={length:v.length>=10,mix:/[a-z]/.test(v)&&/[A-Z]/.test(v),number:/\d/.test(v),symbol:/[^A-Za-z0-9]/.test(v),pattern:!/(.)\1\1|1234|abcd|qwerty/i.test(v)};
+  Object.entries(checks).forEach(([key,ok])=>document.querySelector(`[data-check="${key}"]`)?.classList.toggle('passed',ok));
+  const score=Object.values(checks).filter(Boolean).length;
+  const level=['Very weak','Weak','Getting there','Fair','Strong','Excellent'][score];
+  const colors=['#c83c35','#c83c35','#d38324','#d38324','#278b71','#17624f'];
+  fill.style.width=(score/5*100)+'%';fill.style.background=colors[score];lbl.textContent=v?`${level} · ${score}/5 checks`:'Enter a password';
 });
 
 document.getElementById('register-form').addEventListener('submit', async e => {
@@ -80,20 +113,26 @@ document.getElementById('register-form').addEventListener('submit', async e => {
   btn.disabled = true;
   try {
     const res = await fetch('{{ url_for("auth.register") }}', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
+      method: 'POST', headers: {'Content-Type':'application/json','X-CSRFToken':document.querySelector('meta[name="csrf-token"]')?.content||''},
       body: JSON.stringify(data)
     });
     const json = await res.json();
-    if (json.success) { showToast('Welcome aboard! 🚀 Setting up your orbit…', 'success'); setTimeout(()=>window.location=json.redirect, 900); }
+    if (json.otp_required) { document.getElementById('register-form').classList.add('hidden'); document.getElementById('otp-form').classList.remove('hidden'); showToast(json.message,'success'); }
+    else if (json.success) { showToast('Welcome aboard! Setting up your account…', 'success'); setTimeout(()=>window.location=json.redirect, 900); }
     else { (json.errors||['Registration failed']).forEach(e=>showToast(e,'error')); }
   } catch { showToast('Network error. Try again.','error'); }
   finally { btn.querySelector('.btn-text').classList.remove('hidden'); btn.querySelector('.btn-spinner').classList.add('hidden'); btn.disabled=false; }
 });
 
+document.getElementById('otp-form').addEventListener('submit',async e=>{e.preventDefault();const r=await fetch('{{ url_for("auth.verify_otp") }}',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':document.querySelector('meta[name="csrf-token"]')?.content||''},body:JSON.stringify({code:document.getElementById('otp-code').value})});const d=await r.json();if(d.success)location.href=d.redirect;else showToast(d.error,'error')});
+document.getElementById('resend-otp').onclick=async()=>{const r=await fetch('{{ url_for("auth.resend_otp") }}',{method:'POST',headers:{'X-CSRFToken':document.querySelector('meta[name="csrf-token"]')?.content||''}});const d=await r.json();showToast(d.message||d.error,r.ok?'success':'error')};
+
 document.querySelector('.input-eye').addEventListener('click', function(){
   const inp = document.getElementById(this.dataset.target);
   inp.type = inp.type==='password'?'text':'password';
-  this.textContent = inp.type==='password'?'👁':'🙈';
+  this.setAttribute('aria-label', inp.type==='password'?'Show password':'Hide password');
+  this.innerHTML = `<i data-lucide="${inp.type==='password'?'eye':'eye-off'}" aria-hidden="true"></i><span>${inp.type==='password'?'Show':'Hide'}</span>`;
+  window.refreshIcons?.();
 });
 </script>
 {% endblock %}

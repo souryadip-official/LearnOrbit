@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Dashboard{% endblock %}
-{% block topbar_title %}🏠 Dashboard{% endblock %}
+{% block topbar_title %}<i data-lucide="house" aria-hidden="true"></i> Dashboard{% endblock %}
 {% block loader_text %}Loading your learning universe…{% endblock %}
 
 {% block content %}
@@ -9,44 +9,44 @@
   <!-- Welcome banner -->
   <div class="welcome-banner animate__animated animate__fadeIn">
     <div class="welcome-text">
-      <h1>Hey, {{ current_user.username }}! 👋</h1>
+      <h1>Hey, {{ current_user.username }}!</h1>
       <p>
         {% if stats.streak > 0 %}
-          You're on a <strong>{{ stats.streak }}-day streak</strong>! 🔥 Keep it up!
+          You're on a <strong>{{ stats.streak }}-day streak</strong>. Keep it up!
         {% else %}
-          Ready to learn something amazing today? 🚀
+          Ready to learn something amazing today?
         {% endif %}
       </p>
     </div>
     <a href="{{ url_for('tutor.new_session') }}" class="btn-start-session">
-      ⚡ Start Learning
+      <i data-lucide="circle-play" aria-hidden="true"></i><span>Start Learning</span>
     </a>
   </div>
 
   <!-- Stats row -->
   <div class="stats-row">
     <div class="stat-card animate__animated animate__fadeInUp">
-      <div class="stat-icon">📚</div>
+      <div class="stat-icon"><i data-lucide="book-open" aria-hidden="true"></i></div>
       <div class="stat-value">{{ stats.total_sessions }}</div>
       <div class="stat-name">Total Sessions</div>
     </div>
     <div class="stat-card animate__animated animate__fadeInUp" style="animation-delay:.1s">
-      <div class="stat-icon">✅</div>
+      <div class="stat-icon"><i data-lucide="circle-check" aria-hidden="true"></i></div>
       <div class="stat-value">{{ stats.completed_sessions }}</div>
       <div class="stat-name">Completed</div>
     </div>
     <div class="stat-card animate__animated animate__fadeInUp" style="animation-delay:.2s">
-      <div class="stat-icon">🎯</div>
+      <div class="stat-icon"><i data-lucide="target" aria-hidden="true"></i></div>
       <div class="stat-value">{{ stats.topics_studied }}</div>
       <div class="stat-name">Topics Studied</div>
     </div>
     <div class="stat-card animate__animated animate__fadeInUp" style="animation-delay:.3s">
-      <div class="stat-icon">⭐</div>
+      <div class="stat-icon"><i data-lucide="star" aria-hidden="true"></i></div>
       <div class="stat-value">{{ stats.avg_mastery }}%</div>
       <div class="stat-name">Avg Mastery</div>
     </div>
     <div class="stat-card animate__animated animate__fadeInUp" style="animation-delay:.4s">
-      <div class="stat-icon">🔥</div>
+      <div class="stat-icon"><i data-lucide="flame" aria-hidden="true"></i></div>
       <div class="stat-value">{{ stats.streak }}</div>
       <div class="stat-name">Day Streak</div>
     </div>
@@ -56,7 +56,7 @@
 
     <!-- Recent sessions -->
     <div class="dash-card">
-      <div class="dash-card-title">📖 Recent Sessions</div>
+      <div class="dash-card-title"><i data-lucide="history" aria-hidden="true"></i> Recent Sessions</div>
       {% if recent_sessions %}
       <div class="session-list">
         {% for s in recent_sessions %}
@@ -67,9 +67,9 @@
           </div>
           <div class="session-right">
             <span class="session-status status-{{ s.status }}">{{ s.status }}</span>
-            <a href="{{ url_for('tutor.chat', session_id=s.id) }}" class="session-link" title="{% if s.status == 'completed' %}Review conversation{% else %}Continue session{% endif %}">{% if s.status == 'completed' %}💬{% else %}▶️{% endif %}</a>
+            <a href="{{ url_for('tutor.chat', session_id=s.id) }}" class="session-link" title="{% if s.status == 'completed' %}Review conversation{% else %}Continue session{% endif %}"><i data-lucide="{% if s.status == 'completed' %}message-square-text{% else %}play{% endif %}" aria-hidden="true"></i><span>{% if s.status == 'completed' %}Review{% else %}Continue{% endif %}</span></a>
             {% if s.status == 'completed' %}
-            <a href="{{ url_for('notes.view_notes', session_id=s.id) }}" class="session-link" title="View notes">📝</a>
+            <a href="{{ url_for('notes.view_notes', session_id=s.id) }}" class="session-link" title="View notes"><i data-lucide="notebook-text" aria-hidden="true"></i><span>Notes</span></a>
             {% endif %}
           </div>
         </div>
@@ -77,7 +77,7 @@
       </div>
       {% else %}
       <div class="empty-state">
-        <div class="empty-icon">🌱</div>
+        <div class="empty-icon"><i data-lucide="sprout" aria-hidden="true"></i><span>Start with one curious question</span></div>
         <p>No sessions yet! Start your first one.</p>
         <a href="{{ url_for('tutor.new_session') }}" class="btn-secondary">Begin Learning →</a>
       </div>
@@ -86,7 +86,7 @@
 
     <!-- Mastery radar -->
     <div class="dash-card">
-      <div class="dash-card-title">🏆 Topic Mastery</div>
+      <div class="dash-card-title"><i data-lucide="trophy" aria-hidden="true"></i> Topic Mastery</div>
       {% if mastery_records %}
       <div class="mastery-list">
         {% for m in mastery_records %}
@@ -101,7 +101,7 @@
       </div>
       {% else %}
       <div class="empty-state">
-        <div class="empty-icon">📊</div>
+        <div class="empty-icon"><i data-lucide="chart-no-axes-column-increasing" aria-hidden="true"></i><span>Your progress will grow here</span></div>
         <p>Complete sessions to build your mastery profile.</p>
       </div>
       {% endif %}
@@ -109,26 +109,26 @@
 
     <!-- Quick actions -->
     <div class="dash-card quick-actions">
-      <div class="dash-card-title">⚡ Quick Actions</div>
+      <div class="dash-card-title"><i data-lucide="zap" aria-hidden="true"></i> Quick Actions</div>
       <div class="action-grid">
         <a href="{{ url_for('tutor.new_session') }}" class="action-btn" style="--ac:#6366f1">
-          <span>🧠</span><span>New Session</span>
+          <i data-lucide="brain" aria-hidden="true"></i><span>New Session</span>
         </a>
         <a href="{{ url_for('games.index') }}" class="action-btn" style="--ac:#10b981">
-          <span>🎮</span><span>Brain Break</span>
+          <i data-lucide="gamepad-2" aria-hidden="true"></i><span>Brain Break</span>
         </a>
         <a href="{{ url_for('auth.settings') }}" class="action-btn" style="--ac:#f59e0b">
-          <span>⚙️</span><span>Settings</span>
+          <i data-lucide="settings-2" aria-hidden="true"></i><span>Settings</span>
         </a>
         <a href="#" class="action-btn split-screen-toggle" style="--ac:#8b5cf6" id="split-screen-btn">
-          <span>🖥️</span><span>Split Screen</span>
+          <i data-lucide="panels-top-left" aria-hidden="true"></i><span>Split Screen</span>
         </a>
       </div>
     </div>
 
     <!-- Fun fact / tip -->
     <div class="dash-card tip-card">
-      <div class="dash-card-title">💡 Learning Tip</div>
+      <div class="dash-card-title"><i data-lucide="lightbulb" aria-hidden="true"></i> Learning Tip</div>
       <div class="tip-content" id="tip-content">Loading your daily wisdom…</div>
     </div>
 
@@ -140,14 +140,14 @@
   <div class="split-screen-container">
     <div class="split-panel split-left">
       <div class="split-toolbar">
-        <span>📄 File Viewer</span>
+        <span><i data-lucide="file-text" aria-hidden="true"></i> File Viewer</span>
         <input type="file" id="file-input" accept=".pdf,.txt,.md" class="hidden" />
         <button class="btn-sm" onclick="document.getElementById('file-input').click()">Open File</button>
-        <button class="btn-sm-danger" id="close-split">✕ Close</button>
+        <button class="btn-sm-danger" id="close-split"><i data-lucide="x" aria-hidden="true"></i><span>Close</span></button>
       </div>
       <div class="file-viewer" id="file-viewer">
         <div class="file-placeholder">
-          <span>📂</span>
+          <i data-lucide="folder-open" aria-hidden="true"></i>
           <p>Open a file to read it here while chatting with your tutor</p>
           <button onclick="document.getElementById('file-input').click()" class="btn-secondary">Open File</button>
         </div>
@@ -155,7 +155,7 @@
     </div>
     <div class="split-divider"></div>
     <div class="split-panel split-right">
-      <div class="split-toolbar"><span>🧠 Quick Tutor Chat</span></div>
+      <div class="split-toolbar"><span><i data-lucide="brain" aria-hidden="true"></i> Quick Tutor Chat</span></div>
       <iframe id="split-tutor-frame" src="{{ url_for('tutor.new_session') }}" class="split-iframe"></iframe>
     </div>
   </div>
@@ -166,13 +166,13 @@
 <script>
 // Tips rotation
 const tips = [
-  "🧠 The Feynman Technique: Explain a concept as if teaching a child. LearnOrbit does this for you!",
-  "⏱️ Pomodoro power: 25 min study, 5 min break. Our games are perfect for that break!",
-  "📝 Writing notes by hand improves retention by 40% vs typing. Use our PDF export to review!",
-  "🔁 Spaced repetition: revisit a topic 1 day, 1 week, 1 month later. Track it with mastery scores.",
-  "❓ Questions beat passive reading. Keep asking your AI tutor 'why?' and 'how does this connect?'",
-  "🎯 One topic per session = deeper learning. Resist the urge to jump around!",
-  "😴 Sleep after studying seals memories. Don't pull all-nighters if you want to actually remember things.",
+  "The Feynman Technique: Explain a concept as if teaching a child. LearnOrbit does this for you!",
+  "Pomodoro power: 25 minutes of study, 5 minutes of break. Our games are perfect for that break!",
+  "Writing notes by hand can improve retention. Use our PDF export to review!",
+  "Spaced repetition: revisit a topic 1 day, 1 week, and 1 month later. Track it with mastery scores.",
+  "Questions beat passive reading. Keep asking your AI tutor 'why?' and 'how does this connect?'",
+  "One topic per session supports deeper learning. Resist the urge to jump around!",
+  "Sleep after studying helps seal memories. Avoid all-nighters if you want to remember what you learned.",
 ];
 document.getElementById('tip-content').textContent = tips[Math.floor(Math.random()*tips.length)];
 
@@ -180,7 +180,7 @@ document.getElementById('tip-content').textContent = tips[Math.floor(Math.random
 document.getElementById('split-screen-btn').addEventListener('click', e => {
   e.preventDefault();
   {% if current_user.plan == 'free' %}
-    showToast('Split screen requires Scholar or Academy plan. Upgrade to unlock! 🚀', 'warning');
+    showToast('Split screen requires Scholar or Academy plan. Upgrade to unlock.', 'warning');
   {% else %}
     document.getElementById('split-screen-modal').classList.toggle('hidden');
   {% endif %}

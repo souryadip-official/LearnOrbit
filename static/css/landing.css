@@ -14,10 +14,10 @@
 
 /* Nav */
 .landing-nav {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
+  position: sticky;
+  top: 10px;
+  width: auto;
+  margin: 10px clamp(12px, 4vw, 56px) 0;
   z-index: 100;
   padding: 0 24px;
   transition:
@@ -25,10 +25,12 @@
     box-shadow 0.3s;
 }
 .landing-nav.scrolled {
-  background: rgba(255, 255, 255, 0.95);
-  box-shadow: 0 2px 20px rgba(99, 102, 241, 0.12);
-  backdrop-filter: blur(12px);
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
 }
+.landing-nav.scrolled .nav-container { animation: nav-capsule-roll .32s cubic-bezier(.2,.8,.2,1); }
+@keyframes nav-capsule-roll { from { transform:translateY(-12px) scale(.96); border-radius:36px; opacity:.84; } to { transform:translateY(0) scale(1); border-radius:24px 24px 24px 8px; opacity:1; } }
 [data-theme="dark"] .landing-nav.scrolled {
   background: rgba(15, 14, 30, 0.95);
 }
@@ -732,4 +734,238 @@
   .games-grid-preview {
     grid-template-columns: repeat(3, 1fr);
   }
+}
+
+/* Playful paper-and-ink presentation for the public home page. */
+.landing-body {
+  background: #929cdb;
+  color: #202b26;
+  padding: 0 clamp(10px, 4vw, 56px);
+}
+.starfield-canvas { display: none; }
+.landing-body::before {
+  content: '';
+  position: fixed;
+  inset: 10px clamp(8px, 3vw, 42px);
+  z-index: 0;
+  border: 3px solid #202b26;
+  border-radius: 34px 34px 8px 8px;
+  background: #f7f5ed;
+  pointer-events: none;
+}
+.landing-nav { position: sticky; top: 14px; left: auto; right: auto; width: 100%; max-width: 1360px; margin: 14px auto 0; padding: 0 20px; }
+.nav-container {
+  height: 72px; max-width: 1120px; padding: 0 22px;
+  background: #fffdf6; border: 2px solid #202b26; border-radius: 24px 24px 24px 8px;
+  box-shadow: 3px 4px 0 #202b26;
+}
+.brand-icon-lg svg { width: 30px; height: 30px; stroke-width: 2.5; }
+.brand-text { font-family: var(--display); font-size: 1.35rem; color: #202b26; }
+.nav-link { color: #303a34; font-weight: 700; }
+.nav-actions { gap: 10px; }
+.theme-btn-landing { display: inline-flex; align-items: center; gap: 6px; color: #26352d; font: 700 .8rem var(--font); border: 1.5px solid #26352d; border-radius: 12px; padding: 8px 10px; background: #fff2ca; }
+.theme-btn-landing svg { width: 17px; height: 17px; }
+.btn-ghost, .btn-primary-landing { border: 2px solid #202b26; box-shadow: 2px 3px 0 #202b26; border-radius: 12px; }
+.btn-primary-landing { background: #286b5b; }
+.nav-mobile-toggle { color: #202b26; }
+.nav-mobile-toggle svg { width: 24px; height: 24px; }
+.mobile-nav { top: 86px; left: clamp(12px, 4vw, 56px); right: clamp(12px, 4vw, 56px); border: 2px solid #202b26; border-radius: 18px; }
+.hero-section {
+  width: min(1120px, 100%); max-width: 1120px; min-height: min(770px, 100svh);
+  margin: 94px auto 35px; padding: 100px clamp(24px, 8vw, 100px) 72px; gap: 45px;
+  background: #f7f5ed; border: 2px solid #202b26; border-radius: 34px 34px 34px 8px;
+  box-shadow: 7px 8px 0 #202b26; overflow: hidden;
+}
+.hero-section::after {
+  content: ''; position: absolute; width: 460px; height: 330px; right: -100px; top: 18%; z-index: -0;
+  background: #bce7c7; border: 2px solid #202b26; border-radius: 58% 42% 39% 61% / 55% 42% 58% 45%;
+  transform: rotate(-12deg);
+}
+.hero-content, .hero-visual { position: relative; z-index: 1; }
+.hero-badge { display: inline-flex; align-items: center; gap: 7px; color: #285f53; background: #dff2e8; border: 1.5px solid #202b26; border-radius: 999px; }
+.hero-badge svg { width: 16px; height: 16px; }
+.hero-title { font-family: var(--display); color: #1c2a22; font-size: clamp(2.7rem, 6vw, 4.8rem); line-height: .99; }
+.hero-highlight { color: #286b5b; background: none; -webkit-text-fill-color: currentColor; }
+.hero-sub { color: #626a62; }
+.btn-hero-primary { background: #1f3a2c; border: 2px solid #202b26; box-shadow: 3px 4px 0 #202b26; border-radius: 999px; }
+.btn-hero-ghost { display: inline-flex; align-items: center; color: #202b26; font-weight: 700; }
+.hero-stats { gap: 9px; }
+.stat-pill { border: 1.5px solid #202b26; border-radius: 13px; background: #fffdf6; box-shadow: 2px 3px 0 rgba(32,43,38,.15); }
+.orbit-center-inner, .orbit-sat { display: flex; align-items: center; justify-content: center; color: #203a30; border: 2px solid #202b26; box-shadow: 3px 4px 0 #202b26; }
+.orbit-center-inner { flex-direction: column; background: #ffdb6e; font: 800 .75rem var(--font); }
+.orbit-center-inner svg { width: 35px; height: 35px; }
+.orbit-sat svg { width: 24px; height: 24px; }
+.sat-1 { background: #72cfb9; }.sat-2 { background: #ffdb6e; }.sat-3 { background: #b6a1ef; }.sat-4 { background: #ed7967; }
+.section-container { max-width: 1120px; padding: 0 clamp(15px, 4vw, 30px); }
+.features-section, .how-section, .games-preview-section, .pricing-section { position: relative; z-index: 1; padding-block: clamp(55px, 8vw, 100px); }
+.section-header { margin-bottom: 38px; }
+.section-title { font-family: var(--display); color: #1d2b23; font-size: clamp(2rem, 4vw, 3.1rem); }
+.section-sub { color: #606a62; }
+.feature-card, .pricing-card { background: #fffdf6; color: #202b26; border: 2px solid #202b26; border-radius: 23px 23px 23px 8px; box-shadow: 4px 5px 0 #202b26; }
+.feature-card:hover, .pricing-card:hover { transform: translateY(-4px) rotate(-.4deg); }
+.feature-icon-wrap { display: flex; align-items: center; justify-content: center; border: 1.5px solid #202b26; border-radius: 14px; }
+.feature-icon-wrap svg, .step-icon svg { width: 30px; height: 30px; color: #286b5b; }
+.feature-tag { border: 1px solid #202b26; }
+.steps-flow { align-items: stretch; }
+.step-item { background: #fffdf6; border: 2px solid #202b26; border-radius: 20px 20px 20px 7px; box-shadow: 3px 4px 0 #202b26; padding: 22px; }
+.step-num { border: 1.5px solid #202b26; background: #ffdb6e; color: #202b26; }
+.step-icon { color: #286b5b; }
+.game-preview-card { display: flex; min-height: 126px; align-items: center; justify-content: center; gap: 12px; flex-direction: column; background: #fffdf6; border: 2px solid #202b26; border-radius: 18px 18px 18px 6px; box-shadow: 3px 4px 0 #202b26; color: var(--gc); }
+.game-preview-card svg { width: 28px; height: 28px; }
+.game-preview-card span { color: #202b26; font-weight: 700; }
+.pricing-featured { transform: translateY(-8px); background: #fff1bd; }
+.plan-badge, .btn-plan { border: 1.5px solid #202b26; }
+.plan-features li { color: #4f5b53; }
+.cta-section { background: #bdedda; border: 2px solid #202b26; border-radius: 34px 34px 34px 8px; box-shadow: 6px 7px 0 #202b26; color: #20372e; margin-inline: clamp(10px, 4vw, 55px); }
+.cta-content h2 { font-family: var(--display); }
+.cta-content .btn-hero-primary { background: #1f3a2c; color: #fff; }
+.landing-footer { background: transparent; border: 0; color: #24352d; }
+@media (max-width: 900px) {
+  .hero-section { min-height: auto; margin-top: 90px; padding-block: 100px 60px; }
+  .hero-visual { display: flex; transform: scale(.82); }
+}
+@media (max-width: 640px) {
+  .landing-body { padding: 0 5px; }
+  .landing-body::before { inset: 6px 5px; border-radius: 22px 22px 5px 5px; }
+  .landing-nav { left: auto; right: auto; top: 10px; width: calc(100% - 10px); margin: 10px auto 0; padding: 0 3px; }
+  .nav-container { height: 60px; padding: 0 11px; gap: 8px; border-radius: 17px 17px 17px 6px; }
+  .brand-text { font-size: 1rem; }
+  .brand-icon-lg svg { width: 24px; height: 24px; }
+  .nav-actions { margin-left: auto; gap: 6px; }
+  .nav-actions .btn-ghost { padding: 7px 9px; font-size: .75rem; }
+  .nav-actions .btn-primary-landing { padding: 7px 9px; font-size: .72rem; }
+  .theme-btn-landing { padding: 7px; }
+  .theme-btn-landing span { display: none; }
+  .nav-mobile-toggle { padding: 4px; }
+  .hero-section { display: block; margin-top: 78px; padding: 70px 22px 35px; border-radius: 23px 23px 23px 6px; }
+  .hero-content { max-width: none; }
+  .hero-title { font-size: clamp(2.6rem, 12vw, 4rem); }
+  .hero-visual { display: none; }
+  .hero-stats { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .stat-pill { justify-content: center; }
+  .features-section, .how-section, .games-preview-section, .pricing-section { padding-block: 55px; }
+  .section-header { text-align: left; }
+  .features-grid { grid-template-columns: 1fr; }
+  .feature-large { grid-column: auto; }
+  .steps-flow { grid-template-columns: 1fr; }
+  .games-grid-preview { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .cta-section { margin-inline: 4px; padding: 44px 20px; }
+}
+/* Keep the floating navigation limited to its capsule while scrolling. */
+.landing-nav.scrolled {
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+.stat-label { color: #48554d; font-weight: 600; }
+.hero-sub, .section-sub { color: #515d55; }
+
+html[data-theme="dark"] body.landing-body { background: #10151e; color: #f5f2e9; }
+html[data-theme="dark"] body.landing-body::before {
+  background: #1b2330;
+  border-color: #10151e;
+}
+html[data-theme="dark"] .landing-nav.scrolled { background: transparent; }
+html[data-theme="dark"] .nav-container,
+html[data-theme="dark"] .mobile-nav,
+html[data-theme="dark"] .hero-section,
+html[data-theme="dark"] .feature-card,
+html[data-theme="dark"] .step-item,
+html[data-theme="dark"] .game-preview-card,
+html[data-theme="dark"] .pricing-card,
+html[data-theme="dark"] .stat-pill {
+  background: #27313e;
+  color: #f5f2e9;
+  border-color: #111820;
+  box-shadow: 3px 4px 0 #10151e;
+}
+html[data-theme="dark"] .nav-link,
+html[data-theme="dark"] .brand-text,
+html[data-theme="dark"] .section-title,
+html[data-theme="dark"] .feature-card h3,
+html[data-theme="dark"] .step-item h4,
+html[data-theme="dark"] .game-preview-card span,
+html[data-theme="dark"] .plan-name,
+html[data-theme="dark"] .price-num { color: #f5f2e9; }
+html[data-theme="dark"] .hero-title { color: #f5f2e9; }
+html[data-theme="dark"] .hero-highlight { color: #8bd4c1; -webkit-text-fill-color: currentColor; }
+html[data-theme="dark"] .hero-sub,
+html[data-theme="dark"] .section-sub,
+html[data-theme="dark"] .feature-card p,
+html[data-theme="dark"] .step-item p,
+html[data-theme="dark"] .plan-features li,
+html[data-theme="dark"] .stat-label,
+html[data-theme="dark"] .footer-tagline,
+html[data-theme="dark"] .footer-copy { color: #c5cec9; }
+html[data-theme="dark"] .hero-section::after { background: #345e56; }
+html[data-theme="dark"] .orbit-center-inner { color: #24352d; background: #f2d16e; }
+html[data-theme="dark"] .stat-num { color: #8bd4c1; }
+html[data-theme="dark"] .pricing-featured { background: #514a32; }
+html[data-theme="dark"] .cta-section { background: #29483f; color: #f5f2e9; }
+html[data-theme="dark"] .cta-section p { color: #d6e4dd; }
+html[data-theme="dark"] .footer-brand .brand-text { color: #f5f2e9; }
+html[data-theme="dark"] .btn-ghost { color: #edf2ee; border-color: #aab8b1; }
+html[data-theme="dark"] .theme-btn-landing { background: #384452; color: #f5f2e9; border-color: #111820; }
+
+/* Scroll exit: content folds back as it passes under the floating nav. */
+.landing-body { overflow-x: clip; }
+.landing-nav { z-index: 1000; }
+.landing-nav .nav-container { position: relative; z-index: 2; }
+.landing-roll-item {
+  transform-origin: 50% 0%;
+  transform: perspective(900px) rotateX(var(--roll-angle, 0deg)) translateY(var(--roll-y, 0px));
+  opacity: var(--roll-opacity, 1);
+  filter: blur(var(--roll-blur, 0px));
+  backface-visibility: hidden;
+  will-change: transform, opacity, filter;
+}
+.landing-nav.scrolled .nav-container { background: #fffdf6; }
+html[data-theme="dark"] .landing-nav.scrolled .nav-container { background: #27313e; }
+.cta-section { color: #20372e; }
+.cta-section .cta-content h2 { color: #20372e; }
+.cta-section .cta-content p { color: #34483f; opacity: 1; }
+.cta-section .cta-content .btn-hero-primary,
+.cta-section .cta-content .btn-hero-primary:hover {
+  background: #1f3a2c; color: #fffdf6; border-color: #14271e;
+}
+.cta-section .cta-content .btn-hero-primary:hover { transform: translateY(-2px); box-shadow: 4px 6px 0 #14271e; }
+.feature-card, .pricing-card, .step-item, .game-preview-card,
+.btn-hero-primary, .btn-hero-ghost, .btn-plan, .nav-container, .nav-actions a, .theme-btn-landing {
+  transition: transform .24s cubic-bezier(.2,.75,.25,1), box-shadow .24s ease, background-color .2s ease, color .2s ease;
+}
+.feature-card:hover, .pricing-card:hover, .step-item:hover, .game-preview-card:hover { box-shadow: 7px 9px 0 #202b26; }
+html[data-theme="dark"] .cta-section,
+html[data-theme="dark"] .cta-section .cta-content h2 { background: #bcebd9; color: #20372e; }
+html[data-theme="dark"] .cta-section .cta-content p { color: #34483f; }
+@media (max-width: 640px) {
+  .landing-body { padding-inline: 5px; }
+  .landing-nav { margin-top: 8px; top: 8px; }
+  .hero-section { margin: 20px auto 26px; padding: 46px 20px 30px; min-height: 0; }
+  .hero-section::after { display: none; }
+  .hero-title { font-size: clamp(2.55rem, 11.7vw, 3.7rem); }
+  .hero-sub { font-size: 1rem; line-height: 1.6; }
+  .cta-section { margin-block: 28px; }
+}
+@media (max-width: 760px) {
+  .mobile-nav {
+    top: 78px; left: 50%; right: auto; width: min(520px, calc(100vw - 24px));
+    padding: 12px; gap: 6px; border: 2px solid #202b26;
+    border-radius: 20px 20px 20px 7px; background: #fffdf6;
+    box-shadow: 5px 6px 0 rgba(32,43,38,.22); transform: translateX(-50%);
+  }
+  .mobile-nav a {
+    display: flex; align-items: center; min-height: 48px; padding: 0 15px;
+    border: 0; border-radius: 12px; color: #26352d; font-weight: 700;
+    transition: background .18s ease, color .18s ease, transform .18s ease;
+  }
+  .mobile-nav a:hover, .mobile-nav a:focus-visible { background: #dff2e8; color: #205e50; transform: translateX(3px); outline: none; }
+  .mobile-nav a.btn-primary-landing { justify-content: center; margin-top: 3px; background: #286b5b; color: #fff; text-align: center; }
+  .mobile-nav a.btn-primary-landing:hover { background: #1f5146; }
+  html[data-theme="dark"] .mobile-nav { background: #27313e; border-color: #111820; }
+  html[data-theme="dark"] .mobile-nav a { color: #f5f2e9; }
+  html[data-theme="dark"] .mobile-nav a:hover, html[data-theme="dark"] .mobile-nav a:focus-visible { background: #345e56; }
+  html[data-theme="dark"] .mobile-nav a.btn-primary-landing { background: #286b5b; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .landing-roll-item { transform: none; opacity: 1; filter: none; will-change: auto; }
 }

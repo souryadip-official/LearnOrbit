@@ -5,7 +5,7 @@ LearnOrbit Quiz Routes
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for
 from flask_login import login_required, current_user
 from app import db
-from app.models import LearningSession, QuizAttempt
+from app.models import LearningSession, QuizAttempt, SessionDocument
 from app.services.ai_service import generate_quiz
 from app.services.mastery_service import recalculate_topic_mastery, topic_slug
 
@@ -36,6 +36,18 @@ def generate(session_id):
     # Extract key areas from conversation
     conv = session_obj.conversation
     key_text = " ".join(m["content"] for m in conv[-10:] if m["role"] == "assistant")[:500]
+    documents = SessionDocument.query.filter_by(session_id=session_obj.id, user_id=current_user.id).all()
+    if documents:
+        import json
+        from app.routes.features import hybrid_retrieve, _embeddings
+        query = f"{session_obj.topic} key concepts and learning objectives"
+        qvec = _embeddings([query])
+        for doc in documents:
+            try: cached = json.loads(doc.embeddings_json) if doc.embedding_provider == provider and doc.embeddings_json else None
+            except ValueError: cached = None
+            hits = hybrid_retrieve(doc.extracted_text, query, 2, cached_vectors=cached, query_vector=qvec)
+            key_text += "\nSOURCE NOTES (" + doc.filename + "): " + " ".join(hit["text"][:500] for hit in hits)
+        key_text = key_text[:3000]
 
     result = generate_quiz(provider, model, api_key, session_obj.topic, key_text)
 

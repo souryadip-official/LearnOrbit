@@ -99,20 +99,21 @@ def validate_key():
     result = call_ai(provider, model, api_key,
                      [{"role": "user", "content": "Say only: OK"}],
                      max_tokens=10)
-    valid = not result.startswith(("❌", "⏳"))
+    failure_prefixes = ("Invalid API key", "API key was rejected", "Rate limit hit", "API error", "Unexpected error")
+    valid = not result.startswith(failure_prefixes)
     provider_name = current_app.config["AI_PROVIDERS"].get(provider, {}).get("name", provider)
     # Distinguish rejected credentials from network, model, and provider failures.
-    if result.startswith("❌ Invalid API key"):
+    if result.startswith("Invalid API key"):
         message = f"{provider_name} rejected this API key. Check that it is a valid key for {provider_name}."
         return jsonify({"valid": False, "message": message, "error_type": "authentication"})
-    if result.startswith("❌ API key was rejected or lacks permission"):
-        return jsonify({"valid": False, "message": result[2:], "error_type": "permission"})
-    if result.startswith("❌ Unexpected error:"):
+    if result.startswith("API key was rejected or lacks permission"):
+        return jsonify({"valid": False, "message": result, "error_type": "permission"})
+    if result.startswith("Unexpected error:"):
         message = "Could not connect to the AI provider. Check your internet connection and try again."
         return jsonify({"valid": False, "message": message, "error_type": "connection"})
-    if result.startswith("❌ API error"):
+    if result.startswith("API error"):
         message = result[:300]
         return jsonify({"valid": False, "message": message, "error_type": "provider"})
-    if result.startswith("⏳"):
+    if result.startswith("Rate limit hit"):
         return jsonify({"valid": False, "message": result, "error_type": "rate_limit"})
-    return jsonify({"valid": valid, "message": "API key is valid! ✅" if valid else result[:300]})
+    return jsonify({"valid": valid, "message": "API key is valid." if valid else result[:300]})

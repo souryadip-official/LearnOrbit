@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 {% block title %}Tic Tac Toe{% endblock %}
-{% block topbar_title %}⭕ Tic Tac Toe{% endblock %}
+{% block topbar_title %}<i data-lucide="grid-3x3" aria-hidden="true"></i> Tic Tac Toe{% endblock %}
 {% block content %}
 <div class="game-page">
   <div class="game-wrapper">
     <div class="game-header">
-      <h2>⭕ Tic Tac Toe</h2>
+      <h2><i data-lucide="grid-3x3" aria-hidden="true"></i> Tic Tac Toe</h2>
       <div class="game-status" id="status">Your turn — X</div>
       <div class="game-score-row">
         <div class="score-box">You (X)<br><span id="score-x">0</span></div>
@@ -21,7 +21,7 @@
     </div>
 
     <div class="game-actions">
-      <button class="btn-secondary" id="reset-btn">🔄 New Game</button>
+      <button class="btn-secondary" id="reset-btn"><i data-lucide="refresh-cw" aria-hidden="true"></i><span>New Game</span></button>
       <a href="{{ url_for('games.index') }}" class="btn-ghost-link">← Back to games</a>
     </div>
   </div>
@@ -60,21 +60,22 @@ function handleClick(i) {
   if (gameOver || board[i]) return;
   board[i]='X';
   render();
-  if (checkWinner(board,'X')) { endGame('🎉 You win!','X'); return; }
-  if (checkDraw(board)) { endGame("It's a draw! 🤝",'D'); return; }
+  if (checkWinner(board,'X')) { endGame('You win!','X'); return; }
+  if (checkDraw(board)) { endGame("It's a draw!",'D'); return; }
   document.getElementById('status').textContent = "AI thinking…";
   setTimeout(()=>{
     const ai = aiMove();
-    if (ai===-1) { endGame("It's a draw! 🤝",'D'); return; }
+    if (ai===-1) { endGame("It's a draw!",'D'); return; }
     board[ai]='O';
     render();
-    if (checkWinner(board,'O')) { endGame('😅 AI wins!','O'); return; }
-    if (checkDraw(board)) { endGame("It's a draw! 🤝",'D'); return; }
+    if (checkWinner(board,'O')) { endGame('AI wins!','O'); return; }
+    if (checkDraw(board)) { endGame("It's a draw!",'D'); return; }
     document.getElementById('status').textContent = "Your turn — X";
   }, 400);
 }
 
 function endGame(msg, winner) {
+  window.saveGameScore?.('tictactoe', winner === 'X' ? 1 : 0);
   gameOver=true;
   document.getElementById('status').textContent=msg;
   scores[winner]++;

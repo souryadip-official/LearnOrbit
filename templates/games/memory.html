@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 {% block title %}Memory Match{% endblock %}
-{% block topbar_title %}🃏 Memory Match{% endblock %}
+{% block topbar_title %}<i data-lucide="layers-2" aria-hidden="true"></i> Memory Match{% endblock %}
 {% block content %}
 <div class="game-page">
   <div class="game-wrapper">
     <div class="game-header">
-      <h2>🃏 Memory Match</h2>
+      <h2><i data-lucide="layers-2" aria-hidden="true"></i> Memory Match</h2>
       <div class="game-score-row">
         <div class="score-box">Moves<br><span id="moves">0</span></div>
         <div class="score-box">Matched<br><span id="matched">0</span>/8</div>
@@ -14,7 +14,7 @@
     </div>
     <div class="memory-grid" id="memory-grid"></div>
     <div class="game-actions">
-      <button class="btn-secondary" id="reset-btn">🔄 New Game</button>
+      <button class="btn-secondary" id="reset-btn"><i data-lucide="refresh-cw" aria-hidden="true"></i><span>New Game</span></button>
       <a href="{{ url_for('games.index') }}" class="btn-ghost-link">← Back</a>
     </div>
   </div>
@@ -22,13 +22,13 @@
 {% endblock %}
 {% block scripts %}
 <script>
-const EMOJIS=['🧠','⚡','📚','🎯','🚀','💡','🏆','🔬'];
-let cards=[...EMOJIS,...EMOJIS], flipped=[], matched=0, moves=0, lock=false, seconds=0, timer=null;
+const MATCH_ICONS=['brain','zap','book-open','target','rocket','lightbulb','trophy','flask-conical'];
+let cards=[...MATCH_ICONS,...MATCH_ICONS], flipped=[], matched=0, moves=0, lock=false, seconds=0, timer=null;
 
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a;}
 
 function initGame(){
-  cards=shuffle([...EMOJIS,...EMOJIS]);
+  cards=shuffle([...MATCH_ICONS,...MATCH_ICONS]);
   flipped=[];matched=0;moves=0;lock=false;
   document.getElementById('moves').textContent=0;
   document.getElementById('matched').textContent=0;
@@ -37,15 +37,16 @@ function initGame(){
   timer=setInterval(()=>{seconds++;document.getElementById('timer').textContent=seconds+'s';},1000);
   const grid=document.getElementById('memory-grid');
   grid.innerHTML='';
-  cards.forEach((emoji,i)=>{
+  cards.forEach((icon,i)=>{
     const card=document.createElement('div');
     card.className='memory-card';
     card.dataset.index=i;
-    card.dataset.emoji=emoji;
-    card.innerHTML=`<div class="card-inner"><div class="card-front">?</div><div class="card-back">${emoji}</div></div>`;
+    card.dataset.icon=icon;
+    card.innerHTML=`<div class="card-inner"><div class="card-front"><i data-lucide="circle-help" aria-hidden="true"></i><span>Flip</span></div><div class="card-back"><i data-lucide="${icon}" aria-hidden="true"></i><span>${icon.replaceAll('-', ' ')}</span></div></div>`;
     card.addEventListener('click',()=>flipCard(card));
     grid.appendChild(card);
   });
+  window.refreshIcons?.();
 }
 
 function flipCard(card){
@@ -55,11 +56,11 @@ function flipCard(card){
   if(flipped.length===2){
     lock=true;moves++;
     document.getElementById('moves').textContent=moves;
-    if(flipped[0].dataset.emoji===flipped[1].dataset.emoji){
+    if(flipped[0].dataset.icon===flipped[1].dataset.icon){
       flipped.forEach(c=>c.classList.add('matched'));
       matched++;document.getElementById('matched').textContent=matched;
       flipped=[];lock=false;
-      if(matched===8){clearInterval(timer);showToast(`🏆 Completed in ${moves} moves & ${seconds}s!`,'success');}
+      if(matched===8){clearInterval(timer);window.saveGameScore?.('memory',Math.max(1,1000-moves*10-seconds));showToast(`Completed in ${moves} moves and ${seconds} seconds.`,'success');}
     } else {
       setTimeout(()=>{flipped.forEach(c=>c.classList.remove('revealed'));flipped=[];lock=false;},1000);
     }

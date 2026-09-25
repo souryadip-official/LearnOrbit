@@ -6,12 +6,14 @@ from flask import Blueprint, render_template, request, jsonify, redirect, url_fo
 from flask_login import login_required, current_user
 from app import db
 from app.models import LearningSession, LearningBehavior
+from app.models import SessionDocument
 from app.services.ai_service import (
     call_ai, build_tutor_system, detect_misconception, infer_learning_style
 )
 from app.services.mastery_service import recalculate_topic_mastery, topic_slug
 from datetime import datetime
 import re
+import json
 
 tutor_bp = Blueprint("tutor", __name__)
 
@@ -36,7 +38,7 @@ def new_session():
                 return jsonify({"success": False,
                                 "error": "Please add your API key in Settings first!",
                                 "redirect": url_for("auth.settings")}), 400
-            flash("Please add your AI API key in Settings! ⚙️", "warning")
+            flash("Please add your AI API key in Settings.", "warning")
             return redirect(url_for("auth.settings"))
 
         session_obj = LearningSession(user_id=current_user.id, topic=topic)
@@ -81,8 +83,25 @@ def send_message(session_id):
     messages_for_ai.append({"role": "user", "content": user_msg})
 
     behavior = LearningBehavior.query.filter_by(user_id=current_user.id).first()
-    style = behavior.preferred_style if behavior else "balanced"
+    from app.models import UserProfile
+    profile = UserProfile.query.filter_by(user_id=current_user.id).first()
+    style = (profile.teaching_style if profile and profile.teaching_style else behavior.preferred_style if behavior else "balanced")
     system = build_tutor_system(session_obj.topic, session_obj.difficulty_level, style)
+    # Ground answers in this session's BYOB notes using semantic/keyword RRF.
+    documents = SessionDocument.query.filter_by(session_id=session_obj.id, user_id=current_user.id).all()
+    if documents:
+        from app.routes.features import hybrid_retrieve, _embeddings
+        passages = []
+        query_vector = _embeddings([f"{session_obj.topic}\n{user_msg}"])
+        for document in documents:
+            cached_vectors = None
+            if document.embedding_provider == provider and document.embeddings_json:
+                try: cached_vectors = json.loads(document.embeddings_json)
+                except (TypeError, ValueError): cached_vectors = None
+            for hit in hybrid_retrieve(document.extracted_text, f"{session_obj.topic}\n{user_msg}", 3, cached_vectors=cached_vectors, query_vector=query_vector):
+                passages.append(f"[From {document.filename}] {hit['text'][:1500]}")
+        if passages:
+            system += "\n\nSTUDENT-PROVIDED SOURCE NOTES (use as grounding, cite the filename in your answer; tell the student when notes do not support a claim):\n" + "\n\n".join(passages[:4])
 
     ai_reply = call_ai(provider, model, api_key, messages_for_ai, system=system, max_tokens=2048)
 

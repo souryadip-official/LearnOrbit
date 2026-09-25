@@ -137,15 +137,15 @@ def call_ai(provider: str, model: str, api_key: str, messages: list,
             "authentication_error",
         )
         if status == 401 or any(marker in lowered_detail for marker in invalid_key_markers):
-            return "❌ Invalid API key. Check that this is a key for the selected provider."
+            return "Invalid API key. Check that this is a key for the selected provider."
         if status == 403:
-            return f"❌ API key was rejected or lacks permission: {detail[:400]}"
+            return f"API key was rejected or lacks permission: {detail[:400]}"
         elif status == 429:
-            return "⏳ Rate limit hit. Please wait a moment and try again."
+            return "Rate limit hit. Please wait a moment and try again."
         else:
-            return f"❌ API error ({status}): {detail[:500]}"
+            return f"API error ({status}): {detail[:500]}"
     except Exception as e:
-        return f"❌ Unexpected error: {str(e)[:300]}"
+        return f"Unexpected error: {str(e)[:300]}"
 
 
 # ---------------------------------------------------------------------------

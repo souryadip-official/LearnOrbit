@@ -65,6 +65,37 @@
   onScroll();
 })();
 
+// Fold landing-page content backward as it reaches the floating navbar edge.
+(function initLandingRoll() {
+  const nav = document.getElementById('landing-nav');
+  if (!nav || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const items = document.querySelectorAll(
+    '.hero-title, .hero-sub, .hero-actions, .hero-stats, .section-header > *, .feature-card, .step-item, .game-preview-card, .pricing-card, .cta-content > *'
+  );
+  items.forEach(item => item.classList.add('landing-roll-item'));
+  let frame = 0;
+  function update() {
+    frame = 0;
+    const edge = nav.getBoundingClientRect().bottom;
+    items.forEach(item => {
+      const bounds = item.getBoundingClientRect();
+      const distance = edge - bounds.top;
+      const range = Math.min(220, Math.max(90, bounds.height * 1.2));
+      const progress = Math.max(0, Math.min(1, distance / range));
+      item.style.setProperty('--roll-angle', `${-11 * progress}deg`);
+      item.style.setProperty('--roll-y', `${-7 * progress}px`);
+      item.style.setProperty('--roll-blur', `${2.2 * progress}px`);
+      item.style.setProperty('--roll-opacity', `${1 - 0.28 * progress}`);
+    });
+  }
+  function requestUpdate() {
+    if (!frame) frame = requestAnimationFrame(update);
+  }
+  window.addEventListener('scroll', requestUpdate, { passive: true });
+  window.addEventListener('resize', requestUpdate, { passive: true });
+  requestUpdate();
+})();
+
 // ── Mobile nav ────────────────────────────────────────────
 (function initMobileNav() {
   const btn = document.getElementById('nav-mobile-toggle');
@@ -72,12 +103,16 @@
   if (!btn || !nav) return;
   btn.addEventListener('click', () => {
     nav.classList.toggle('open');
-    btn.textContent = nav.classList.contains('open') ? '✕' : '☰';
+    btn.setAttribute('aria-label', nav.classList.contains('open') ? 'Close navigation' : 'Open navigation');
+    btn.innerHTML = `<i data-lucide="${nav.classList.contains('open') ? 'x' : 'menu'}" aria-hidden="true"></i>`;
+    window.refreshIcons?.();
   });
   nav.querySelectorAll('a').forEach(a => {
     a.addEventListener('click', () => {
       nav.classList.remove('open');
-      btn.textContent = '☰';
+      btn.setAttribute('aria-label', 'Open navigation');
+      btn.innerHTML = '<i data-lucide="menu" aria-hidden="true"></i>';
+      window.refreshIcons?.();
     });
   });
 })();
@@ -87,16 +122,24 @@
   const btn = document.getElementById('theme-btn');
   if (!btn) return;
   const html = document.documentElement;
+  function updateThemeIcon(theme) {
+    const icon = btn.querySelector('[data-lucide],svg');
+    if (!icon) return;
+    const name = theme === 'dark' ? 'sun' : 'moon';
+    if (icon.tagName.toLowerCase() === 'svg' && window.setLucideIcon) window.setLucideIcon(icon, name);
+    else icon.setAttribute('data-lucide', name);
+    window.refreshIcons?.();
+  }
   // Init from localStorage
-  const saved = localStorage.getItem('lo-theme') || 'light';
+  const saved = localStorage.getItem('learnorbit-theme') || localStorage.getItem('lo-theme') || 'light';
   html.setAttribute('data-theme', saved);
-  btn.textContent = saved === 'dark' ? '☀️' : '🌙';
+  updateThemeIcon(saved);
 
   btn.addEventListener('click', () => {
     const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
     html.setAttribute('data-theme', next);
-    btn.textContent = next === 'dark' ? '☀️' : '🌙';
-    localStorage.setItem('lo-theme', next);
+    updateThemeIcon(next);
+    localStorage.setItem('learnorbit-theme', next);
   });
 })();
 

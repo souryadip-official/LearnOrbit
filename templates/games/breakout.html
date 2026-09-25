@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 {% block title %}Breakout{% endblock %}
-{% block topbar_title %}🧱 Breakout{% endblock %}
+{% block topbar_title %}<i data-lucide="blocks" aria-hidden="true"></i> Breakout{% endblock %}
 {% block content %}
 <div class="game-page">
   <div class="game-wrapper">
     <div class="game-header">
-      <h2>🧱 Breakout</h2>
+      <h2><i data-lucide="blocks" aria-hidden="true"></i> Breakout</h2>
       <div class="game-score-row">
         <div class="score-box">Score<br><span id="score-br">0</span></div>
         <div class="score-box">Lives<br><span id="lives-br">3</span></div>
@@ -14,7 +14,7 @@
     </div>
     <canvas id="breakout-canvas" width="480" height="360" style="border-radius:12px;cursor:none;"></canvas>
     <div class="game-actions">
-      <button class="btn-secondary" id="reset-br">🔄 New Game</button>
+      <button class="btn-secondary" id="reset-br"><i data-lucide="refresh-cw" aria-hidden="true"></i><span>New Game</span></button>
       <a href="{{ url_for('games.index') }}" class="btn-ghost-link">← Back</a>
     </div>
     <p style="text-align:center;font-size:.85rem;opacity:.6;margin-top:.5rem">Move mouse / finger to control the paddle. Click/tap to launch!</p>
@@ -81,13 +81,13 @@ function update(){
   });
   // Out of bounds
   if(ball.y>H+ball.r){lives--;document.getElementById('lives-br').textContent=lives;
-    if(!lives){running=false;ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(0,0,W,H);ctx.fillStyle='#fff';ctx.font='bold 28px Plus Jakarta Sans,sans-serif';ctx.textAlign='center';ctx.fillText('Game Over 😢',W/2,H/2);return;}
+    if(!lives){running=false;window.saveGameScore?.('breakout',score);ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(0,0,W,H);ctx.fillStyle='#fff';ctx.font='bold 28px DM Sans,sans-serif';ctx.textAlign='center';ctx.fillText('Game Over',W/2,H/2);return;}
     ball={x:W/2,y:H-35,r:7,dx:3,dy:-3};launched=false;
   }
   // Level up
   if(bricks.every(b=>!b.alive)){level++;document.getElementById('level-br').textContent=level;
     bricks=makeBricks(level);ball={x:W/2,y:H-35,r:7,dx:3+level*0.3,dy:-(3+level*0.3)};launched=false;
-    showToast(`Level ${level}! 🔥`,'success');
+    showToast(`Level ${level}!`,'success');
   }
 }
 

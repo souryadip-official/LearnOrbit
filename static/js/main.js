@@ -16,11 +16,12 @@ function showToast(message, type = 'info', duration = 4000) {
   const container = document.getElementById('toast-container');
   if (!container) return;
 
-  const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
+  const icons = { success: 'circle-check', error: 'circle-x', warning: 'triangle-alert', info: 'info' };
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
-  toast.innerHTML = `<span>${icons[type] || '💬'}</span><span>${message}</span>`;
+  toast.innerHTML = `<i data-lucide="${icons[type] || 'message-circle'}" aria-hidden="true"></i><span>${message}</span>`;
   container.appendChild(toast);
+  window.refreshIcons?.();
 
   setTimeout(() => {
     toast.style.animation = 'slideInRight .3s ease reverse';
@@ -59,10 +60,12 @@ function initTheme() {
 
   async function setTheme(theme) {
     html.setAttribute('data-theme', theme);
+    localStorage.setItem('learnorbit-theme', theme);
     ['#theme-icon', '#theme-icon-top'].forEach(sel => {
       const el = document.querySelector(sel);
-      if (el) el.textContent = theme === 'dark' ? '☀️' : '🌙';
+      if (el) window.setLucideIcon?.(el, theme === 'dark' ? 'sun' : 'moon');
     });
+    window.refreshIcons?.();
     // Persist via API if authenticated
     try {
       await fetch('/api/theme', {
@@ -92,6 +95,12 @@ function getCSRF() {
   return meta?.getAttribute('content') || '';
 }
 window.getCSRF = getCSRF;
+
+window.saveGameScore = (gameId, score) => fetch('/games/score', {
+  method: 'POST', keepalive: true,
+  headers: {'Content-Type':'application/json','X-CSRFToken':getCSRF()},
+  body: JSON.stringify({game_id:gameId, score})
+}).catch(() => {});
 
 // ── Auto-resize textareas ─────────────────────────────────
 function initAutoResize() {
@@ -130,6 +139,14 @@ function initSmoothScroll() {
   });
 }
 
+function initFloatingNav() {
+  const nav = document.querySelector('.topbar');
+  if (!nav) return;
+  const update = () => nav.classList.toggle('scrolled', window.scrollY > 24);
+  window.addEventListener('scroll', update, {passive:true});
+  update();
+}
+
 // ── Active nav highlight (MathJax cleanup helper) ─────────
 function renderMathInElement(el) {
   if (window.MathJax && el) {
@@ -145,4 +162,45 @@ document.addEventListener('DOMContentLoaded', () => {
   initAutoResize();
   initShortcuts();
   initSmoothScroll();
+  initFloatingNav();
+  const clock = document.getElementById('live-clock');
+  const paintClock = () => { if (clock) clock.textContent = new Intl.DateTimeFormat([], {hour:'2-digit', minute:'2-digit'}).format(new Date()); };
+  paintClock(); setInterval(paintClock, 15000);
+  const musicIsland = document.getElementById('music-island');
+  const player = document.getElementById('global-focus-audio');
+  if (musicIsland && player) {
+    const state = () => {
+      musicIsland.classList.toggle('hidden', !player.src);
+      const label = musicIsland.querySelector('span');
+      if (label) label.textContent = player.paused ? 'Resume focus music' : 'Music playing';
+      localStorage.setItem('learnorbit-music-active', String(!player.paused && !!player.src));
+    };
+    const restore = async () => {
+      try {
+        const open = indexedDB.open('learnorbit-focus-audio', 1);
+        open.onupgradeneeded = () => open.result.createObjectStore('tracks');
+        open.onsuccess = () => {
+          const db = open.result, req = db.transaction('tracks').objectStore('tracks').get('current');
+          req.onsuccess = () => {
+            const file = req.result;
+            if (!file) return;
+            player.src = URL.createObjectURL(file);
+            player.addEventListener('loadedmetadata', () => {
+              const shouldResume = localStorage.getItem('learnorbit-music-active') === 'true';
+              player.currentTime = Math.min(Number(localStorage.getItem('learnorbit-music-position') || 0), player.duration || 0);
+              state();
+              if (shouldResume) player.play().catch(state);
+            }, {once:true});
+          };
+        };
+      } catch (_) {}
+    };
+    player.addEventListener('play', state); player.addEventListener('pause', state);
+    player.addEventListener('timeupdate', () => localStorage.setItem('learnorbit-music-position', String(player.currentTime || 0)));
+    musicIsland.addEventListener('click', () => player.paused ? player.play().catch(state) : player.pause());
+    restore();
+  }
+  if (location.pathname.startsWith('/games/') && location.pathname !== '/games/') {
+    window.addEventListener('pagehide', () => fetch('/games/usage/close', {method:'POST', keepalive:true}));
+  }
 });

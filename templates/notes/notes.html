@@ -1,16 +1,16 @@
 {% extends "base.html" %}
 {% block title %}Notes — {{ session.topic }}{% endblock %}
-{% block topbar_title %}📝 Study Notes{% endblock %}
+{% block topbar_title %}<i data-lucide="notebook-text" aria-hidden="true"></i> Study Notes{% endblock %}
 {% block loader_text %}Generating your notes…{% endblock %}
 
 {% block topbar_actions %}
-<button class="btn-sm" id="export-pdf-btn">📄 Export PDF</button>
+<button class="btn-sm" id="export-pdf-btn"><i data-lucide="file-down" aria-hidden="true"></i><span>Export PDF</span></button>
 {% endblock %}
 
 {% block content %}
 <div class="notes-page">
   <div class="notes-header">
-    <h1>📝 {{ session.topic }}</h1>
+    <h1>{{ session.topic }}</h1>
     <div class="notes-meta">
       <span>Session {{ session.id }}</span>
       <span>·</span>
@@ -22,20 +22,20 @@
 
   {% if not session.notes_md %}
   <div class="notes-empty">
-    <div class="empty-icon">📝</div>
+    <div class="empty-icon"><i data-lucide="notebook-pen" aria-hidden="true"></i></div>
     <h3>No notes yet!</h3>
     <p>Generate your AI-powered study notes for this session.</p>
     <button class="btn-primary" id="generate-notes-btn">
-      <span class="btn-text">⚡ Generate Notes</span>
-      <span class="btn-spinner hidden">⏳ AI is writing…</span>
+      <span class="btn-text"><i data-lucide="sparkles" aria-hidden="true"></i> Generate Notes</span>
+      <span class="btn-spinner hidden"><i data-lucide="loader-circle" aria-hidden="true"></i> AI is writing…</span>
     </button>
   </div>
   {% endif %}
 
   <div class="notes-content {% if not session.notes_md %}hidden{% endif %}" id="notes-content">
     <div class="notes-toolbar">
-      <button class="btn-sm" id="regenerate-btn">🔄 Regenerate</button>
-      <button class="btn-sm" id="export-pdf-btn-2">📄 Export PDF</button>
+      <button class="btn-sm" id="regenerate-btn"><i data-lucide="refresh-cw" aria-hidden="true"></i><span>Regenerate</span></button>
+      <button class="btn-sm" id="export-pdf-btn-2"><i data-lucide="file-down" aria-hidden="true"></i><span>Export PDF</span></button>
     </div>
     <div class="notes-body markdown-body" id="notes-body">
       {% if session.notes_md %}
@@ -80,7 +80,7 @@ async function generateNotes() {
     document.getElementById('notes-empty')?.classList.add('hidden');
     document.getElementById('notes-content').classList.remove('hidden');
     renderNotes(json.notes);
-    showToast('Notes generated! 📝', 'success');
+    showToast('Notes generated.', 'success');
   } catch { showToast('Failed to generate notes', 'error'); }
   finally {
     if (btn) {
@@ -98,7 +98,7 @@ document.getElementById('regenerate-btn')?.addEventListener('click', generateNot
 
 function exportPDF() {
   {% if current_user.plan == 'free' %}
-    showToast('PDF export requires the Scholar plan. Upgrade to unlock! 🚀', 'warning');
+    showToast('PDF export requires the Scholar plan. Upgrade to unlock.', 'warning');
   {% else %}
     showToast('Preparing your branded PDF…', 'info');
     window.location = `/notes/${SESSION_ID}/export-pdf`;

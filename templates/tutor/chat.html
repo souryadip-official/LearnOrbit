@@ -1,27 +1,35 @@
 {% extends "base.html" %}
 {% block title %}{{ session.topic }}{% endblock %}
-{% block topbar_title %}🧠 {{ session.topic[:40] }}{% endblock %}
+{% block topbar_title %}<i data-lucide="brain" aria-hidden="true"></i> {{ session.topic[:40] }}{% endblock %}
 {% block loader_text %}Summoning your AI Professor…{% endblock %}
 
 {% block topbar_actions %}
 <span class="difficulty-badge" id="difficulty-badge">{{ session.difficulty_level }}</span>
 {% if session.status == 'active' %}
-<button class="btn-sm-danger" id="end-session-btn" title="End Session">🏁 End</button>
+<button class="btn-sm-danger" id="end-session-btn"><i data-lucide="flag" aria-hidden="true"></i><span>End session</span></button>
 {% else %}
-<span class="session-readonly-badge">✓ Completed · Read only</span>
+<span class="session-readonly-badge"><i data-lucide="lock-keyhole" aria-hidden="true"></i><span>Completed · Read only</span></span>
 {% endif %}
 {% endblock %}
 
 {% block content %}
 <div class="chat-page">
+  <div class="byob-toolbar">
+    <div><strong>BYOB · Bring Your Own Book</strong><small>Upload topic notes as a text PDF to ground your tutor's answers.</small></div>
+    {% if session.status == 'active' %}<label class="btn-secondary byob-upload"><i data-lucide="paperclip"></i><span id="byob-label">Attach PDF</span><input id="byob-file" type="file" accept="application/pdf,.pdf" hidden></label>{% endif %}
+    <button class="btn-sm hidden" id="open-pdf"><i data-lucide="panel-right-open"></i><span>Open notes</span></button>
+  </div>
+  <div class="chat-workspace" id="chat-workspace">
+  <aside class="pdf-pane hidden" id="pdf-pane"><div class="pdf-pane-head"><strong id="pdf-title">Study notes</strong><label class="sr-only" for="pdf-width">Document pane width</label><input id="pdf-width" type="range" min="28" max="65" value="42" aria-label="Adjust document pane width"><button class="btn-sm" id="close-pdf" aria-label="Close notes"><i data-lucide="x"></i><span>Close</span></button></div><iframe id="pdf-frame" title="Uploaded study notes"></iframe></aside>
+  <div class="chat-column">
   <!-- Misconception alert (hidden by default) -->
   <div class="misconception-alert hidden" id="misconception-alert">
     <div class="misconception-inner">
-      <span class="misconception-icon">🔍</span>
+      <span class="misconception-icon"><i data-lucide="search-check" aria-hidden="true"></i><span>Concept check</span></span>
       <div class="misconception-text">
         <strong>Heads up!</strong>
         <p id="misconception-msg"></p>
-        <button class="btn-sm" id="dismiss-misconception">Got it! ✓</button>
+        <button class="btn-sm" id="dismiss-misconception">Got it</button>
       </div>
     </div>
   </div>
@@ -30,13 +38,13 @@
   <div class="chat-messages" id="chat-messages">
     <!-- Welcome message -->
     {% if session.status == 'active' or not session.conversation %}<div class="msg msg-assistant animate__animated animate__fadeIn">
-      <div class="msg-avatar">⚡</div>
+      <div class="msg-avatar"><i data-lucide="bot" aria-hidden="true"></i><span>Tutor</span></div>
       <div class="msg-body">
         <div class="msg-content">
-          <p>👋 Hello! I'm your LearnOrbit AI tutor, powered by <strong>{{ current_user.ai_provider | title }}</strong>.</p>
+          <p>Hello! I'm your LearnOrbit AI tutor, powered by <strong>{{ current_user.ai_provider | title }}</strong>.</p>
           <p>Today we're diving into: <strong>{{ session.topic }}</strong></p>
           <p>Let me start with a solid foundation — theory, intuition, and examples. Ask me anything along the way!</p>
-          <p>Ready? Here we go! 🚀</p>
+          <p>Ready? Let's begin.</p>
         </div>
         <div class="msg-time">Just now</div>
       </div>
@@ -45,7 +53,7 @@
     {% for msg in session.conversation %}
     <div class="msg msg-{{ msg.role }} animate__animated animate__fadeIn">
       {% if msg.role == 'assistant' %}
-      <div class="msg-avatar">⚡</div>
+      <div class="msg-avatar"><i data-lucide="bot" aria-hidden="true"></i><span>Tutor</span></div>
       {% endif %}
       <div class="msg-body">
         <div class="msg-content markdown-body" data-raw="{{ msg.content | e }}"></div>
@@ -59,7 +67,7 @@
 
     <!-- Typing indicator -->
     {% if session.status == 'active' %}<div class="msg msg-assistant hidden" id="typing-indicator">
-      <div class="msg-avatar">⚡</div>
+      <div class="msg-avatar"><i data-lucide="bot" aria-hidden="true"></i><span>Tutor</span></div>
       <div class="msg-body">
         <div class="typing-dots">
           <span></span><span></span><span></span>
@@ -79,9 +87,9 @@
         maxlength="2000"
       ></textarea>
       <div class="input-actions">
-        <button class="btn-suggest" id="suggest-btn" title="I'm stuck — help me!">💡</button>
+        <button class="btn-suggest" id="suggest-btn"><i data-lucide="lightbulb" aria-hidden="true"></i><span>Suggest a question</span></button>
         <button class="btn-send" id="send-btn" title="Send (Ctrl+Enter)">
-          <span id="send-icon">➤</span>
+          <i id="send-icon" data-lucide="send" aria-hidden="true"></i><span>Send</span>
         </button>
       </div>
     </div>
@@ -90,12 +98,14 @@
       <span id="char-count">0/2000</span>
     </div>
   </div>{% else %}<div class="chat-input-bar session-readonly-note">This session is complete. You can review the conversation, but messaging is closed.</div>{% endif %}
+  </div>
 </div>
+  </div>
 
 <!-- End session confirm modal -->
 {% if session.status == 'active' %}<div class="modal-overlay hidden" id="end-modal">
   <div class="modal-card animate__animated animate__zoomIn">
-    <div class="modal-icon">🏁</div>
+    <div class="modal-icon"><i data-lucide="flag" aria-hidden="true"></i></div>
     <h3>End this session?</h3>
     <p>Your mastery score will be updated and you'll head to the quiz. Make sure you've covered everything you wanted!</p>
     <div class="modal-actions">
@@ -111,6 +121,30 @@
 const SESSION_ID = {{ session.id }};
 // Flask-WTF exposes its request token in the base template meta tag.
 const CSRF = document.querySelector('meta[name="csrf-token"]')?.content || '';
+const docInput = document.getElementById('byob-file');
+const openPdf = document.getElementById('open-pdf');
+const pdfPane = document.getElementById('pdf-pane');
+let currentPdf = null;
+docInput?.addEventListener('change', async () => {
+  const file = docInput.files?.[0]; if (!file) return;
+  const form = new FormData(); form.append('file', file);
+  document.getElementById('byob-label').textContent = 'Checking…';
+  try {
+    const response = await fetch(`/features/session/${SESSION_ID}/documents`, {method:'POST',headers:{'X-CSRFToken':CSRF},body:form});
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Could not upload the PDF.');
+    currentPdf = data.document; document.getElementById('pdf-title').textContent = currentPdf.filename;
+    document.getElementById('pdf-frame').src = currentPdf.url;
+    openPdf.classList.remove('hidden'); pdfPane.classList.remove('hidden');
+    document.getElementById('byob-label').textContent = 'Add another PDF';
+    showToast('PDF checked and added as tutor context.', 'success');
+  } catch(error) { showToast(error.message, 'error'); document.getElementById('byob-label').textContent='Attach PDF'; }
+  finally { docInput.value=''; }
+});
+openPdf?.addEventListener('click', () => pdfPane.classList.remove('hidden'));
+document.getElementById('close-pdf')?.addEventListener('click', () => pdfPane.classList.add('hidden'));
+document.getElementById('pdf-width')?.addEventListener('input', e => {pdfPane.style.flexBasis=`${e.target.value}%`;pdfPane.style.width=`${e.target.value}%`;});
+fetch(`/features/session/${SESSION_ID}/documents`).then(r=>r.json()).then(docs=>{if(!docs.length)return;currentPdf=docs[0];document.getElementById('pdf-title').textContent=currentPdf.filename;document.getElementById('pdf-frame').src=currentPdf.url;openPdf?.classList.remove('hidden');const label=document.getElementById('byob-label');if(label)label.textContent='Add another PDF';}).catch(()=>{});
 
 // Render existing markdown messages on load
 document.querySelectorAll('.markdown-body[data-raw]').forEach(el => {
@@ -155,7 +189,7 @@ async function sendMessage() {
   document.getElementById('typing-indicator').classList.remove('hidden');
   scrollToBottom();
   document.getElementById('send-btn').disabled = true;
-  document.getElementById('send-icon').textContent = '⏳';
+  window.setLucideIcon?.(document.getElementById('send-icon'), 'loader-circle');
 
   try {
     const res = await fetch(`/tutor/${SESSION_ID}/message`, {
@@ -189,7 +223,7 @@ async function sendMessage() {
     showToast('Failed to get response. Try again.', 'error');
   } finally {
     document.getElementById('send-btn').disabled = false;
-    document.getElementById('send-icon').textContent = '➤';
+    window.setLucideIcon?.(document.getElementById('send-icon'), 'send');
   }
 }
 
@@ -200,7 +234,7 @@ function addMessage(role, content) {
   const now = new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
   if (role === 'assistant') {
     div.innerHTML = `
-      <div class="msg-avatar">⚡</div>
+      <div class="msg-avatar"><i data-lucide="bot" aria-hidden="true"></i><span>Tutor</span></div>
       <div class="msg-body">
         <div class="msg-content markdown-body">${renderContent(content)}</div>
         <div class="msg-time">${now}</div>
@@ -216,6 +250,7 @@ function addMessage(role, content) {
   // Insert before typing indicator
   const indicator = document.getElementById('typing-indicator');
   msgs.insertBefore(div, indicator);
+  window.refreshIcons?.();
   typesetMath(div);
   scrollToBottom();
 }
@@ -258,7 +293,7 @@ document.getElementById('cancel-end').addEventListener('click', () => {
   document.getElementById('end-modal').classList.add('hidden');
 });
 document.getElementById('confirm-end').addEventListener('click', async () => {
-  document.getElementById('confirm-end').textContent = '⏳ Saving…';
+  document.getElementById('confirm-end').textContent = 'Saving…';
   document.getElementById('confirm-end').disabled = true;
   try {
     const res = await fetch(`/tutor/${SESSION_ID}/end`, {
@@ -266,7 +301,7 @@ document.getElementById('confirm-end').addEventListener('click', async () => {
     });
     const json = await res.json();
     if (json.success) {
-      showToast('Session complete! Heading to your quiz 🎯', 'success');
+      showToast('Session complete! Heading to your quiz.', 'success');
       setTimeout(() => window.location = json.redirect, 800);
     }
   } catch { showToast('Error ending session', 'error'); }

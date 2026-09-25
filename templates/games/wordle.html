@@ -1,14 +1,14 @@
 {% extends "base.html" %}
 {% block title %}Wordle{% endblock %}
-{% block topbar_title %}🔤 Wordle{% endblock %}
+{% block topbar_title %}<i data-lucide="case-sensitive" aria-hidden="true"></i> Wordle{% endblock %}
 {% block content %}
 <div class="game-page">
   <div class="game-wrapper wordle-wrapper">
-    <div class="game-header"><h2>🔤 Wordle</h2><div class="game-status" id="wordle-status">Guess the 5-letter word!</div></div>
+    <div class="game-header"><h2><i data-lucide="case-sensitive" aria-hidden="true"></i> Wordle</h2><div class="game-status" id="wordle-status">Guess the 5-letter word!</div></div>
     <div class="wordle-grid" id="wordle-grid"></div>
     <div class="wordle-keyboard" id="wordle-keyboard"></div>
     <div class="game-actions">
-      <button class="btn-secondary" id="wordle-reset">🔄 New Word</button>
+      <button class="btn-secondary" id="wordle-reset"><i data-lucide="refresh-cw" aria-hidden="true"></i><span>New Word</span></button>
       <a href="{{ url_for('games.index') }}" class="btn-ghost-link">← Back</a>
     </div>
   </div>
@@ -81,8 +81,8 @@ function submitGuess(){
       setTimeout(()=>{cell.className=`wordle-cell ${state}`;cell.textContent=current[c];updateKey(current[c],state);},250);
     },c*80);
   });
-  if(current===secret){setTimeout(()=>{showToast('🏆 Brilliant! You got it!','success');gameOver=true;document.getElementById('wordle-status').textContent='🎉 Correct!';},600);}
-  else if(guesses.length===ROWS){setTimeout(()=>{showToast(`The word was ${secret}`,'error');gameOver=true;document.getElementById('wordle-status').textContent=`The word was ${secret}`;},600);}
+  if(current===secret){setTimeout(()=>{showToast('Brilliant! You got it!','success');gameOver=true;window.saveGameScore?.('wordle',(ROWS-guesses.length+1)*100);document.getElementById('wordle-status').textContent='Correct!';},600);}
+  else if(guesses.length===ROWS){setTimeout(()=>{showToast(`The word was ${secret}`,'error');gameOver=true;window.saveGameScore?.('wordle',0);document.getElementById('wordle-status').textContent=`The word was ${secret}`;},600);}
   current='';
 }
 

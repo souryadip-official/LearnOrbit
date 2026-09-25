@@ -1,24 +1,24 @@
 {% extends "base.html" %}
 {% block title %}New Session{% endblock %}
-{% block topbar_title %}🧠 Start Learning{% endblock %}
+{% block topbar_title %}<i data-lucide="brain" aria-hidden="true"></i> Start Learning{% endblock %}
 {% block loader_text %}Preparing your tutor…{% endblock %}
 
 {% block content %}
 <div class="new-session-page">
   <div class="new-session-card animate__animated animate__fadeInUp">
-    <div class="session-hero-icon">🧠</div>
+    <div class="session-hero-icon"><i data-lucide="brain" aria-hidden="true"></i><span>Build understanding, one idea at a time</span></div>
     <h1>What do you want to learn today?</h1>
     <p class="session-sub">Type any topic — from Quantum Mechanics to Renaissance Art to Python Decorators. Your AI professor is ready!</p>
 
     <form id="new-session-form" class="session-form">
       <div class="topic-input-wrap">
-        <span class="topic-icon">🎯</span>
+        <span class="topic-icon"><i data-lucide="target" aria-hidden="true"></i><span class="sr-only">Topic</span></span>
         <input type="text" id="topic-input" class="topic-input"
                placeholder="e.g. Fourier Transform, Photosynthesis, Dynamic Programming…"
                autocomplete="off" autofocus required />
         <button type="submit" class="topic-submit" id="start-btn">
-          <span class="btn-text">Start →</span>
-          <span class="btn-spinner hidden">⏳</span>
+          <span class="btn-text"><i data-lucide="arrow-right" aria-hidden="true"></i> Start session</span>
+          <span class="btn-spinner hidden"><i data-lucide="loader-circle" aria-hidden="true"></i><span>Starting…</span></span>
         </button>
       </div>
     </form>
@@ -27,25 +27,25 @@
     <div class="topic-suggestions">
       <p class="suggestions-label">Popular picks:</p>
       <div class="suggestion-chips">
-        <button class="chip" data-topic="Neural Networks">🤖 Neural Networks</button>
-        <button class="chip" data-topic="Calculus - Derivatives">∂ Calculus</button>
-        <button class="chip" data-topic="The French Revolution">⚔️ French Revolution</button>
-        <button class="chip" data-topic="DNA Replication">🧬 DNA Replication</button>
-        <button class="chip" data-topic="Binary Trees">🌳 Binary Trees</button>
-        <button class="chip" data-topic="Thermodynamics">🌡️ Thermodynamics</button>
-        <button class="chip" data-topic="Shakespeare's Hamlet">📜 Hamlet</button>
-        <button class="chip" data-topic="Linear Algebra">📐 Linear Algebra</button>
+        <button class="chip" data-topic="Neural Networks"><i data-lucide="network" aria-hidden="true"></i> Neural Networks</button>
+        <button class="chip" data-topic="Calculus - Derivatives"><i data-lucide="sigma" aria-hidden="true"></i> Calculus</button>
+        <button class="chip" data-topic="The French Revolution"><i data-lucide="landmark" aria-hidden="true"></i> French Revolution</button>
+        <button class="chip" data-topic="DNA Replication"><i data-lucide="dna" aria-hidden="true"></i> DNA Replication</button>
+        <button class="chip" data-topic="Binary Trees"><i data-lucide="git-branch" aria-hidden="true"></i> Binary Trees</button>
+        <button class="chip" data-topic="Thermodynamics"><i data-lucide="thermometer" aria-hidden="true"></i> Thermodynamics</button>
+        <button class="chip" data-topic="Shakespeare's Hamlet"><i data-lucide="book-text" aria-hidden="true"></i> Hamlet</button>
+        <button class="chip" data-topic="Linear Algebra"><i data-lucide="triangle" aria-hidden="true"></i> Linear Algebra</button>
       </div>
     </div>
 
     <div class="session-info-row">
-      <div class="info-pill">🤖 {{ current_user.ai_provider | title }} · {{ current_user.ai_model }}</div>
-      <a href="{{ url_for('auth.settings') }}" class="info-link">Change →</a>
+      <div class="info-pill"><i data-lucide="bot" aria-hidden="true"></i> {{ current_user.ai_provider | title }} · {{ current_user.ai_model }}</div>
+      <a href="{{ url_for('auth.settings') }}" class="info-link"><i data-lucide="settings-2" aria-hidden="true"></i> Change provider</a>
     </div>
 
     {% if not current_user.get_ai_api_key() %}
     <div class="alert-warning">
-      ⚠️ No API key set. <a href="{{ url_for('auth.settings') }}">Add one in Settings</a> to use the AI tutor.
+      <i data-lucide="triangle-alert" aria-hidden="true"></i><span>No API key set. <a href="{{ url_for('auth.settings') }}">Add one in Settings</a> to use the AI tutor.</span>
     </div>
     {% endif %}
   </div>
@@ -78,7 +78,7 @@ document.getElementById('new-session-form').addEventListener('submit', async e =
     });
     const json = await res.json();
     if (json.success) {
-      showToast(`Starting session on "${topic}" 🚀`, 'success');
+      showToast(`Starting session on "${topic}".`, 'success');
       setTimeout(() => window.location = json.redirect, 500);
     } else {
       showToast(json.error || 'Failed to start session', 'error');

@@ -274,3 +274,101 @@ class LearningBehavior(db.Model):
             "streak_days": self.streak_days,
             "profile": self.profile,
         }
+
+
+class UserProfile(db.Model):
+    __tablename__ = "user_profiles"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), unique=True, nullable=False)
+    full_name = db.Column(db.String(120), default="")
+    date_of_birth = db.Column(db.String(10), default="")
+    grade = db.Column(db.String(40), default="")
+    teaching_style = db.Column(db.String(32), default="balanced")
+    desired_plan = db.Column(db.String(16), default="free")
+    email_verified = db.Column(db.Boolean, default=True)
+    avatar = db.Column(db.String(64), default="orbit-1")
+    picture_path = db.Column(db.String(255))
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class SessionDocument(db.Model):
+    __tablename__ = "session_documents"
+    id = db.Column(db.Integer, primary_key=True)
+    session_id = db.Column(db.Integer, db.ForeignKey("learning_sessions.id"), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    filename = db.Column(db.String(255), nullable=False)
+    storage_path = db.Column(db.String(500), nullable=False)
+    extracted_text = db.Column(db.Text, nullable=False)
+    embedding_provider = db.Column(db.String(32))
+    embeddings_json = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class GameUsage(db.Model):
+    __tablename__ = "game_usage"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    started_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    ended_at = db.Column(db.DateTime)
+
+
+class GameScore(db.Model):
+    __tablename__ = "game_scores"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    game_id = db.Column(db.String(32), nullable=False)
+    score = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class CalendarEvent(db.Model):
+    __tablename__ = "calendar_events"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    title = db.Column(db.String(160), nullable=False)
+    details = db.Column(db.Text, default="")
+    starts_at = db.Column(db.DateTime, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class Subscription(db.Model):
+    __tablename__ = "subscriptions"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    plan = db.Column(db.String(16), nullable=False)
+    status = db.Column(db.String(16), default="active")
+    current_period_start = db.Column(db.DateTime, default=datetime.utcnow)
+    current_period_end = db.Column(db.DateTime, nullable=False)
+    cancel_at_period_end = db.Column(db.Boolean, default=False)
+    scheduled_plan = db.Column(db.String(16))
+
+
+class PaymentRecord(db.Model):
+    __tablename__ = "payment_records"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    plan = db.Column(db.String(16), nullable=False)
+    amount = db.Column(db.Float, nullable=False)
+    status = db.Column(db.String(16), default="demo")
+    reference = db.Column(db.String(40), unique=True, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class CodeSnippet(db.Model):
+    __tablename__ = "code_snippets"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    title = db.Column(db.String(120), default="Untitled")
+    language = db.Column(db.String(24), default="python")
+    source_code = db.Column(db.Text, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class EmailOTP(db.Model):
+    __tablename__ = "email_otps"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    purpose = db.Column(db.String(16), nullable=False)
+    code_hash = db.Column(db.String(256), nullable=False)
+    expires_at = db.Column(db.DateTime, nullable=False)
+    attempts = db.Column(db.Integer, default=0)

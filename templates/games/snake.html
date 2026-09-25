@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 {% block title %}Snake{% endblock %}
-{% block topbar_title %}🐍 Snake{% endblock %}
+{% block topbar_title %}<i data-lucide="move" aria-hidden="true"></i> Snake{% endblock %}
 {% block content %}
 <div class="game-page">
   <div class="game-wrapper">
     <div class="game-header">
-      <h2>🐍 Snake</h2>
+      <h2><i data-lucide="move" aria-hidden="true"></i> Snake</h2>
       <div class="game-score-row">
         <div class="score-box">Score<br><span id="score">0</span></div>
         <div class="score-box">Best<br><span id="best">0</span></div>
@@ -15,9 +15,9 @@
       <canvas id="snake-canvas" width="400" height="400"></canvas>
       <div class="snake-overlay hidden" id="snake-overlay">
         <div class="overlay-content">
-          <div id="overlay-icon">🐍</div>
+          <div id="overlay-icon"><i data-lucide="play" aria-hidden="true"></i><span>Ready to play?</span></div>
           <div id="overlay-msg">Press Start to play!</div>
-          <button class="btn-primary" id="snake-start">▶ Start</button>
+          <button class="btn-primary" id="snake-start"><i data-lucide="play" aria-hidden="true"></i><span>Start game</span></button>
         </div>
       </div>
     </div>
@@ -60,7 +60,8 @@ function draw(){
   });
   // Food
   ctx.font=`${CELL-4}px serif`;
-  ctx.fillText('🍎',food.x*CELL+1,food.y*CELL+CELL-2);
+  ctx.fillStyle='#e96558';ctx.beginPath();ctx.arc(food.x*CELL+CELL/2,food.y*CELL+CELL/2,CELL*.38,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#286b5b';ctx.fillRect(food.x*CELL+CELL/2,food.y*CELL+2,3,6);
 }
 
 function tick(){
@@ -73,9 +74,11 @@ function tick(){
 }
 
 function endGame(){
+  window.saveGameScore?.('snake', score);
   clearInterval(loop);running=false;
   if(score>best){best=score;document.getElementById('best').textContent=best;}
-  document.getElementById('overlay-icon').textContent='💀';
+  document.getElementById('overlay-icon').innerHTML='<i data-lucide="circle-x" aria-hidden="true"></i><span>Game over</span>';
+  window.refreshIcons?.();
   document.getElementById('overlay-msg').textContent=`Score: ${score}`;
   document.getElementById('snake-start').textContent='▶ Play Again';
   document.getElementById('snake-overlay').classList.remove('hidden');

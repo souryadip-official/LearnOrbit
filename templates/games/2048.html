@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 {% block title %}2048{% endblock %}
-{% block topbar_title %}🔢 2048{% endblock %}
+{% block topbar_title %}<i data-lucide="grid-2x2-check" aria-hidden="true"></i> 2048{% endblock %}
 {% block content %}
 <div class="game-page">
   <div class="game-wrapper">
     <div class="game-header">
-      <h2>🔢 2048</h2>
+      <h2><i data-lucide="grid-2x2-check" aria-hidden="true"></i> 2048</h2>
       <div class="game-score-row">
         <div class="score-box">Score<br><span id="score-2048">0</span></div>
         <div class="score-box">Best<br><span id="best-2048">0</span></div>
@@ -13,7 +13,7 @@
     </div>
     <div class="game-2048-grid" id="grid-2048"></div>
     <div class="game-actions">
-      <button class="btn-secondary" id="reset-2048">🔄 New Game</button>
+      <button class="btn-secondary" id="reset-2048"><i data-lucide="refresh-cw" aria-hidden="true"></i><span>New Game</span></button>
       <a href="{{ url_for('games.index') }}" class="btn-ghost-link">← Back</a>
     </div>
     <p style="text-align:center;font-size:.85rem;opacity:.6;margin-top:.5rem">Use arrow keys or swipe to move tiles.</p>
@@ -22,10 +22,10 @@
 {% endblock %}
 {% block scripts %}
 <script>
-let board,score=0,best=0;
+let board,score=0,best=0,won=false;
 const COLORS={'2':'#eef2ff','4':'#e0e7ff','8':'#c7d2fe','16':'#a5b4fc','32':'#818cf8','64':'#6366f1','128':'#4f46e5','256':'#4338ca','512':'#3730a3','1024':'#312e81','2048':'#1e1b4b'};
 
-function initBoard(){board=Array(4).fill(null).map(()=>Array(4).fill(0));score=0;document.getElementById('score-2048').textContent=0;addTile();addTile();render();}
+function initBoard(){board=Array(4).fill(null).map(()=>Array(4).fill(0));score=0;won=false;document.getElementById('score-2048').textContent=0;addTile();addTile();render();}
 
 function addTile(){
   const empty=[];
@@ -56,7 +56,7 @@ function move(dir){
   if(moved){board=nb;document.getElementById('score-2048').textContent=score;if(score>best){best=score;document.getElementById('best-2048').textContent=best;}addTile();render();checkWin();}
 }
 
-function checkWin(){if(board.some(r=>r.includes(2048)))showToast('🏆 You reached 2048!','success');}
+function checkWin(){if(!won&&board.some(r=>r.includes(2048))){won=true;window.saveGameScore?.('2048',score);showToast('You reached 2048!','success');}}
 
 document.addEventListener('keydown',e=>{
   const map={ArrowLeft:'left',ArrowRight:'right',ArrowUp:'up',ArrowDown:'down'};

@@ -7,5 +7,6 @@ Werkzeug==3.0.3
 SQLAlchemy==2.0.31
 requests==2.32.3
 fpdf2==2.7.9
+pypdf==5.4.0
 python-dotenv==1.0.1
 gunicorn==22.0.0
