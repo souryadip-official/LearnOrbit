@@ -5,7 +5,11 @@
 
 {% block topbar_actions %}
 <span class="difficulty-badge" id="difficulty-badge">{{ session.difficulty_level }}</span>
+{% if session.status == 'active' %}
 <button class="btn-sm-danger" id="end-session-btn" title="End Session">🏁 End</button>
+{% else %}
+<span class="session-readonly-badge">✓ Completed · Read only</span>
+{% endif %}
 {% endblock %}
 
 {% block content %}
@@ -25,7 +29,7 @@
   <!-- Chat messages -->
   <div class="chat-messages" id="chat-messages">
     <!-- Welcome message -->
-    <div class="msg msg-assistant animate__animated animate__fadeIn">
+    {% if session.status == 'active' or not session.conversation %}<div class="msg msg-assistant animate__animated animate__fadeIn">
       <div class="msg-avatar">⚡</div>
       <div class="msg-body">
         <div class="msg-content">
@@ -36,7 +40,7 @@
         </div>
         <div class="msg-time">Just now</div>
       </div>
-    </div>
+    </div>{% endif %}
 
     {% for msg in session.conversation %}
     <div class="msg msg-{{ msg.role }} animate__animated animate__fadeIn">
@@ -54,18 +58,18 @@
     {% endfor %}
 
     <!-- Typing indicator -->
-    <div class="msg msg-assistant hidden" id="typing-indicator">
+    {% if session.status == 'active' %}<div class="msg msg-assistant hidden" id="typing-indicator">
       <div class="msg-avatar">⚡</div>
       <div class="msg-body">
         <div class="typing-dots">
           <span></span><span></span><span></span>
         </div>
       </div>
-    </div>
+    </div>{% endif %}
   </div>
 
   <!-- Chat input -->
-  <div class="chat-input-bar">
+  {% if session.status == 'active' %}<div class="chat-input-bar">
     <div class="chat-input-wrap">
       <textarea
         id="chat-input"
@@ -85,11 +89,11 @@
       <span>Ctrl+Enter to send</span>
       <span id="char-count">0/2000</span>
     </div>
-  </div>
+  </div>{% else %}<div class="chat-input-bar session-readonly-note">This session is complete. You can review the conversation, but messaging is closed.</div>{% endif %}
 </div>
 
 <!-- End session confirm modal -->
-<div class="modal-overlay hidden" id="end-modal">
+{% if session.status == 'active' %}<div class="modal-overlay hidden" id="end-modal">
   <div class="modal-card animate__animated animate__zoomIn">
     <div class="modal-icon">🏁</div>
     <h3>End this session?</h3>
@@ -99,19 +103,20 @@
       <button class="btn-danger" id="confirm-end">End & Take Quiz →</button>
     </div>
   </div>
-</div>
+</div>{% endif %}
 {% endblock %}
 
 {% block scripts %}
 <script>
 const SESSION_ID = {{ session.id }};
-const CSRF = document.cookie.split('; ').find(r=>r.startsWith('csrf_'))?.split('=')?.[1]||'';
+// Flask-WTF exposes its request token in the base template meta tag.
+const CSRF = document.querySelector('meta[name="csrf-token"]')?.content || '';
 
 // Render existing markdown messages on load
 document.querySelectorAll('.markdown-body[data-raw]').forEach(el => {
-  el.innerHTML = renderContent(el.dataset.raw);
+  el.innerHTML = renderMarkdownMath(el.dataset.raw);
 });
-if (window.MathJax) MathJax.typesetPromise();
+typesetMath(document.getElementById('chat-messages'));
 
 // Auto-scroll to bottom
 function scrollToBottom() {
@@ -121,6 +126,7 @@ function scrollToBottom() {
 scrollToBottom();
 
 // Auto-resize textarea
+{% if session.status == 'active' %}
 const textarea = document.getElementById('chat-input');
 textarea.addEventListener('input', function() {
   this.style.height = 'auto';
@@ -210,16 +216,12 @@ function addMessage(role, content) {
   // Insert before typing indicator
   const indicator = document.getElementById('typing-indicator');
   msgs.insertBefore(div, indicator);
-  if (window.MathJax) MathJax.typesetPromise([div]);
+  typesetMath(div);
   scrollToBottom();
 }
 
 function renderContent(text) {
-  if (typeof marked !== 'undefined') {
-    marked.setOptions({breaks: true, gfm: true});
-    return marked.parse(text);
-  }
-  return escapeHtml(text).replace(/\n/g,'<br>');
+  return renderMarkdownMath(text);
 }
 
 function escapeHtml(t) {
@@ -269,5 +271,6 @@ document.getElementById('confirm-end').addEventListener('click', async () => {
     }
   } catch { showToast('Error ending session', 'error'); }
 });
+{% endif %}
 </script>
 {% endblock %}

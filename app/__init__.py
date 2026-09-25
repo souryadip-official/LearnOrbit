@@ -2,11 +2,11 @@
 LearnOrbit Application Factory
 """
 
-from flask import Flask
+from flask import Flask, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_migrate import Migrate
-from flask_wtf.csrf import CSRFProtect
+from flask_wtf.csrf import CSRFProtect, CSRFError
 import os
 
 db = SQLAlchemy()
@@ -28,6 +28,13 @@ def create_app(config_name=None):
     login_manager.init_app(app)
     migrate.init_app(app, db)
     csrf.init_app(app)
+
+    @app.errorhandler(CSRFError)
+    def handle_csrf_error(error):
+        # AJAX callers expect JSON; Flask-WTF's default HTML 400 obscures the cause.
+        if request.path.startswith(("/tutor/", "/api/", "/auth/")):
+            return jsonify({"error": "Security token expired or missing. Refresh the page and try again."}), 400
+        return "Security token expired or missing. Please refresh and try again.", 400
 
     login_manager.login_view = "auth.login"
     login_manager.login_message = "Please log in to continue your learning journey! 🚀"

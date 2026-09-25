@@ -43,7 +43,7 @@
       <a href="{{ url_for('auth.settings') }}" class="info-link">Change →</a>
     </div>
 
-    {% if not current_user.ai_api_key_enc %}
+    {% if not current_user.get_ai_api_key() %}
     <div class="alert-warning">
       ⚠️ No API key set. <a href="{{ url_for('auth.settings') }}">Add one in Settings</a> to use the AI tutor.
     </div>
@@ -89,7 +89,7 @@ document.getElementById('new-session-form').addEventListener('submit', async e =
 });
 
 function getCSRF() {
-  return document.cookie.split('; ').find(r=>r.startsWith('csrf_'))?.split('=')?.[1] || '';
+    return document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 }
 </script>
 {% endblock %}

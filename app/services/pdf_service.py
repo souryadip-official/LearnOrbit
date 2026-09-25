@@ -1,172 +1,207 @@
 """
 LearnOrbit PDF Export Service
-Generates branded, styled PDF notes from markdown content.
+Generates clean, print-friendly study notes from Markdown content.
 """
 
 import os
 import re
+import unicodedata
 from datetime import datetime
 
 
 def _md_to_text_blocks(md_text: str) -> list:
-    """Parse markdown into a list of (type, content) tuples."""
+    """Parse the Markdown constructs used by the notes generator."""
     blocks = []
-    lines = md_text.split("\n")
-    i = 0
-    while i < len(lines):
-        line = lines[i]
-        if line.startswith("# "):
-            blocks.append(("h1", line[2:].strip()))
+    for raw_line in md_text.splitlines():
+        line = raw_line.strip()
+        if line.startswith("### "):
+            blocks.append(("h3", line[4:].strip()))
         elif line.startswith("## "):
             blocks.append(("h2", line[3:].strip()))
-        elif line.startswith("### "):
-            blocks.append(("h3", line[4:].strip()))
+        elif line.startswith("# "):
+            blocks.append(("h1", line[2:].strip()))
         elif line.startswith("- [ ] ") or line.startswith("- [x] "):
-            checked = line.startswith("- [x] ")
-            blocks.append(("checkbox", (checked, line[6:].strip())))
-        elif line.startswith("- ") or line.startswith("* "):
+            blocks.append(("checkbox", (line.startswith("- [x] "), line[6:].strip())))
+        elif re.match(r"^\d+[.)]\s+", line):
+            match = re.match(r"^(\d+)[.)]\s+(.*)$", line)
+            blocks.append(("ordered", (match.group(1), match.group(2))))
+        elif line.startswith(("- ", "* ", "+ ")):
             blocks.append(("bullet", line[2:].strip()))
-        elif line.strip() == "":
+        elif line.startswith("> "):
+            blocks.append(("quote", line[2:].strip()))
+        elif re.fullmatch(r"[-*_]{3,}", line):
+            blocks.append(("rule", ""))
+        elif not line:
             blocks.append(("blank", ""))
         else:
-            blocks.append(("para", line.strip()))
-        i += 1
+            blocks.append(("para", line))
     return blocks
 
 
+def _pdf_safe(text: str) -> str:
+    """Convert text to printable ASCII for FPDF's built-in Helvetica fonts."""
+    normalized = unicodedata.normalize("NFKD", str(text))
+    return normalized.encode("ascii", "ignore").decode("ascii")
+
+
+def _plain_markdown(text: str) -> str:
+    """Remove Markdown and turn common LaTeX into readable printable notation."""
+    text = re.sub(r"!\[([^\]]*)\]\([^)]+\)", r"\1", text)
+    text = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", text)
+    text = re.sub(r"(`{1,3})(.*?)\1", r"\2", text)
+    text = re.sub(r"(\*\*|__)(.*?)\1", r"\2", text)
+    # Helvetica in the PDF exporter is ASCII-only. Keep equations legible by
+    # converting frequent LaTeX commands before unsupported glyphs are removed.
+    text = re.sub(r"\\(?:\[|\]|\(|\))", "", text)
+    text = text.replace("$$", "").replace("\\$", "$")
+    text = re.sub(r"\\frac\s*\{([^{}]*)\}\s*\{([^{}]*)\}", r"(\1)/ (\2)", text)
+    text = re.sub(r"\\sqrt\s*\{([^{}]*)\}", r"sqrt(\1)", text)
+    text = re.sub(r"\\(?:text|mathrm|mathbf|mathit)\s*\{([^{}]*)\}", r"\1", text)
+    latex_symbols = {
+        r"\\times": " x ", r"\\cdot": " * ", r"\\div": " / ",
+        r"\\pm": " +/- ", r"\\leq?": " <= ", r"\\geq?": " >= ",
+        r"\\neq": " != ", r"\\approx": " ~= ", r"\\infty": "infinity",
+        r"\\pi": "pi", r"\\theta": "theta", r"\\alpha": "alpha",
+        r"\\beta": "beta", r"\\gamma": "gamma", r"\\Delta": "Delta",
+        r"\\sum": "sum", r"\\prod": "product", r"\\int": "integral",
+        r"\\rightarrow|\\to": " -> ", r"\\left|\\right": "",
+    }
+    for pattern, replacement in latex_symbols.items():
+        text = re.sub(pattern, replacement, text)
+    text = re.sub(r"\\(?:begin|end)\{[^{}]+\}", "", text)
+    text = re.sub(r"\\([A-Za-z]+)", r"\1", text)
+    return _pdf_safe(text.replace("\\$", "$"))
+
+
 def export_notes_pdf(notes_md: str, topic: str, username: str, output_dir: str) -> str:
-    """
-    Export notes as a PDF file. Returns the file path.
-    Uses fpdf2 (pip install fpdf2).
-    Falls back to a simple text file if fpdf2 is not available.
-    """
+    """Export Markdown notes to a styled PDF. Falls back to UTF-8 text if needed."""
     os.makedirs(output_dir, exist_ok=True)
-    safe_topic = re.sub(r"[^\w\s-]", "", topic).replace(" ", "_")[:40]
+    safe_topic = re.sub(r"[^\w\s-]", "", topic).replace(" ", "_")[:40] or "Study_Notes"
     timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-    filename = f"LearnOrbit_Notes_{safe_topic}_{timestamp}.pdf"
-    filepath = os.path.join(output_dir, filename)
+    filepath = os.path.join(output_dir, f"LearnOrbit_Notes_{safe_topic}_{timestamp}.pdf")
 
     try:
         from fpdf import FPDF, XPos, YPos
 
         class NotesPDF(FPDF):
-            def __init__(self, topic, username):
-                super().__init__()
-                self.topic = topic
-                self.username = username
-
             def header(self):
-                # Brand bar
-                self.set_fill_color(99, 102, 241)  # Indigo
-                self.rect(0, 0, 210, 14, "F")
-                self.set_text_color(255, 255, 255)
-                self.set_font("Helvetica", "B", 11)
-                self.set_xy(10, 3)
-                self.cell(0, 8, "⚡ LearnOrbit — AI Learning Intelligence", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-                self.set_text_color(0, 0, 0)
-                self.ln(4)
+                # A restrained brand accent replaces the old page-sized watermark.
+                self.set_fill_color(79, 70, 229)
+                self.rect(0, 0, 210, 3, "F")
+                self.set_y(8)
+                self.set_font("Helvetica", "B", 9)
+                self.set_text_color(67, 56, 202)
+                self.cell(95, 6, "LEARNORBIT  /  STUDY NOTES")
+                self.set_font("Helvetica", "", 8)
+                self.set_text_color(107, 114, 128)
+                self.cell(0, 6, _pdf_safe(topic), align="R")
+                self.set_draw_color(226, 232, 240)
+                self.set_line_width(0.3)
+                self.line(self.l_margin, 17, 210 - self.r_margin, 17)
+                self.set_y(23)
 
             def footer(self):
-                self.set_y(-15)
-                # Watermark bar
-                self.set_fill_color(238, 242, 255)
-                self.rect(0, 282, 210, 15, "F")
-                self.set_font("Helvetica", "I", 8)
-                self.set_text_color(99, 102, 241)
-                self.set_xy(10, 284)
-                self.cell(
-                    0, 5,
-                    f"Generated by LearnOrbit for {self.username} | {datetime.utcnow().strftime('%d %b %Y')} | learnorbit.app",
-                    new_x=XPos.LMARGIN, new_y=YPos.NEXT,
-                )
-                self.set_text_color(180, 180, 220)
-                self.set_font("Helvetica", "B", 28)
-                self.set_xy(50, 265)
-                self.set_text_color(220, 220, 240)
-                # Diagonal watermark text
-                with self.rotation(30, x=105, y=148):
-                    self.set_font("Helvetica", "B", 48)
-                    self.set_text_color(230, 232, 255)
-                    self.set_xy(30, 130)
-                    self.cell(0, 20, "LearnOrbit")
+                self.set_y(-14)
+                self.set_draw_color(226, 232, 240)
+                self.set_line_width(0.3)
+                self.line(self.l_margin, self.get_y(), 210 - self.r_margin, self.get_y())
+                self.set_y(-11)
+                self.set_font("Helvetica", "", 8)
+                self.set_text_color(107, 114, 128)
+                self.cell(95, 5, "Prepared for " + _pdf_safe(username))
+                self.cell(0, 5, f"Page {self.page_no()}", align="R")
 
-        pdf = NotesPDF(topic, username)
+        pdf = NotesPDF()
+        pdf.set_margins(17, 23, 17)
+        pdf.set_auto_page_break(auto=True, margin=19)
         pdf.add_page()
-        pdf.set_auto_page_break(auto=True, margin=20)
 
-        # Title block
-        pdf.set_fill_color(238, 242, 255)
-        pdf.rect(10, pdf.get_y(), 190, 22, "F")
-        pdf.set_font("Helvetica", "B", 16)
-        pdf.set_text_color(79, 70, 229)
-        pdf.set_xy(14, pdf.get_y() + 4)
-        pdf.cell(0, 7, f"📚 {topic}", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        # Clear, compact title treatment with useful metadata.
+        pdf.set_font("Helvetica", "B", 22)
+        pdf.set_text_color(31, 41, 55)
+        pdf.multi_cell(0, 10, _pdf_safe(topic), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
         pdf.set_font("Helvetica", "", 9)
-        pdf.set_text_color(120, 120, 160)
-        pdf.cell(0, 6, f"Learner: {username}  |  {datetime.utcnow().strftime('%d %B %Y')}",
+        pdf.set_text_color(107, 114, 128)
+        pdf.cell(0, 6, f"STUDY GUIDE  |  {datetime.utcnow().strftime('%d %B %Y')}",
                  new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        pdf.ln(3)
+        pdf.set_fill_color(79, 70, 229)
+        pdf.rect(pdf.l_margin, pdf.get_y(), 22, 1.2, "F")
         pdf.ln(6)
-        pdf.set_text_color(0, 0, 0)
 
         blocks = _md_to_text_blocks(notes_md)
+        # The generated Markdown begins with the topic heading, already shown above.
+        if blocks and blocks[0][0] == "h1":
+            blocks = blocks[1:]
+
+        body_width = 210 - pdf.l_margin - pdf.r_margin
         for btype, content in blocks:
             if btype == "h1":
-                pdf.ln(4)
-                pdf.set_font("Helvetica", "B", 15)
-                pdf.set_text_color(79, 70, 229)
-                # Strip emoji for fpdf compatibility
-                clean = content.encode("ascii", "ignore").decode()
-                pdf.multi_cell(0, 8, clean, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-                pdf.set_draw_color(99, 102, 241)
-                pdf.set_line_width(0.5)
-                pdf.line(10, pdf.get_y(), 200, pdf.get_y())
-                pdf.ln(2)
-                pdf.set_text_color(0, 0, 0)
+                pdf.ln(5)
+                pdf.set_font("Helvetica", "B", 16)
+                pdf.set_text_color(49, 46, 129)
+                pdf.multi_cell(0, 8, _plain_markdown(content), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+                pdf.ln(1)
             elif btype == "h2":
-                pdf.ln(3)
-                pdf.set_font("Helvetica", "B", 12)
-                pdf.set_text_color(67, 56, 202)
-                clean = content.encode("ascii", "ignore").decode()
-                pdf.multi_cell(0, 7, f"  {clean}", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-                pdf.set_text_color(0, 0, 0)
+                if pdf.get_y() > 255:
+                    pdf.add_page()
+                pdf.ln(4)
+                pdf.set_font("Helvetica", "B", 11)
+                pdf.set_text_color(55, 48, 163)
+                pdf.set_fill_color(238, 242, 255)
+                pdf.multi_cell(body_width, 7.5, "  " + _plain_markdown(content),
+                               fill=True, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+                pdf.ln(1.5)
             elif btype == "h3":
                 pdf.ln(2)
-                pdf.set_font("Helvetica", "BI", 11)
-                pdf.set_text_color(99, 102, 241)
-                clean = content.encode("ascii", "ignore").decode()
-                pdf.multi_cell(0, 6, f"    {clean}", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-                pdf.set_text_color(0, 0, 0)
-            elif btype == "bullet":
-                pdf.set_font("Helvetica", "", 10)
-                clean = content.encode("ascii", "ignore").decode()
-                pdf.set_x(16)
-                pdf.multi_cell(180, 5.5, f"\u2022  {clean}", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-            elif btype == "checkbox":
-                checked, text = content
-                mark = "[x]" if checked else "[ ]"
-                pdf.set_font("Helvetica", "", 10)
-                clean = text.encode("ascii", "ignore").decode()
-                pdf.set_x(16)
-                pdf.multi_cell(180, 5.5, f"{mark}  {clean}", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-            elif btype == "para":
-                pdf.set_font("Helvetica", "", 10)
-                clean = content.encode("ascii", "ignore").decode()
-                if clean.strip():
-                    pdf.multi_cell(0, 5.5, clean, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-            elif btype == "blank":
+                pdf.set_font("Helvetica", "B", 10)
+                pdf.set_text_color(67, 56, 202)
+                pdf.multi_cell(0, 6, _plain_markdown(content), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+            elif btype in ("bullet", "ordered", "checkbox"):
+                pdf.set_font("Helvetica", "", 9.5)
+                pdf.set_text_color(31, 41, 55)
+                if btype == "checkbox":
+                    checked, text = content
+                    prefix = "[x] " if checked else "[ ] "
+                elif btype == "ordered":
+                    number, text = content
+                    prefix = f"{number}. "
+                else:
+                    prefix = "- "
+                    text = content
+                pdf.set_x(pdf.l_margin + 3)
+                pdf.multi_cell(body_width - 3, 5.8, prefix + _plain_markdown(text),
+                               new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+            elif btype == "quote":
+                pdf.set_font("Helvetica", "I", 9.5)
+                pdf.set_text_color(55, 65, 81)
+                pdf.set_fill_color(249, 250, 251)
+                pdf.set_x(pdf.l_margin + 3)
+                pdf.multi_cell(body_width - 3, 6, _plain_markdown(content), fill=True,
+                               new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+            elif btype == "rule":
+                pdf.ln(2)
+                pdf.set_draw_color(203, 213, 225)
+                pdf.line(pdf.l_margin, pdf.get_y(), 210 - pdf.r_margin, pdf.get_y())
                 pdf.ln(3)
+            elif btype == "para":
+                clean = _plain_markdown(content)
+                if clean.strip():
+                    pdf.set_font("Helvetica", "", 9.5)
+                    pdf.set_text_color(31, 41, 55)
+                    pdf.multi_cell(0, 5.8, clean, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+                    pdf.ln(1)
+            elif btype == "blank":
+                pdf.ln(1.5)
 
         pdf.output(filepath)
         return filepath
 
     except ImportError:
-        # Fallback: write plain text
         txt_path = filepath.replace(".pdf", ".txt")
         with open(txt_path, "w", encoding="utf-8") as f:
-            f.write(f"LearnOrbit Study Notes\n{'='*40}\n")
-            f.write(f"Topic: {topic}\nLearner: {username}\n")
-            f.write(f"Generated: {datetime.utcnow()}\n{'='*40}\n\n")
-            f.write(notes_md)
+            f.write(f"LearnOrbit Study Notes\nTopic: {topic}\nLearner: {username}\n")
+            f.write(f"Generated: {datetime.utcnow()}\n\n{notes_md}")
         return txt_path
     except Exception as e:
         raise RuntimeError(f"PDF generation failed: {e}")

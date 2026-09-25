@@ -4,7 +4,9 @@
 {% block loader_text %}Loading your preferences…{% endblock %}
 
 {% block content %}
-<div class="settings-page">
+<div class="settings-page" id="settings-page"
+     data-current-provider="{{ current_user.ai_provider }}"
+     data-saved-model="{{ current_user.ai_model }}">
   <div class="settings-header">
     <h1>Settings ⚙️</h1>
     <p>Configure your AI provider, appearance, and account preferences.</p>
@@ -17,7 +19,7 @@
 
     <div class="provider-grid" id="provider-grid">
       {% for pid, pdata in providers.items() %}
-      <button class="provider-btn {% if current_user.ai_provider == pid %}active{% endif %}"
+      <button type="button" class="provider-btn {% if current_user.ai_provider == pid %}active{% endif %}"
               data-provider="{{ pid }}"
               data-models="{{ pdata.models | tojson | e }}">
         <span class="provider-icon">
@@ -45,20 +47,21 @@
       <label class="form-label" for="api-key-input">
         API Key
         <span class="key-badge" id="key-status">
-          {% if current_user.ai_api_key_enc %}✅ Saved{% else %}❌ Not set{% endif %}
+          {% if current_user.get_ai_api_key() %}✅ Saved{% else %}❌ Not set{% endif %}
         </span>
       </label>
       <div class="input-wrap">
         <input class="form-input" type="password" id="api-key-input"
                placeholder="Paste your API key here…"
-               value="{{ current_user.ai_api_key_enc or '' }}" />
+               value="{{ current_user.get_ai_api_key() or '' }}" />
         <button type="button" class="input-eye" data-target="api-key-input">👁</button>
       </div>
-      <button class="btn-secondary mt-2" id="validate-key-btn">🔍 Validate Key</button>
+      <p class="card-desc">Each provider has its own saved key. A blank field uses that provider’s saved key; enter a new key to replace it.</p>
+      <button type="button" class="btn-secondary mt-2" id="validate-key-btn">🔍 Validate Key</button>
       <span class="validate-result" id="validate-result"></span>
     </div>
 
-    <button class="btn-primary mt-4" id="save-ai-btn">💾 Save AI Settings</button>
+    <button type="button" class="btn-primary mt-4" id="save-ai-btn">💾 Save AI Settings</button>
   </div>
 
   <!-- Appearance -->
@@ -67,8 +70,8 @@
     <div class="theme-toggle-row">
       <span>Theme</span>
       <div class="theme-switch-wrap">
-        <button class="theme-option {% if current_user.theme == 'light' %}active{% endif %}" data-theme="light">☀️ Light</button>
-        <button class="theme-option {% if current_user.theme == 'dark' %}active{% endif %}" data-theme="dark">🌙 Dark</button>
+        <button type="button" class="theme-option {% if current_user.theme == 'light' %}active{% endif %}" data-theme="light">☀️ Light</button>
+        <button type="button" class="theme-option {% if current_user.theme == 'dark' %}active{% endif %}" data-theme="dark">🌙 Dark</button>
       </div>
     </div>
   </div>
@@ -100,79 +103,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script>
-const PROVIDERS = {{ providers | tojson }};
-let selectedProvider = '{{ current_user.ai_provider }}';
-
-// Provider selection
-document.querySelectorAll('.provider-btn').forEach(btn => {
-  btn.addEventListener('click', function() {
-    document.querySelectorAll('.provider-btn').forEach(b=>b.classList.remove('active'));
-    this.classList.add('active');
-    selectedProvider = this.dataset.provider;
-    const models = JSON.parse(this.dataset.models);
-    const sel = document.getElementById('model-select');
-    sel.innerHTML = models.map(m=>`<option value="${m}">${m}</option>`).join('');
-  });
-});
-
-// Validate key
-document.getElementById('validate-key-btn').addEventListener('click', async () => {
-  const key = document.getElementById('api-key-input').value.trim();
-  const result = document.getElementById('validate-result');
-  const model = document.getElementById('model-select').value;
-  result.textContent = '⏳ Validating…';
-  try {
-    const res = await fetch('/api/validate-key', {
-      method: 'POST', headers: {'Content-Type':'application/json','X-CSRFToken': getCSRF()},
-      body: JSON.stringify({provider: selectedProvider, model, api_key: key})
-    });
-    const json = await res.json();
-    result.textContent = json.message;
-    result.style.color = json.valid ? '#10b981' : '#ef4444';
-  } catch { result.textContent = '❌ Error'; }
-});
-
-// Save AI settings
-document.getElementById('save-ai-btn').addEventListener('click', async () => {
-  const key = document.getElementById('api-key-input').value.trim();
-  const model = document.getElementById('model-select').value;
-  const res = await fetch('/auth/settings', {
-    method: 'POST', headers: {'Content-Type':'application/json','X-CSRFToken': getCSRF()},
-    body: JSON.stringify({ai_provider: selectedProvider, ai_model: model, api_key: key})
-  });
-  const json = await res.json();
-  if (json.success) {
-    showToast(json.message, 'success');
-    document.getElementById('key-status').textContent = '✅ Saved';
-  }
-});
-
-// Theme toggle
-document.querySelectorAll('.theme-option').forEach(btn => {
-  btn.addEventListener('click', async function() {
-    const theme = this.dataset.theme;
-    document.querySelectorAll('.theme-option').forEach(b=>b.classList.remove('active'));
-    this.classList.add('active');
-    document.documentElement.setAttribute('data-theme', theme);
-    await fetch('/api/theme', {
-      method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':getCSRF()},
-      body: JSON.stringify({theme})
-    });
-    document.querySelectorAll('#theme-icon,#theme-icon-top').forEach(el=>{el.textContent=theme==='dark'?'☀️':'🌙';});
-    showToast(`${theme==='dark'?'🌙 Dark':'☀️ Light'} mode activated!`, 'success');
-  });
-});
-
-// Eye toggle
-document.querySelector('.input-eye').addEventListener('click', function(){
-  const inp = document.getElementById(this.dataset.target);
-  inp.type = inp.type==='password'?'text':'password';
-  this.textContent = inp.type==='password'?'👁':'🙈';
-});
-
-function getCSRF() {
-  return document.cookie.split('; ').find(r=>r.startsWith('csrf_'))?.split('=')?.[1] || '';
-}
-</script>
+<script src="{{ url_for('static', filename='js/settings.js') }}?v=3"></script>
 {% endblock %}

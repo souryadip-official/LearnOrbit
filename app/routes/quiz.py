@@ -7,6 +7,7 @@ from flask_login import login_required, current_user
 from app import db
 from app.models import LearningSession, QuizAttempt
 from app.services.ai_service import generate_quiz
+from app.services.mastery_service import recalculate_topic_mastery, topic_slug
 
 quiz_bp = Blueprint("quiz", __name__)
 
@@ -27,7 +28,7 @@ def generate(session_id):
 
     provider = current_user.ai_provider
     model = current_user.ai_model
-    api_key = current_user.ai_api_key_enc
+    api_key = current_user.get_ai_api_key()
 
     if not api_key:
         return jsonify({"error": "API key missing"}), 400
@@ -84,6 +85,13 @@ def submit(session_id):
     # Update session quiz score (best score)
     if session_obj.quiz_score is None or score > session_obj.quiz_score:
         session_obj.quiz_score = score
+    mastery = None
+    if session_obj.status == "completed":
+        mastery = recalculate_topic_mastery(
+            current_user.id, topic_slug(session_obj.topic)
+        )
+        if mastery:
+            session_obj.mastery_score = mastery.overall
     db.session.commit()
 
     return jsonify({
@@ -92,4 +100,5 @@ def submit(session_id):
         "total": total,
         "evaluated": evaluated,
         "attempt_id": attempt.id,
+        "mastery": mastery.to_dict() if mastery else None,
     })

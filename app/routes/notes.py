@@ -29,7 +29,7 @@ def generate(session_id):
 
     provider = current_user.ai_provider
     model = current_user.ai_model
-    api_key = current_user.ai_api_key_enc
+    api_key = current_user.get_ai_api_key()
     if not api_key:
         return jsonify({"error": "API key missing"}), 400
 

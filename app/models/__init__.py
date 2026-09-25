@@ -15,6 +15,7 @@ import json
 
 class User(UserMixin, db.Model):
     __tablename__ = "users"
+    _AI_KEY_STORE_FORMAT = "learnorbit-provider-keys-v1"
 
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), unique=True, nullable=False, index=True)
@@ -29,6 +30,45 @@ class User(UserMixin, db.Model):
     ai_provider = db.Column(db.String(32), default="openai")
     ai_model = db.Column(db.String(128), default="gpt-4o-mini")
     ai_api_key_enc = db.Column(db.Text)  # encrypted in production; plaintext for demo
+
+    def migrate_ai_api_keys(self):
+        """Wrap a legacy single key in a provider-key map without losing it."""
+        raw = self.ai_api_key_enc
+        if not raw:
+            return
+        try:
+            stored = json.loads(raw)
+        except (TypeError, ValueError):
+            stored = None
+        if isinstance(stored, dict) and stored.get("format") == self._AI_KEY_STORE_FORMAT:
+            return
+        self.ai_api_key_enc = json.dumps({
+            "format": self._AI_KEY_STORE_FORMAT,
+            "keys": {self.ai_provider: raw},
+        })
+
+    def get_ai_api_key(self, provider=None):
+        """Get this user's key for a provider, including legacy single-key data."""
+        provider = provider or self.ai_provider
+        raw = self.ai_api_key_enc
+        if not raw:
+            return None
+        try:
+            stored = json.loads(raw)
+        except (TypeError, ValueError):
+            stored = None
+        if isinstance(stored, dict) and stored.get("format") == self._AI_KEY_STORE_FORMAT:
+            return stored.get("keys", {}).get(provider)
+        return raw if provider == self.ai_provider else None
+
+    def set_ai_api_key(self, provider, api_key):
+        """Save one provider's key while preserving all other provider keys."""
+        self.migrate_ai_api_keys()
+        stored = json.loads(self.ai_api_key_enc) if self.ai_api_key_enc else {
+            "format": self._AI_KEY_STORE_FORMAT, "keys": {}
+        }
+        stored.setdefault("keys", {})[provider] = api_key
+        self.ai_api_key_enc = json.dumps(stored)
 
     # Relationships
     sessions = db.relationship("LearningSession", backref="user", lazy="dynamic", cascade="all, delete-orphan")

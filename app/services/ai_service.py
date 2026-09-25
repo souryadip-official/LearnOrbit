@@ -62,38 +62,38 @@ def _call_gemini(api_key: str, model: str, messages: list,
         contents.append({"role": role, "parts": [{"text": m["content"]}]})
 
     url = (f"https://generativelanguage.googleapis.com/v1beta/models/"
-           f"{model}:generateContent?key={api_key}")
+           f"{model}:generateContent")
+    headers = {"x-goog-api-key": api_key, "Content-Type": "application/json"}
     payload = {
         "contents": contents,
         "generationConfig": {"maxOutputTokens": max_tokens, "temperature": 0.7},
     }
-    resp = requests.post(url, json=payload, timeout=60)
+    resp = requests.post(url, headers=headers, json=payload, timeout=60)
     resp.raise_for_status()
     return resp.json()["candidates"][0]["content"]["parts"][0]["text"]
 
 
 def _call_huggingface(api_key: str, model: str, messages: list,
                       system: str = None, max_tokens: int = 1024) -> str:
-    """HuggingFace Inference API."""
-    prompt_parts = []
+    """Call Hugging Face's current OpenAI-compatible Inference Providers API."""
+    payload_messages = []
     if system:
-        prompt_parts.append(f"<|system|>\n{system}\n")
+        payload_messages.append({"role": "system", "content": system})
     for m in messages:
-        tag = "user" if m["role"] == "user" else "assistant"
-        prompt_parts.append(f"<|{tag}|>\n{m['content']}\n")
-    prompt_parts.append("<|assistant|>\n")
-    prompt = "".join(prompt_parts)
+        payload_messages.append({"role": m["role"], "content": m["content"]})
 
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
-    payload = {"inputs": prompt, "parameters": {"max_new_tokens": max_tokens,
-                                                  "temperature": 0.7, "return_full_text": False}}
-    url = f"https://api-inference.huggingface.co/models/{model}"
-    resp = requests.post(url, headers=headers, json=payload, timeout=90)
+    payload = {
+        "model": model,
+        "messages": payload_messages,
+        "max_tokens": max_tokens,
+        "temperature": 0.7,
+    }
+    resp = requests.post("https://router.huggingface.co/v1/chat/completions",
+                         headers=headers, json=payload, timeout=90)
     resp.raise_for_status()
     data = resp.json()
-    if isinstance(data, list) and data:
-        return data[0].get("generated_text", "")
-    return str(data)
+    return data["choices"][0]["message"]["content"]
 
 
 # ---------------------------------------------------------------------------
@@ -120,13 +120,30 @@ def call_ai(provider: str, model: str, api_key: str, messages: list,
         else:
             return f"[LearnOrbit] Unknown AI provider: {provider}"
     except requests.exceptions.HTTPError as e:
-        status = e.response.status_code if e.response else "?"
-        if status == 401:
-            return "❌ Invalid API key. Please check your credentials in Settings."
+        response = e.response
+        # Preserve the actual provider status/body; those details explain 400s
+        # such as unsupported models and malformed requests.
+        match = re.search(r"\b([45]\d{2}) Client Error:", str(e))
+        status = response.status_code if response is not None else (int(match.group(1)) if match else "?")
+        detail = response.text[:1000] if response is not None else str(e)
+        lowered_detail = detail.lower()
+        invalid_key_markers = (
+            "api_key_invalid",
+            "api key not valid",
+            "invalid api key",
+            "incorrect api key",
+            "incorrect api key provided",
+            "invalid x-api-key",
+            "authentication_error",
+        )
+        if status == 401 or any(marker in lowered_detail for marker in invalid_key_markers):
+            return "❌ Invalid API key. Check that this is a key for the selected provider."
+        if status == 403:
+            return f"❌ API key was rejected or lacks permission: {detail[:400]}"
         elif status == 429:
             return "⏳ Rate limit hit. Please wait a moment and try again."
         else:
-            return f"❌ API error ({status}): {e.response.text[:200] if e.response else str(e)}"
+            return f"❌ API error ({status}): {detail[:500]}"
     except Exception as e:
         return f"❌ Unexpected error: {str(e)[:300]}"
 
@@ -189,37 +206,54 @@ OUTPUT FORMAT — strict JSON only:
 """
 
 NOTES_SYSTEM = """You are LearnOrbit Notes Generator.
-Generate comprehensive structured study notes for the topic based on what was covered in the session.
+Create clear, accurate notes that a student can learn from without rereading the chat.
 
-FORMAT:
-# Topic Title
+TEACHING AND ACCURACY RULES:
+- Start with a plain-language overview and 3–5 concrete learning goals.
+- Build ideas in order: prerequisites or context, core idea, how it works,
+  then use.
+- For each important concept, give a precise definition, an intuitive
+  explanation, and a short example. Explain technical terms the first time.
+- Include one worked example when the topic supports it; show the reasoning in
+  steps and explain why each step is valid.
+- For formulas, define every symbol and unit, state when the formula applies,
+  and use LaTeX for mathematical notation ($inline$ or $$block$$).
+- Distinguish what the conversation covered from useful background. Fill small
+  gaps with standard facts, but do not invent claims, sources, or learner results.
+- Prefer specific explanations over repeated summaries or motivational filler.
+  Keep paragraphs short; use lists when they improve scanning.
+- Omit sections that do not apply instead of adding generic filler.
 
-## 📖 Core Concepts
-[Bullet list of key ideas]
+OUTPUT FORMAT — Markdown only:
+# {topic}
 
-## 🧮 Key Formulas & Derivations
-[All math in LaTeX: $inline$ and $$block$$]
+## At a glance
+[A concise overview, then 3–5 learning goals]
 
-## 💡 Intuition Builder
-[Analogies and mental models]
+## Build the idea
+[Prerequisites and core concepts in a sensible teaching order]
 
-## 🔗 Real-World Applications
-[Concrete examples]
+## See it in action
+[Worked example, demonstration, or concrete case]
 
-## ⚠️ Common Mistakes
-[What to watch out for]
+## Apply it
+[Practical uses and when this knowledge is useful]
 
-## 🧠 Quick Revision Checklist
-- [ ] item 1
-- [ ] item 2
-...
+## Common confusions
+[Likely mistakes, why they happen, and how to correct them]
 
-## 📚 Suggested Next Topics
-[2-3 related topics to explore]
+## Quick review
+[A short checklist of the essential takeaways]
 
-Be thorough but clear. Use LaTeX properly for all math.
+## Check your understanding
+[3–5 questions, followed by a clearly labeled answer key]
+
+## Where to go next
+[Two or three closely related topics, with a brief reason for each]
+
 Topic: {topic}
-Session summary: {summary}
+Session coverage and context:
+{summary}
 """
 
 LEARNING_STYLE_SYSTEM = """Analyze the user's conversation and infer their learning style.

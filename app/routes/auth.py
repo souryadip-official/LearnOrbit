@@ -110,6 +110,10 @@ def settings():
         data = request.get_json() if request.is_json else request.form
         changed = False
 
+        # Preserve any existing single-provider key under its current provider
+        # before changing the selected provider.
+        current_user.migrate_ai_api_keys()
+
         if data.get("ai_provider"):
             current_user.ai_provider = data["ai_provider"]
             changed = True
@@ -117,7 +121,7 @@ def settings():
             current_user.ai_model = data["ai_model"]
             changed = True
         if data.get("api_key"):
-            current_user.ai_api_key_enc = data["api_key"]
+            current_user.set_ai_api_key(current_user.ai_provider, data["api_key"])
             changed = True
         if data.get("theme") in ("light", "dark"):
             current_user.theme = data["theme"]
@@ -128,6 +132,8 @@ def settings():
             if request.is_json:
                 return jsonify({"success": True, "message": "Settings saved!"})
             flash("Settings updated! ✅", "success")
+        elif request.is_json:
+            return jsonify({"success": True, "message": "Settings are already up to date."})
 
     from flask import current_app
     providers = current_app.config["AI_PROVIDERS"]

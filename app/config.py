@@ -60,7 +60,7 @@ class BaseConfig:
         },
         "google": {
             "name": "Google Gemini",
-            "models": ["gemini-2.0-flash", "gemini-1.5-pro", "gemini-1.5-flash"],
+            "models": ["gemini-3.1-flash-lite", "gemini-1.5-pro", "gemini-1.5-flash"],
             "base_url": "https://generativelanguage.googleapis.com/v1beta",
         },
         "anthropic": {
@@ -75,19 +75,10 @@ class BaseConfig:
         },
         "huggingface": {
             "name": "Hugging Face",
-            "models": [
-                "meta-llama/Meta-Llama-3.1-70B-Instruct",
-                "meta-llama/Meta-Llama-3.1-8B-Instruct",
-                "mistralai/Mixtral-8x7B-Instruct-v0.1",
-                "mistralai/Mistral-7B-Instruct-v0.3",
-                "google/gemma-2-27b-it",
-                "google/gemma-2-9b-it",
-                "Qwen/Qwen2.5-72B-Instruct",
-                "Qwen/Qwen2.5-7B-Instruct",
-                "microsoft/Phi-3.5-mini-instruct",
-                "tiiuae/falcon-7b-instruct",
-            ],
-            "base_url": "https://api-inference.huggingface.co/models",
+            # Fallback list; the settings page loads the current catalog from
+            # the Inference Providers router when it is available.
+            "models": ["openai/gpt-oss-120b"],
+            "base_url": "https://router.huggingface.co/v1",
         },
     }
 

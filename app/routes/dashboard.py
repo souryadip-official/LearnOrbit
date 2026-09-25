@@ -5,6 +5,8 @@ LearnOrbit Dashboard Routes
 from flask import Blueprint, render_template, jsonify
 from flask_login import login_required, current_user
 from app.models import LearningSession, TopicMastery, LearningBehavior
+from app import db
+from app.services.mastery_service import recalculate_all_topic_mastery
 from sqlalchemy import desc
 
 dashboard_bp = Blueprint("dashboard", __name__)
@@ -14,6 +16,10 @@ dashboard_bp = Blueprint("dashboard", __name__)
 @dashboard_bp.route("/home")
 @login_required
 def home():
+    # Reconcile records created by earlier scoring logic with saved quiz results.
+    recalculate_all_topic_mastery(current_user.id)
+    db.session.commit()
+
     recent_sessions = (
         LearningSession.query
         .filter_by(user_id=current_user.id)

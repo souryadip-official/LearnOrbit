@@ -67,10 +67,9 @@
           </div>
           <div class="session-right">
             <span class="session-status status-{{ s.status }}">{{ s.status }}</span>
+            <a href="{{ url_for('tutor.chat', session_id=s.id) }}" class="session-link" title="{% if s.status == 'completed' %}Review conversation{% else %}Continue session{% endif %}">{% if s.status == 'completed' %}💬{% else %}▶️{% endif %}</a>
             {% if s.status == 'completed' %}
             <a href="{{ url_for('notes.view_notes', session_id=s.id) }}" class="session-link" title="View notes">📝</a>
-            {% else %}
-            <a href="{{ url_for('tutor.chat', session_id=s.id) }}" class="session-link" title="Continue">▶️</a>
             {% endif %}
           </div>
         </div>

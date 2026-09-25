@@ -49,17 +49,12 @@
 {% block scripts %}
 <script>
 const SESSION_ID = {{ session.id }};
-const CSRF = document.cookie.split('; ').find(r=>r.startsWith('csrf_'))?.split('=')?.[1]||'';
+const CSRF = document.querySelector('meta[name="csrf-token"]')?.content || '';
 
 function renderNotes(md) {
   const body = document.getElementById('notes-body');
-  if (typeof marked !== 'undefined') {
-    marked.setOptions({breaks: true, gfm: true});
-    body.innerHTML = marked.parse(md);
-  } else {
-    body.textContent = md;
-  }
-  if (window.MathJax) MathJax.typesetPromise([body]);
+  body.innerHTML = renderMarkdownMath(md);
+  typesetMath(body);
 }
 
 // Render existing notes on load

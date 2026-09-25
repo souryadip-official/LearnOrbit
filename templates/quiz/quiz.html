@@ -73,7 +73,7 @@
 {% block scripts %}
 <script>
 const SESSION_ID = {{ session.id }};
-const CSRF = document.cookie.split('; ').find(r=>r.startsWith('csrf_'))?.split('=')?.[1]||'';
+const CSRF = document.querySelector('meta[name="csrf-token"]')?.content || '';
 let questions = [];
 let userAnswers = {};
 
@@ -116,14 +116,14 @@ function renderQuiz() {
           <label class="option-label" data-qid="${q.id}" data-key="${k}">
             <input type="radio" name="q_${q.id}" value="${k}" class="option-radio" />
             <span class="option-key">${k}</span>
-            <span class="option-text">${v}</span>
+          <span class="option-text">${escapeHtml(String(v))}</span>
           </label>
         `).join('')}
       </div>`;
     list.appendChild(card);
   });
 
-  if (window.MathJax) MathJax.typesetPromise([list]);
+  typesetMath(list);
 
   // Track answers
   document.querySelectorAll('.option-radio').forEach(radio => {
@@ -145,11 +145,11 @@ function updateProgress() {
 }
 
 function renderMd(text) {
-  if (typeof marked !== 'undefined') {
-    marked.setOptions({breaks: true});
-    return marked.parse(text);
-  }
-  return text;
+  return renderMarkdownMath(text);
+}
+
+function escapeHtml(text) {
+  return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
 document.getElementById('submit-quiz-btn').addEventListener('click', async () => {
@@ -204,7 +204,7 @@ function showResults(data) {
       <div class="review-explanation">💡 ${q.explanation}</div>
     </div>`).join('');
 
-  if (window.MathJax) MathJax.typesetPromise([review]);
+  typesetMath(review);
 }
 
 document.getElementById('review-btn').addEventListener('click', () => {

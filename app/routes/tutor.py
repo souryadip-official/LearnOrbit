@@ -5,10 +5,11 @@ LearnOrbit AI Tutor Routes
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash
 from flask_login import login_required, current_user
 from app import db
-from app.models import LearningSession, TopicMastery, LearningBehavior
+from app.models import LearningSession, LearningBehavior
 from app.services.ai_service import (
     call_ai, build_tutor_system, detect_misconception, infer_learning_style
 )
+from app.services.mastery_service import recalculate_topic_mastery, topic_slug
 from datetime import datetime
 import re
 
@@ -17,7 +18,7 @@ tutor_bp = Blueprint("tutor", __name__)
 
 def _get_or_require_key():
     """Return (provider, model, api_key) or None if missing."""
-    return current_user.ai_provider, current_user.ai_model, current_user.ai_api_key_enc
+    return current_user.ai_provider, current_user.ai_model, current_user.get_ai_api_key()
 
 
 @tutor_bp.route("/new", methods=["GET", "POST"])
@@ -130,38 +131,26 @@ def end_session(session_id):
     session_obj = LearningSession.query.filter_by(
         id=session_id, user_id=current_user.id).first_or_404()
 
+    was_active = session_obj.status == "active"
     session_obj.status = "completed"
-    session_obj.ended_at = datetime.utcnow()
+    if not session_obj.ended_at:
+        session_obj.ended_at = datetime.utcnow()
 
-    # Update topic mastery
-    topic_slug = session_obj.topic.lower().replace(" ", "-")[:100]
-    mastery = TopicMastery.query.filter_by(
-        user_id=current_user.id, topic_slug=topic_slug).first()
-    if not mastery:
-        mastery = TopicMastery(
-            user_id=current_user.id, topic=session_obj.topic, topic_slug=topic_slug)
-        db.session.add(mastery)
-
-    # Score from quiz + engagement heuristic
-    quiz_score = session_obj.quiz_score or 0
-    msg_engagement = min(session_obj.messages_count / 20.0, 1.0) * 30
-
-    mastery.understanding = min(100, mastery.understanding + quiz_score * 0.4 + msg_engagement)
-    mastery.application = min(100, mastery.application + quiz_score * 0.3)
-    mastery.problem_solving = min(100, mastery.problem_solving + quiz_score * 0.2)
-    mastery.retention = min(100, mastery.retention + quiz_score * 0.1)
-    mastery.sessions_count += 1
-    mastery.last_studied = datetime.utcnow()
-    mastery.recalculate_overall()
-    session_obj.mastery_score = mastery.overall
+    # Recompute from persisted session results so a quiz taken after ending the
+    # session is reflected when its submission route recalculates mastery.
+    mastery = recalculate_topic_mastery(
+        current_user.id, topic_slug(session_obj.topic)
+    )
+    if mastery:
+        session_obj.mastery_score = mastery.overall
 
     # Update behavior
     behavior = LearningBehavior.query.filter_by(user_id=current_user.id).first()
-    if behavior:
+    if behavior and was_active:
         behavior.total_sessions += 1
         behavior.last_active = datetime.utcnow()
         if session_obj.started_at and session_obj.ended_at:
-            duration = (session_obj.ended_at - session_obj.started_at).seconds / 60
+            duration = (session_obj.ended_at - session_obj.started_at).total_seconds() / 60
             n = behavior.total_sessions
             behavior.avg_session_duration_mins = (
                 (behavior.avg_session_duration_mins * (n - 1) + duration) / n
@@ -178,6 +167,6 @@ def end_session(session_id):
 
     return jsonify({
         "success": True,
-        "mastery": mastery.to_dict(),
+        "mastery": mastery.to_dict() if mastery else {},
         "redirect": url_for("quiz.quiz_page", session_id=session_id),
     })
