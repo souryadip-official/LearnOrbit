@@ -49,22 +49,22 @@ class BaseConfig:
     AI_PROVIDERS = {
         "openai": {
             "name": "OpenAI",
-            "models": ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-3.5-turbo", "o1-mini"],
+            "models": ["gpt-5.5", "gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-3.5-turbo", "o1-mini"],
             "base_url": "https://api.openai.com/v1",
         },
         "google": {
             "name": "Google Gemini",
-            "models": ["gemini-3.1-flash-lite", "gemini-1.5-pro", "gemini-1.5-flash"],
+            "models": ["gemini-3.1-flash-lite", "gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.1-pro-preview"],
             "base_url": "https://generativelanguage.googleapis.com/v1beta",
         },
         "anthropic": {
             "name": "Anthropic Claude",
-            "models": ["claude-opus-4-5", "claude-sonnet-4-5", "claude-haiku-4-5"],
+            "models": ["claude-fable-5.1", "claude-sonnet-4.6", "claude-opus-4-5", "claude-sonnet-4-5", "claude-haiku-4-5"],
             "base_url": "https://api.anthropic.com/v1",
         },
         "xai": {
             "name": "xAI Grok",
-            "models": ["grok-3", "grok-3-mini", "grok-2"],
+            "models": ["grok-4.7", "grok-4.6", "grok-4.5", "grok-4.3", "grok-3", "grok-3-mini", "grok-2"],
             "base_url": "https://api.x.ai/v1",
         },
         "huggingface": {
