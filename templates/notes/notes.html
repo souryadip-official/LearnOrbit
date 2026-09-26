@@ -3,10 +3,6 @@
 {% block topbar_title %}<i data-lucide="notebook-text" aria-hidden="true"></i> Study Notes{% endblock %}
 {% block loader_text %}Generating your notes…{% endblock %}
 
-{% block topbar_actions %}
-<button class="btn-sm" id="export-pdf-btn"><i data-lucide="file-down" aria-hidden="true"></i><span>Export PDF</span></button>
-{% endblock %}
-
 {% block content %}
 <div class="notes-page">
   <div class="notes-header">
@@ -35,7 +31,6 @@
   <div class="notes-content {% if not session.notes_md %}hidden{% endif %}" id="notes-content">
     <div class="notes-toolbar">
       <button class="btn-sm" id="regenerate-btn"><i data-lucide="refresh-cw" aria-hidden="true"></i><span>Regenerate</span></button>
-      <button class="btn-sm" id="export-pdf-btn-2"><i data-lucide="file-down" aria-hidden="true"></i><span>Export PDF</span></button>
     </div>
     <div class="notes-body markdown-body" id="notes-body">
       {% if session.notes_md %}
@@ -96,16 +91,5 @@ async function generateNotes() {
 document.getElementById('generate-notes-btn')?.addEventListener('click', generateNotes);
 document.getElementById('regenerate-btn')?.addEventListener('click', generateNotes);
 
-function exportPDF() {
-  {% if current_user.plan == 'free' %}
-    showToast('PDF export requires the Scholar plan. Upgrade to unlock.', 'warning');
-  {% else %}
-    showToast('Preparing your branded PDF…', 'info');
-    window.location = `/notes/${SESSION_ID}/export-pdf`;
-  {% endif %}
-}
-
-document.getElementById('export-pdf-btn')?.addEventListener('click', exportPDF);
-document.getElementById('export-pdf-btn-2')?.addEventListener('click', exportPDF);
 </script>
 {% endblock %}

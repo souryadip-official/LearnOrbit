@@ -116,12 +116,16 @@ def profile():
         record.date_of_birth = request.form.get("date_of_birth", "")[:10]
         record.grade = request.form.get("grade", "")[:40]
         record.teaching_style = request.form.get("teaching_style", "balanced")[:32]
+        accent = request.form.get("accent_theme", "garden")
+        if accent in {"garden", "ocean", "berry", "sunset", "mint", "slate"}:
+            current_user.accent_theme = accent
         behavior = LearningBehavior.query.filter_by(user_id=current_user.id).first()
         if behavior:
             behavior.preferred_style = record.teaching_style
         chosen = request.form.get("avatar", "orbit-1")
         if chosen in AVATARS: record.avatar = chosen
         picture = request.files.get("picture")
+        old_picture = record.picture_path
         if request.form.get("remove_picture") == "1" and not (picture and picture.filename): record.picture_path = None
         if picture and picture.filename:
             extension = os.path.splitext(secure_filename(picture.filename))[1].lower()
@@ -135,6 +139,11 @@ def profile():
             path = os.path.join(directory, name)
             picture.save(path); record.picture_path = path
         db.session.commit()
+        if old_picture and old_picture != record.picture_path:
+            avatar_root = os.path.realpath(os.path.join(current_app.instance_path, "avatars", str(current_user.id)))
+            if os.path.realpath(old_picture).startswith(avatar_root + os.sep) and os.path.isfile(old_picture):
+                try: os.remove(old_picture)
+                except OSError: current_app.logger.warning("Could not remove replaced profile image")
         return jsonify({"success": True, "message": "Profile updated."}) if request.is_json else render_template("features/profile.html", profile=record, avatars=AVATARS, saved=True)
     return render_template("features/profile.html", profile=record, avatars=AVATARS)
 
@@ -301,60 +310,71 @@ def video():
 @features_bp.route("/video/transcript", methods=["POST"])
 @login_required
 def video_transcript():
-    session_id = request.form.get("session_id", type=int)
-    study = LearningSession.query.filter_by(id=session_id, user_id=current_user.id).first_or_404()
+    """Prepare an in-memory transcript; video study never attaches to tutor sessions."""
     upload = request.files.get("transcript")
-    transcript = ""; filename = "video-transcript.txt"
+    transcript = ""
+    filename = "video-transcript.txt"
     if upload and upload.filename:
         if not upload.filename.lower().endswith((".txt", ".vtt", ".srt")):
             return jsonify({"error": "Transcript must be a .txt, .vtt, or .srt file."}), 400
-        transcript = upload.read(2_000_000).decode("utf-8", errors="ignore"); filename = secure_filename(upload.filename)
+        transcript = upload.read(2_000_000).decode("utf-8", errors="ignore")
+        filename = secure_filename(upload.filename) or filename
     else:
         video = request.files.get("video")
-        if video and video.filename:
-            if current_user.ai_provider != "openai":
-                return jsonify({"error": "Automatic video transcription currently needs an OpenAI API key. You can attach a .txt, .vtt, or .srt transcript with any tutor provider."}), 400
-            import shutil, subprocess, tempfile
-            ffmpeg = shutil.which("ffmpeg")
-            if not ffmpeg: return jsonify({"error": "Install ffmpeg to transcribe local video, or upload its captions file."}), 503
-            tempdir = tempfile.mkdtemp(prefix="learnorbit-transcript-")
-            try:
-                source = os.path.join(tempdir, secure_filename(video.filename) or "source-video")
-                audio = os.path.join(tempdir, "audio.mp3"); video.save(source)
-                subprocess.run([ffmpeg, "-y", "-i", source, "-vn", "-t", "600", "-ac", "1", "-b:a", "64k", audio], check=True, timeout=90, capture_output=True)
-                with open(audio, "rb") as audio_file:
-                    import requests
-                    response = requests.post("https://api.openai.com/v1/audio/transcriptions", headers={"Authorization": f"Bearer {current_user.get_ai_api_key('openai')}"}, files={"file": ("audio.mp3", audio_file, "audio/mpeg")}, data={"model": "whisper-1", "response_format": "text"}, timeout=120)
-                    response.raise_for_status(); transcript = response.text
-                filename = (secure_filename(video.filename) or "video") + "-transcript.txt"
-            except Exception as exc:
-                return jsonify({"error": f"Could not transcribe this video. Check ffmpeg and OpenAI access: {str(exc)[:160]}"}), 502
-            finally:
-                import shutil
-                shutil.rmtree(tempdir, ignore_errors=True)
-        else:
-            link = request.form.get("video_url", "").strip()
-            if link:
-                return jsonify({"error": "A video link alone cannot provide a transcript here. Upload its captions (.vtt/.srt/.txt); YouTube caption downloads require video-owner authorization."}), 400
-            return jsonify({"error": "Choose a video file or provide a transcript/captions file."}), 400
+        if not video or not video.filename:
+            return jsonify({"error": "Upload caption text (.txt, .vtt, .srt) or a local video."}), 400
+        if current_user.ai_provider != "openai" or not current_user.get_ai_api_key("openai"):
+            return jsonify({"error": "Local video transcription needs an OpenAI API key. Upload captions to use another provider."}), 400
+        import shutil, subprocess, tempfile
+        ffmpeg = shutil.which("ffmpeg")
+        if not ffmpeg:
+            return jsonify({"error": "Install ffmpeg to transcribe a local video, or upload its captions file."}), 503
+        tempdir = tempfile.mkdtemp(prefix="learnorbit-transcript-")
+        try:
+            source = os.path.join(tempdir, secure_filename(video.filename) or "source-video")
+            audio = os.path.join(tempdir, "audio.mp3")
+            video.save(source)
+            subprocess.run([ffmpeg, "-y", "-i", source, "-vn", "-t", "600", "-ac", "1", "-b:a", "64k", audio], check=True, timeout=90, capture_output=True)
+            import requests
+            with open(audio, "rb") as audio_file:
+                response = requests.post("https://api.openai.com/v1/audio/transcriptions", headers={"Authorization": f"Bearer {current_user.get_ai_api_key('openai')}"}, files={"file": ("audio.mp3", audio_file, "audio/mpeg")}, data={"model": "whisper-1", "response_format": "text"}, timeout=120)
+                response.raise_for_status()
+                transcript = response.text
+            filename = (secure_filename(video.filename) or "video") + "-transcript.txt"
+        except Exception as exc:
+            return jsonify({"error": f"Could not transcribe this video. Check ffmpeg and OpenAI access: {str(exc)[:160]}"}), 502
+        finally:
+            shutil.rmtree(tempdir, ignore_errors=True)
     transcript = transcript.strip()
-    if len(transcript) < 80: return jsonify({"error": "The transcript is empty or too short to ground a tutor."}), 400
-    terms = set(_tokenize(study.topic)); overlap = max((len(terms & set(_tokenize(c))) for c in _chunks(transcript)), default=0)
-    vectors = _embeddings([study.topic, transcript[:8000]])
-    semantic_ok = len(vectors) == 2 and _cosine(vectors[0], vectors[1]) >= float(os.getenv("BYOB_SEMANTIC_MIN", "0.30"))
-    if overlap < min(2, max(1, len(terms))) and not semantic_ok:
-        return jsonify({"error": "This transcript does not appear relevant to the selected session topic. Choose a related session or transcript."}), 422
-    directory = os.path.join(current_app.instance_path, "documents", str(current_user.id), str(study.id)); os.makedirs(directory, exist_ok=True)
-    path = os.path.join(directory, f"video-{datetime.utcnow().strftime('%Y%m%d%H%M%S%f')}-{filename}")
-    with open(path, "w", encoding="utf-8") as out: out.write(transcript)
-    chunks = _chunks(transcript); stored_vectors = []
-    if vectors:
-        for start in range(0, len(chunks), 32): stored_vectors.extend(_embeddings(chunks[start:start + 32]))
-        if len(stored_vectors) != len(chunks): stored_vectors = []
-    doc = SessionDocument(session_id=study.id, user_id=current_user.id, filename=filename, storage_path=path, extracted_text=transcript,
-                          embedding_provider=current_user.ai_provider, embeddings_json=json.dumps(stored_vectors) if stored_vectors else None)
-    db.session.add(doc); db.session.commit()
-    return jsonify({"success": True, "message": f"Transcript added to {study.topic}. Open the session to chat with it." , "redirect": f"/tutor/{study.id}"})
+    if len(transcript) < 80:
+        return jsonify({"error": "The transcript is empty or too short to study."}), 400
+    return jsonify({"success": True, "filename": filename, "transcript": transcript[:120000]})
+
+
+@features_bp.route("/video/chat", methods=["POST"])
+@login_required
+def video_chat():
+    """Answer a video question from transient browser-held transcript context."""
+    from app.services.ai_service import call_ai, supports_temperature
+    data = request.get_json() or {}
+    transcript = str(data.get("transcript", ""))[:120000]
+    question = str(data.get("message", "")).strip()[:4000]
+    if len(transcript) < 80 or not question:
+        return jsonify({"error": "Prepare a transcript and ask a question about it."}), 400
+    key = current_user.get_ai_api_key()
+    if not key:
+        return jsonify({"error": "Add your AI provider key in Settings before using video chat."}), 400
+    history = data.get("history", [])
+    messages = [{"role": row.get("role"), "content": str(row.get("content", ""))[:4000]}
+                for row in history[-12:] if isinstance(row, dict) and row.get("role") in ("user", "assistant")]
+    messages.append({"role": "user", "content": question})
+    system = "You are a helpful video study companion. Ground answers in the supplied transcript. If it does not contain the answer, say so clearly. Use timestamps if they are present.\n\nTRANSCRIPT (temporary session context):\n" + transcript
+    raw_temperature = data.get("temperature", 0.7)
+    try: temperature = max(0.0, min(2.0, float(raw_temperature)))
+    except (TypeError, ValueError): temperature = 0.7
+    answer = call_ai(current_user.ai_provider, current_user.ai_model, key, messages, system=system,
+                     temperature=temperature if supports_temperature(current_user.ai_provider, current_user.ai_model) else None)
+    return jsonify({"reply": answer})
 
 
 PLANS = {"pro": (9.99, "Scholar"), "team": (24.99, "Academy")}
@@ -364,7 +384,8 @@ PLANS = {"pro": (9.99, "Scholar"), "team": (24.99, "Academy")}
 @login_required
 def pricing():
     active = Subscription.query.filter_by(user_id=current_user.id, status="active").order_by(Subscription.id.desc()).first()
-    return render_template("features/pricing.html", plans=PLANS, subscription=active)
+    active_plan_name = PLANS.get(active.plan, (0, current_user.plan_label))[1] if active else None
+    return render_template("features/pricing.html", plans=PLANS, subscription=active, active_plan_name=active_plan_name)
 
 
 @features_bp.route("/checkout/<plan>")

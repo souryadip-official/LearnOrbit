@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="{{ current_user.theme if current_user.is_authenticated else 'light' }}">
+<html lang="en" data-theme="{{ current_user.theme if current_user.is_authenticated else 'light' }}" data-accent="{{ current_user.accent_theme if current_user.is_authenticated else 'garden' }}">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -104,6 +104,7 @@
       <a href="{{ url_for('features.relax') }}" class="nav-item {% if request.endpoint == 'features.relax' %}active{% endif %}"><span class="nav-icon"><i data-lucide="timer"></i></span><span class="nav-label">Relax & Break</span></a>
       <a href="{{ url_for('features.music') }}" class="nav-item {% if request.endpoint == 'features.music' %}active{% endif %}"><span class="nav-icon"><i data-lucide="audio-lines"></i></span><span class="nav-label">Focus Music</span></a>
       <a href="{{ url_for('features.calendar') }}" class="nav-item {% if request.endpoint == 'features.calendar' %}active{% endif %}"><span class="nav-icon"><i data-lucide="calendar-days"></i></span><span class="nav-label">Calendar</span></a>
+      <a href="{{ url_for('features.calculator') }}" class="nav-item {% if request.endpoint == 'features.calculator' %}active{% endif %}"><span class="nav-icon"><i data-lucide="calculator"></i></span><span class="nav-label">Calculator</span></a>
       <a href="{{ url_for('features.profile') }}" class="nav-item {% if 'features.profile' == request.endpoint %}active{% endif %}"><span class="nav-icon"><i data-lucide="user-round"></i></span><span class="nav-label">My Profile</span>
       </a>
       <a href="{{ url_for('features.video') }}" class="nav-item {% if request.endpoint == 'features.video' %}active{% endif %}"><span class="nav-icon"><i data-lucide="clapperboard"></i></span><span class="nav-label">Video Study</span></a>
@@ -116,10 +117,10 @@
 
     <div class="sidebar-footer">
       <div class="user-pill">
-        {% if user_profile and user_profile.picture_path %}<img class="user-avatar" src="{{ url_for('features.profile_picture') }}" alt="Profile picture">{% elif user_profile %}<span class="user-avatar profile-avatar-art profile-avatar-{{ user_profile.avatar.replace('orbit-', '') }}" aria-label="Selected profile avatar"><i data-lucide="user-round"></i></span>{% else %}<span class="user-avatar">{{ current_user.username[0].upper() }}</span>{% endif %}
+        {% if user_profile and user_profile.picture_path %}<img class="user-avatar" src="{{ url_for('features.profile_picture') }}?v={{ user_profile.updated_at.timestamp()|int if user_profile.updated_at else 0 }}" alt="Profile picture">{% elif user_profile %}<span class="user-avatar profile-avatar-art profile-avatar-{{ user_profile.avatar.replace('orbit-', '') }}" aria-label="Selected profile avatar"><svg viewBox="0 0 80 80" aria-hidden="true"><circle cx="40" cy="41" r="36" fill="var(--avatar-bg)"/><path d="M17 73c2-15 11-22 23-22s21 7 23 22" fill="var(--avatar-shirt)"/><path d="M25 37c0-15 6-23 15-23s15 8 15 23v9c-4 8-10 12-15 12s-11-4-15-12z" fill="var(--avatar-skin)"/><path d="M23 35c-2-13 6-23 18-23 13 0 19 10 16 22-4-4-7-9-8-14-6 7-15 10-26 10z" fill="var(--avatar-hair)"/><circle cx="34" cy="38" r="1.7" fill="#25352e"/><circle cx="46" cy="38" r="1.7" fill="#25352e"/><path d="M35 46q5 4 10 0" fill="none" stroke="#754a45" stroke-width="2"/></svg></span>{% else %}<span class="user-avatar">{{ current_user.username[0].upper() }}</span>{% endif %}
         <div class="user-info">
           <span class="user-name">{{ current_user.username }}</span>
-          <span class="user-plan plan-{{ current_user.plan }}">{{ current_user.plan.title() }}</span>
+          <span class="user-plan plan-{{ current_user.plan }}">{{ current_user.plan_label }}</span>
         </div>
       </div>
       <button class="theme-toggle" id="theme-toggle" title="Toggle dark mode">
@@ -151,14 +152,14 @@
     <main class="main-content">
       {% block content %}{% endblock %}
     </main>
-    <footer class="app-footer"><a class="footer-brand-link" href="{{ url_for('index') }}">LearnOrbit</a><span>Built by Souryadip Mallick</span><a href="https://www.linkedin.com/in/souryadip-mallick-03b303294/" target="_blank" rel="noopener noreferrer">LinkedIn</a><a href="https://github.com/souryadip-official/" target="_blank" rel="noopener noreferrer"><i data-lucide="coffee"></i> Buy me a coffee</a><small>AI providers: OpenAI, Google Gemini, Anthropic, xAI, Hugging Face · Code runner: Judge0 · Icons: Lucide · Math: MathJax</small></footer>
+    <footer class="app-footer"><a class="footer-brand-link" href="{{ url_for('index') }}">LearnOrbit</a><span>Built by Souryadip Mallick</span><a href="https://www.linkedin.com/in/souryadip-mallick-03b303294/" target="_blank" rel="noopener noreferrer">LinkedIn</a><a href="https://github.com/souryadip-official/" target="_blank" rel="noopener noreferrer"><i data-lucide="coffee"></i> Buy me a coffee</a><small>AI providers: OpenAI, Google Gemini, Anthropic, xAI, Hugging Face · Code runner: Judge0 · Editor: CodeMirror · Charts: Chart.js · Icons: Lucide · Math: MathJax</small></footer>
   </div>
   {% else %}
   <!-- Unauthenticated layout -->
   <main>
     {% block public_content %}{% endblock %}
   </main>
-  {% if request.endpoint != 'index' %}<footer class="app-footer public-app-footer"><a class="footer-brand-link" href="{{ url_for('index') }}">LearnOrbit</a><span>Built by Souryadip Mallick</span><a href="https://www.linkedin.com/in/souryadip-mallick-03b303294/" target="_blank" rel="noopener noreferrer">LinkedIn</a><a href="https://github.com/souryadip-official/" target="_blank" rel="noopener noreferrer"><i data-lucide="coffee"></i> Buy me a coffee</a><small>AI providers: OpenAI, Google Gemini, Anthropic, xAI, Hugging Face · Code runner: Judge0 · Icons: Lucide · Math: MathJax</small></footer>{% endif %}
+  {% if request.endpoint != 'index' %}<footer class="app-footer public-app-footer"><a class="footer-brand-link" href="{{ url_for('index') }}">LearnOrbit</a><span>Built by Souryadip Mallick</span><a href="https://www.linkedin.com/in/souryadip-mallick-03b303294/" target="_blank" rel="noopener noreferrer">LinkedIn</a><a href="https://github.com/souryadip-official/" target="_blank" rel="noopener noreferrer"><i data-lucide="coffee"></i> Buy me a coffee</a><small>AI providers: OpenAI, Google Gemini, Anthropic, xAI, Hugging Face · Code runner: Judge0 · Editor: CodeMirror · Charts: Chart.js · Icons: Lucide · Math: MathJax</small></footer>{% endif %}
   {% endif %}
 
   <script src="{{ url_for('static', filename='js/main.js') }}"></script>

@@ -124,10 +124,11 @@ def _migrate_legacy_schema():
     that already exist. This migration is additive and idempotent, preserving
     profile rows while supplying defaults for newly introduced fields.
     """
-    from .models import SessionDocument, UserProfile
+    from .models import SessionDocument, UserProfile, User
 
     # SQL defaults are needed for legacy rows; ORM defaults only run on inserts.
     migrations = {
+        "users": (User, {"accent_theme": "VARCHAR(24) DEFAULT 'garden'"}),
         "user_profiles": (UserProfile, {
             "desired_plan": "VARCHAR(16) DEFAULT 'free'",
             "email_verified": "BOOLEAN DEFAULT 1",

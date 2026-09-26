@@ -81,7 +81,7 @@ function update(){
   });
   // Out of bounds
   if(ball.y>H+ball.r){lives--;document.getElementById('lives-br').textContent=lives;
-    if(!lives){running=false;window.saveGameScore?.('breakout',score);ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(0,0,W,H);ctx.fillStyle='#fff';ctx.font='bold 28px DM Sans,sans-serif';ctx.textAlign='center';ctx.fillText('Game Over',W/2,H/2);return;}
+    if(!lives){running=false;window.saveGameScore?.('breakout',score);showToast(`Breakout finished · score ${score}`,'info');ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(0,0,W,H);ctx.fillStyle='#fff';ctx.font='bold 28px DM Sans,sans-serif';ctx.textAlign='center';ctx.fillText('Game Over',W/2,H/2);return;}
     ball={x:W/2,y:H-35,r:7,dx:3,dy:-3};launched=false;
   }
   // Level up

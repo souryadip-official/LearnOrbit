@@ -23,6 +23,7 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(256), nullable=False)
     plan = db.Column(db.String(16), default="free")  # free | pro | team
     theme = db.Column(db.String(8), default="light")  # light | dark
+    accent_theme = db.Column(db.String(24), default="garden")
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_login = db.Column(db.DateTime)
 
@@ -79,6 +80,10 @@ class User(UserMixin, db.Model):
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+
+    @property
+    def plan_label(self):
+        return {"free": "Explorer", "pro": "Scholar", "team": "Academy"}.get(self.plan, "Explorer")
 
     def to_dict(self):
         return {

@@ -17,9 +17,6 @@ class BaseConfig:
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB
     WTF_CSRF_ENABLED = True
 
-    # PDF export
-    EXPORT_DIR = os.path.join(BASE_DIR, "exports")
-
     # Pricing tiers
     PRICING = {
         "free": {
@@ -27,7 +24,6 @@ class BaseConfig:
             "price": 0,
             "sessions_per_day": 3,
             "quizzes_per_session": 1,
-            "notes_export": False,
             "games_access": True,
             "split_screen": False,
         },
@@ -36,7 +32,6 @@ class BaseConfig:
             "price": 9.99,
             "sessions_per_day": -1,  # unlimited
             "quizzes_per_session": -1,
-            "notes_export": True,
             "games_access": True,
             "split_screen": True,
         },
@@ -45,7 +40,6 @@ class BaseConfig:
             "price": 24.99,
             "sessions_per_day": -1,
             "quizzes_per_session": -1,
-            "notes_export": True,
             "games_access": True,
             "split_screen": True,
         },

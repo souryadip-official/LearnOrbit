@@ -78,11 +78,11 @@
   <div class="settings-card">
     <div class="card-title"><i data-lucide="badge-check" aria-hidden="true"></i> Your Plan</div>
     <div class="plan-status">
-      <span class="plan-badge-large plan-{{ current_user.plan }}">{{ current_user.plan.title() }}</span>
+      <span class="plan-badge-large plan-{{ current_user.plan }}">{{ current_user.plan_label }}</span>
       {% if current_user.plan == 'free' %}
-      <p>You're on the free Explorer plan. <a href="#pricing" class="link">Upgrade to Scholar</a> to unlock PDF exports, split screen, and unlimited sessions.</p>
+      <p>You're on the free Explorer plan. <a href="#pricing" class="link">Upgrade to Scholar</a> to unlock split screen and unlimited sessions.</p>
       {% else %}
-      <p>You're on the {{ current_user.plan.title() }} plan. Thank you for supporting LearnOrbit.</p>
+      <p>You're on the {{ current_user.plan_label }} plan. Thank you for supporting LearnOrbit.</p>
       {% endif %}
     </div>
   </div>

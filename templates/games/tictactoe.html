@@ -78,6 +78,7 @@ function endGame(msg, winner) {
   window.saveGameScore?.('tictactoe', winner === 'X' ? 1 : 0);
   gameOver=true;
   document.getElementById('status').textContent=msg;
+  showToast(msg, winner === 'X' ? 'success' : 'info');
   scores[winner]++;
   document.getElementById('score-x').textContent=scores.X;
   document.getElementById('score-o').textContent=scores.O;

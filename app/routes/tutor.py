@@ -161,6 +161,17 @@ def end_session(session_id):
     if not session_obj.ended_at:
         session_obj.ended_at = datetime.utcnow()
 
+    # Uploaded notes and their cached embedding vectors belong to this session.
+    # Remove the file and index records when the learning session is finished.
+    for document in SessionDocument.query.filter_by(session_id=session_obj.id, user_id=current_user.id).all():
+        try:
+            import os
+            if document.storage_path and os.path.isfile(document.storage_path):
+                os.remove(document.storage_path)
+        except OSError:
+            pass
+        db.session.delete(document)
+
     # Recompute from persisted session results so a quiz taken after ending the
     # session is reflected when its submission route recalculates mastery.
     mastery = recalculate_topic_mastery(
@@ -195,3 +206,20 @@ def end_session(session_id):
         "mastery": mastery.to_dict() if mastery else {},
         "redirect": url_for("quiz.quiz_page", session_id=session_id),
     })
+
+
+@tutor_bp.route("/<int:session_id>/delete", methods=["POST"])
+@login_required
+def delete_session(session_id):
+    session_obj = LearningSession.query.filter_by(id=session_id, user_id=current_user.id).first_or_404()
+    for document in SessionDocument.query.filter_by(session_id=session_obj.id, user_id=current_user.id).all():
+        try:
+            import os
+            if document.storage_path and os.path.isfile(document.storage_path):
+                os.remove(document.storage_path)
+        except OSError:
+            pass
+        db.session.delete(document)
+    db.session.delete(session_obj)
+    db.session.commit()
+    return jsonify({"success": True})

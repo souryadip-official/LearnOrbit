@@ -42,6 +42,6 @@ const jokes = [
   "I told my physics teacher I had potential energy. She said I needed to convert it to kinetic!",
 ];
 document.getElementById('games-joke').textContent = jokes[Math.floor(Math.random()*jokes.length)];
-fetch('/games/scores').then(r=>r.json()).then(scores=>{const el=document.getElementById('game-scores');el.innerHTML='';for(const [id,value] of Object.entries(scores)){const label=document.createElement('div');label.className='calendar-event';label.textContent=`${id.replaceAll('-',' ')} · best ${value}`;el.appendChild(label)}if(!Object.keys(scores).length)el.textContent='Play a game and your best scores will be saved here.'}).catch(()=>{});
+fetch('/games/scores').then(r=>r.json()).then(scores=>{const el=document.getElementById('game-scores');el.innerHTML='';for(const [id,value] of Object.entries(scores)){const label=document.createElement('div');label.className='best-score-card';const icon=document.createElement('i');icon.setAttribute('data-lucide','trophy');const name=document.createElement('span');name.textContent=id.replaceAll('-',' ');const score=document.createElement('strong');score.textContent=value;const caption=document.createElement('small');caption.textContent='personal best';label.append(icon,name,score,caption);el.appendChild(label)}if(!Object.keys(scores).length)el.textContent='Play a game and your best scores will be saved here.';window.refreshIcons?.()}).catch(()=>{});
 </script>
 {% endblock %}

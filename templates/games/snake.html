@@ -80,6 +80,7 @@ function endGame(){
   document.getElementById('overlay-icon').innerHTML='<i data-lucide="circle-x" aria-hidden="true"></i><span>Game over</span>';
   window.refreshIcons?.();
   document.getElementById('overlay-msg').textContent=`Score: ${score}`;
+  showToast(`Snake finished · score ${score}`, 'info');
   document.getElementById('snake-start').textContent='▶ Play Again';
   document.getElementById('snake-overlay').classList.remove('hidden');
 }

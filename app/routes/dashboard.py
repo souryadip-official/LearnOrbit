@@ -4,10 +4,11 @@ LearnOrbit Dashboard Routes
 
 from flask import Blueprint, render_template, jsonify, current_app
 from flask_login import login_required, current_user
-from app.models import LearningSession, TopicMastery, LearningBehavior, AttendanceStamp
+from app.models import LearningSession, TopicMastery, LearningBehavior, AttendanceStamp, QuizAttempt
 from app import db
 from app.services.mastery_service import recalculate_all_topic_mastery
 from sqlalchemy import desc
+from datetime import datetime, timedelta
 import calendar as pycalendar
 
 dashboard_bp = Blueprint("dashboard", __name__)
@@ -44,6 +45,33 @@ def home():
     yearly_attendance = AttendanceStamp.query.filter_by(user_id=current_user.id).filter(
         AttendanceStamp.attended_on >= today.replace(month=1, day=1),
         AttendanceStamp.attended_on <= today).count()
+    # Real study activity, grouped by local calendar day, for the last two weeks.
+    analytics_days = [today - timedelta(days=13 - i) for i in range(14)]
+    session_rows = LearningSession.query.filter(
+        LearningSession.user_id == current_user.id,
+        LearningSession.started_at >= datetime.combine(analytics_days[0], datetime.min.time()),
+        LearningSession.started_at < datetime.combine(today + timedelta(days=1), datetime.min.time()),
+    ).all()
+    activity_by_day = {}
+    for row in session_rows:
+        key = row.started_at.date()
+        activity_by_day[key] = activity_by_day.get(key, 0) + 1
+    quiz_rows = (QuizAttempt.query.join(LearningSession).filter(
+        LearningSession.user_id == current_user.id,
+        QuizAttempt.attempted_at >= datetime.combine(analytics_days[0], datetime.min.time()),
+        QuizAttempt.attempted_at < datetime.combine(today + timedelta(days=1), datetime.min.time()),
+    ).all())
+    quiz_by_day = {}
+    for row in quiz_rows:
+        key = row.attempted_at.date()
+        quiz_by_day.setdefault(key, []).append(float(row.score or 0))
+    analytics = {
+        "labels": [day.strftime("%d %b") for day in analytics_days],
+        "sessions": [activity_by_day.get(day, 0) for day in analytics_days],
+        "quiz": [round(sum(quiz_by_day[day]) / len(quiz_by_day[day]), 1) if quiz_by_day.get(day) else None for day in analytics_days],
+        "quiz_count": len(quiz_rows),
+        "average_quiz": round(sum(float(row.score or 0) for row in quiz_rows) / len(quiz_rows), 1) if quiz_rows else None,
+    }
 
     stats = {
         "total_sessions": LearningSession.query.filter_by(user_id=current_user.id).count(),
@@ -65,6 +93,7 @@ def home():
         mastery_records=mastery_records,
         behavior=behavior,
         stats=stats,
+        analytics=analytics,
     )
 
 
