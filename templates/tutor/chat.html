@@ -40,7 +40,7 @@
               <div class="mode-actions">
                 <button class="btn-primary" id="debate-start" type="submit"><i data-lucide="play"></i><span>Start the debate</span></button>
                 <button class="btn-secondary hidden" id="debate-continue" type="button"><i data-lucide="rotate-cw"></i><span>Continue debate</span></button>
-                <button class="btn-ghost hidden" id="debate-stop" type="button"><i data-lucide="circle-stop"></i><span>Finish here</span></button>
+                <button class="debate-finish hidden" id="debate-stop" type="button"><i data-lucide="circle-stop"></i><span>Finish here</span></button>
               </div>
             </div>
           </details>
@@ -200,6 +200,9 @@ const modeRequest = async (url, body) => {
   }
   return data;
 };
+function escapeHtml(value) {
+  return String(value ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
 const setModeMarkdown=(node,content)=>{
   node.innerHTML=renderMarkdownMath(escapeHtml(String(content||'')));
   typesetMath(node);
@@ -543,10 +546,6 @@ async function addMessage(role, content) {
 
 function renderContent(text) {
   return renderMarkdownMath(text);
-}
-
-function escapeHtml(t) {
-  return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
 // Dismiss misconception
