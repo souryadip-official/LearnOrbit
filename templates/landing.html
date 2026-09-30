@@ -36,10 +36,11 @@
       </div>
       <div class="nav-actions">
         <button id="theme-btn" class="theme-btn-landing"><i data-lucide="moon" aria-hidden="true"></i><span>Theme</span></button>
+        <a href="{{ url_for('admin.login') }}" class="btn-ghost admin-panel-link"><i data-lucide="shield-user" aria-hidden="true"></i><span>Admin Panel</span></a>
         <a href="{{ url_for('auth.login') }}" class="btn-ghost">Log In</a>
         <a href="{{ url_for('auth.register') }}" class="btn-primary-landing">Start Free</a>
       </div>
-      <button class="nav-mobile-toggle" id="nav-mobile-toggle" aria-label="Open navigation"><i data-lucide="menu" aria-hidden="true"></i></button>
+      <button class="nav-mobile-toggle" id="nav-mobile-toggle" type="button" aria-label="Open navigation" aria-controls="mobile-nav" aria-expanded="false"><i data-lucide="menu" aria-hidden="true"></i></button>
     </div>
   </nav>
 
@@ -50,8 +51,12 @@
     <a href="#feedbacks">Feedback</a>
     <a href="#faqs">FAQs</a>
     <a href="#pricing">Pricing</a>
+    <a href="#games">Brain Games</a>
+    <a href="{{ url_for('admin.login') }}"><i data-lucide="shield-user" aria-hidden="true"></i>Admin Panel · Restricted staff access</a>
     <a href="{{ url_for('auth.login') }}">Log In</a>
     <a href="{{ url_for('auth.register') }}" class="btn-primary-landing">Start Free</a>
+    <a href="{{ url_for('features.terms') }}">Terms &amp; Conditions</a>
+    <button class="theme-btn-landing mobile-theme-btn" type="button"><i data-lucide="moon" aria-hidden="true"></i><span>Switch theme</span></button>
   </div>
 
   <!-- Hero -->
@@ -81,25 +86,51 @@
       </div>
     </div>
 
-    <!-- Orbit animation -->
+    <!-- Animated learning intelligence preview -->
     <div class="hero-visual">
-      <div class="orbit-system">
-        <div class="orbit-center">
-          <div class="orbit-center-inner"><i data-lucide="brain" aria-hidden="true"></i><span>Learn</span></div>
-          <div class="orbit-center-ring"></div>
+      <div class="learning-preview">
+        <div class="preview-orbit preview-orbit-one"></div>
+        <div class="preview-orbit preview-orbit-two"></div>
+        <article class="preview-dashboard">
+          <div class="preview-topline"><span class="preview-live"><i></i> YOUR LEARNING ORBIT</span><span class="preview-menu"><i></i><i></i><i></i></span></div>
+          <div class="preview-heading"><div><span>THIS WEEK</span><strong>You're building momentum</strong></div><span class="preview-streak"><i data-lucide="flame"></i> 5 day streak</span></div>
+          <div class="preview-progress">
+            <div><span>Concept mastery</span><strong>78%</strong></div>
+            <div class="preview-progress-track"><i></i></div>
+            <small>+12% since your last review</small>
+          </div>
+          <div class="preview-chart" aria-label="Illustrative weekly learning activity">
+            <span style="--bar-height:34%"><i></i><small>M</small></span>
+            <span style="--bar-height:52%"><i></i><small>T</small></span>
+            <span style="--bar-height:42%"><i></i><small>W</small></span>
+            <span style="--bar-height:72%"><i></i><small>T</small></span>
+            <span class="is-today" style="--bar-height:94%"><i></i><small>F</small></span>
+            <span style="--bar-height:56%"><i></i><small>S</small></span>
+            <span style="--bar-height:28%"><i></i><small>S</small></span>
+          </div>
+          <div class="preview-insight"><span class="preview-insight-icon"><i data-lucide="sparkles"></i></span><span><strong>One idea is ready to revisit</strong><small>Spaced review keeps learning fresh</small></span><i data-lucide="arrow-up-right"></i></div>
         </div>
-        <div class="orbit-track orbit-1">
-          <div class="orbit-sat sat-1"><i data-lucide="book-open" aria-hidden="true"></i></div>
-        </div>
-        <div class="orbit-track orbit-2">
-          <div class="orbit-sat sat-2"><i data-lucide="target" aria-hidden="true"></i></div>
-        </div>
-        <div class="orbit-track orbit-3">
-          <div class="orbit-sat sat-3"><i data-lucide="trophy" aria-hidden="true"></i></div>
-        </div>
-        <div class="orbit-track orbit-4">
-          <div class="orbit-sat sat-4"><i data-lucide="lightbulb" aria-hidden="true"></i></div>
-        </div>
+        <div class="preview-float preview-float-top"><i data-lucide="brain"></i><span>Understand</span></div>
+        <div class="preview-float preview-float-bottom"><i data-lucide="target"></i><span>Remember</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="orbit-story-section" aria-labelledby="orbit-story-title">
+    <div class="section-container orbit-story-grid">
+      <div class="orbit-story-copy">
+        <span class="story-eyebrow"><i data-lucide="orbit"></i> A smarter way to study</span>
+        <h2 id="orbit-story-title">Every session makes the next one <em>more personal.</em></h2>
+        <p>LearnOrbit connects the conversation, your practice, and your progress—so learning feels like a path forward, not a pile of disconnected tools.</p>
+        <a href="#how-it-works" class="story-link">Explore the learning cycle <i data-lucide="arrow-right"></i></a>
+      </div>
+      <div class="orbit-story-map" aria-label="LearnOrbit connects learning, practice, and progress">
+        <div class="story-orbit story-orbit-outer"></div><div class="story-orbit story-orbit-inner"></div>
+        <span class="story-node story-node-learn"><i data-lucide="book-open-check"></i><b>Learn</b></span>
+        <span class="story-node story-node-practice"><i data-lucide="brain"></i><b>Practice</b></span>
+        <span class="story-node story-node-progress"><i data-lucide="chart-no-axes-combined"></i><b>Progress</b></span>
+        <span class="story-core"><i data-lucide="sparkles"></i></span>
+        <span class="story-spark story-spark-one"></span><span class="story-spark story-spark-two"></span>
       </div>
     </div>
   </section>
@@ -257,8 +288,8 @@
       <div class="public-feedback-proof">
         <div class="public-feedback-overall"><span>Overall rating</span><strong>{{ feedback_summary.ratings.overall_rating }}<small>/5</small></strong><span class="feedback-summary-stars" style="--rating:{{ feedback_summary.ratings.overall_rating * 20 }}%" aria-label="{{ feedback_summary.ratings.overall_rating }} out of 5 stars">★★★★★</span><small>From {{ feedback_summary.count }} anonymous responses</small></div>
         <div class="public-feedback-aspects">
-          {% for field,label in [('ease_rating','Ease of use'),('learning_rating','Learning value'),('reliability_rating','Reliability'),('design_rating','Design')] %}
-          <div class="public-feedback-row"><span>{{ label }}</span><div class="public-feedback-track"><span style="--feedback-width:{{ feedback_summary.ratings[field] * 20 }}%;--feedback-color:{{ ['#ef476f','#118ab2','#2a9d8f','#8338ec'][loop.index0] }}"></span></div><strong>{{ feedback_summary.ratings[field] }}</strong></div>
+          {% for field,label in [('ease_rating','Ease of use'),('learning_rating','Learning value'),('reliability_rating','Reliability'),('design_rating','Design'),('performance_rating','Speed'),('mobile_rating','Mobile use'),('accessibility_rating','Readability'),('features_rating','Feature fit')] %}
+          <div class="public-feedback-row"><span>{{ label }}</span><div class="public-feedback-track"><span style="--feedback-width:{{ feedback_summary.ratings[field] * 20 }}%;--feedback-color:{{ ['#ef476f','#118ab2','#2a9d8f','#8338ec','#f4a261','#00a6a6','#577590','#d45087'][loop.index0] }}"></span></div><strong>{{ feedback_summary.ratings[field] }}</strong></div>
           {% endfor %}
         </div>
       </div>
@@ -356,7 +387,7 @@
         <span class="brand-text">LearnOrbit</span>
       </div>
       <p class="footer-tagline">Adaptive AI Learning Intelligence — because understanding beats memorising.</p>
-      <div class="footer-links"><div><strong>Explore</strong><a href="#features">Learning tools</a><a href="#how-it-works">How it works</a><a href="#pricing">Plans</a><a href="{{ url_for('feedback.index') }}">Share feedback</a></div><div><strong>Your account</strong><a href="{{ url_for('auth.login') }}">Log in</a><a href="{{ url_for('auth.register') }}">Create account</a></div><div><strong>Learning promise</strong><span>Mastery over message volume</span><span>Bring your own learning material</span></div></div>
+      <div class="footer-links"><div><strong>Explore</strong><a href="#features">Learning tools</a><a href="#how-it-works">How it works</a><a href="#pricing">Plans</a><a href="{{ url_for('feedback.index') }}">Share feedback</a></div><div><strong>Your account</strong><a href="{{ url_for('auth.login') }}">Log in</a><a href="{{ url_for('auth.register') }}">Create account</a><a href="{{ url_for('admin.login') }}">Admin Panel · Staff only</a></div><div><strong>Learning promise</strong><span>Mastery over message volume</span><span>Bring your own learning material</span></div><div><strong>Policies</strong><a href="{{ url_for('features.terms') }}">Terms &amp; Conditions</a></div></div>
       <div class="footer-credit"><span class="footer-built">Designed and built by <strong>Souryadip Mallick</strong></span><div class="footer-credit-links"><a href="https://www.linkedin.com/in/souryadip-mallick-03b303294/" target="_blank" rel="noopener noreferrer"><i data-lucide="linkedin" aria-hidden="true"></i><span>Connect on LinkedIn</span></a><a href="https://github.com/souryadip-official/" target="_blank" rel="noopener noreferrer"><i data-lucide="coffee" aria-hidden="true"></i><span>Buy me a coffee</span></a></div></div>
       <p class="footer-copy">© 2026 LearnOrbit · AI APIs: OpenAI, Google Gemini, Anthropic, xAI and Hugging Face · Code runner: Judge0 · Icons: Lucide · Math: MathJax · Charts: LearnOrbit Canvas plotter. Subscription screens are demonstrative until a billing provider is connected.</p>
     </div>

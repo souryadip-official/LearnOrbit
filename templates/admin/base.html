@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <title>{% block title %}Staff Console{% endblock %} · LearnOrbit</title>
+  <script>try{const theme=localStorage.getItem('learnorbit-admin-theme');if(theme==='light'||theme==='dark')document.documentElement.dataset.theme=theme}catch(e){}</script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="admin-shell">
+  <div class="admin-frame">
+    <header class="admin-topbar">
+      <a class="admin-brand" href="{{ url_for('admin.dashboard') if admin is defined and admin else url_for('admin.login') }}">
+        <span class="admin-brand-icon"><i data-lucide="orbit"></i></span>
+        <span>LearnOrbit <small>STAFF CONSOLE</small></span>
+      </a>
+      {% if admin is defined and admin %}
+      <nav class="admin-nav" aria-label="Staff console">
+        <a href="{{ url_for('admin.dashboard') }}"><i data-lucide="chart-no-axes-combined"></i>Overview</a>
+        <a href="{{ url_for('admin.users') }}"><i data-lucide="users"></i>Learners</a>
+        <a href="{{ url_for('admin.feedback') }}"><i data-lucide="message-square-heart"></i>Feedback</a>
+        <a href="{{ url_for('admin.issues') }}"><i data-lucide="life-buoy"></i>Issues</a>
+        <a href="{{ url_for('admin.policies') }}"><i data-lucide="settings-2"></i>Policies</a>
+        <a href="{{ url_for('admin.profile') }}"><i data-lucide="user-round-cog"></i>Profile</a>
+        <a href="{{ url_for('admin.guide') }}"><i data-lucide="circle-help"></i>Guide</a>
+      </nav>
+      <form method="post" action="{{ url_for('admin.logout') }}" class="admin-logout">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit"><i data-lucide="log-out"></i><span>Sign out</span></button>
+      </form>
+      {% endif %}
+      <button class="admin-theme-toggle" id="admin-theme-toggle" type="button" aria-label="Switch to light theme">
+        <i data-lucide="sun" aria-hidden="true"></i><span>Light theme</span>
+      </button>
+    </header>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}<div class="admin-flashes">{% for category,message in messages %}<div class="admin-flash {{ category }}">{{ message }}</div>{% endfor %}</div>{% endif %}
+    {% endwith %}
+    <main class="admin-main">{% block content %}{% endblock %}</main>
+    <footer class="admin-footer">Restricted staff area · Sign out when you’re finished · Access is recorded for operational audit.</footer>
+  </div>
+  <script>
+    window.lucide?.createIcons();
+    (() => {
+      const root = document.documentElement;
+      const button = document.getElementById('admin-theme-toggle');
+      if (!button) return;
+      const sync = () => {
+        const dark = root.dataset.theme !== 'light';
+        const label = dark ? 'Light theme' : 'Dark theme';
+        button.setAttribute('aria-label', `Switch to ${dark ? 'light' : 'dark'} theme`);
+        button.querySelector('span').textContent = label;
+        const icon = document.createElement('i');
+        icon.dataset.lucide = dark ? 'sun' : 'moon';
+        icon.setAttribute('aria-hidden', 'true');
+        button.querySelector('i')?.replaceWith(icon);
+        window.lucide?.createIcons();
+      };
+      sync();
+      button.addEventListener('click', () => {
+        root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
+        try { localStorage.setItem('learnorbit-admin-theme', root.dataset.theme); }
+        catch (error) { console.warn('Could not save the staff theme preference.', error); }
+        sync();
+      });
+      window.addEventListener('storage', event => {
+        if (event.key === 'learnorbit-admin-theme' && ['light', 'dark'].includes(event.newValue)) {
+          root.dataset.theme = event.newValue;
+          sync();
+        }
+      });
+    })();
+    document.addEventListener('click', event => {
+      const toggle = event.target instanceof Element
+        ? event.target.closest('[data-password-toggle]')
+        : null;
+      if (!toggle) return;
+      const input = document.getElementById(toggle.getAttribute('aria-controls'));
+      if (!input) return;
+      const show = input.type === 'password';
+      input.type = show ? 'text' : 'password';
+      toggle.setAttribute('aria-pressed', String(show));
+      toggle.querySelector('span').textContent = show ? 'Hide' : 'Show';
+      toggle.setAttribute('aria-label', `${show ? 'Hide' : 'Show'} password`);
+    });
+    document.querySelectorAll('[data-analysis-form]').forEach(form => {
+      form.addEventListener('submit', () => {
+        const button = form.querySelector('[data-analysis-submit]');
+        const progress = form.querySelector('.admin-analysis-progress');
+        if (!button || !progress) return;
+        button.disabled = true;
+        button.setAttribute('aria-busy', 'true');
+        button.querySelector('span').textContent = 'Analyzing…';
+        const icon = document.createElement('i');
+        icon.dataset.lucide = 'loader-circle';
+        icon.setAttribute('aria-hidden', 'true');
+        button.querySelector('svg, i')?.replaceWith(icon);
+        progress.hidden = false;
+        window.lucide?.createIcons();
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 """Anonymous product feedback and public aggregate ratings."""
 
-from flask import Blueprint, current_app, redirect, render_template, request, url_for
+from flask import Blueprint, redirect, render_template, request, url_for
 from sqlalchemy import func
 
 from app import db
@@ -13,6 +13,10 @@ RATING_FIELDS = {
     "learning_rating": ("Learning value", "How useful was LearnOrbit for understanding and practicing?"),
     "reliability_rating": ("Reliability", "How reliably did pages and learning tools work?"),
     "design_rating": ("Design", "How clear and comfortable was the visual experience?"),
+    "performance_rating": ("Speed", "How responsive did pages and tools feel?"),
+    "mobile_rating": ("Mobile experience", "How well did LearnOrbit work on your phone or tablet?"),
+    "accessibility_rating": ("Readability", "Were text, contrast, and controls comfortable to use?"),
+    "features_rating": ("Useful features", "How well did the available learning features meet your needs?"),
     "overall_rating": ("Overall experience", "Overall, how satisfied are you with LearnOrbit?"),
 }
 PUBLIC_FEEDBACK_MINIMUM = 5
@@ -24,10 +28,14 @@ def public_feedback_summary():
         func.avg(ProductFeedback.learning_rating),
         func.avg(ProductFeedback.reliability_rating),
         func.avg(ProductFeedback.design_rating),
+        func.avg(ProductFeedback.performance_rating),
+        func.avg(ProductFeedback.mobile_rating),
+        func.avg(ProductFeedback.accessibility_rating),
+        func.avg(ProductFeedback.features_rating),
         func.avg(ProductFeedback.overall_rating),
         func.count(ProductFeedback.id),
     ).one()
-    count = int(averages[5] or 0)
+    count = int(averages[len(RATING_FIELDS)] or 0)
     fields = list(RATING_FIELDS)
     ratings = {
         field: round(float(averages[index] or 0), 1)
@@ -81,3 +89,12 @@ def index():
         summary=public_feedback_summary(),
         submitted=request.args.get("submitted") == "1",
     )
+
+
+def csrf_error_response():
+    return render_template(
+        "feedback/index.html",
+        aspects=RATING_FIELDS,
+        error="Your security token expired or was missing. The form has been refreshed; please submit it again.",
+        summary=public_feedback_summary(),
+    ), 400

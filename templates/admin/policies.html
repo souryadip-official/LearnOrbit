@@ -1,0 +1,20 @@
+{% extends "admin/base.html" %}
+{% block title %}Policies and maintenance{% endblock %}
+{% block content %}
+<section class="admin-page-heading"><div><span class="admin-kicker">Platform controls</span><h1>Policies & maintenance</h1><p>Publish learner-facing guidance or temporarily pause non-admin routes. Admin access remains available while maintenance is on.</p></div></section>
+<form method="post" class="admin-policy-form">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <section class="admin-card">
+    <div class="admin-section-heading"><div><span class="admin-kicker">Availability</span><h2>Maintenance window</h2></div><i data-lucide="wrench"></i></div>
+    <label class="admin-toggle"><input type="checkbox" name="maintenance" value="on" {% if settings.get('maintenance') == 'on' %}checked{% endif %}><span><strong>Pause learner routes</strong><small>Public landing and staff routes remain accessible. Students see the message below.</small></span></label>
+    <label>Maintenance message<textarea class="admin-input" name="maintenance_message" maxlength="300" rows="3">{{ settings.get('maintenance_message','LearnOrbit is undergoing a short maintenance window. Please check back soon.') }}</textarea></label>
+  </section>
+  {% for key,default in defaults.items() %}
+  <section class="admin-card">
+    <div class="admin-section-heading"><div><span class="admin-kicker">Learner-facing guidance</span><h2>{{ policies[key].title if key in policies else default[0] }}</h2></div><i data-lucide="{% if key == 'privacy' %}shield-check{% else %}users-round{% endif %}"></i></div>
+    <label>{{ default[0] }}<textarea class="admin-input" name="{{ key }}" maxlength="5000" rows="6">{{ policies[key].body if key in policies else default[1] }}</textarea></label>
+  </section>
+  {% endfor %}
+  <button class="admin-button primary" type="submit"><i data-lucide="save"></i>Save platform controls</button>
+</form>
+{% endblock %}

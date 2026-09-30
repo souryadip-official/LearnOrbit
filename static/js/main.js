@@ -424,6 +424,8 @@ document.addEventListener('DOMContentLoaded', () => {
       musicIsland.classList.toggle('hidden', !player.src);
       const label = musicIsland.querySelector('span');
       if (label) label.textContent = player.paused ? 'Resume focus music' : 'Music playing';
+      musicIsland.setAttribute('aria-label', player.paused ? 'Resume focus music' : 'Pause focus music');
+      musicIsland.setAttribute('aria-pressed', String(!player.paused && !!player.src));
       localStorage.setItem('learnorbit-music-active', String(!player.paused && !!player.src));
     };
     const restore = async () => {

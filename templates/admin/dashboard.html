@@ -1,0 +1,50 @@
+{% extends "admin/base.html" %}
+{% block title %}Operations overview{% endblock %}
+{% block content %}
+<section class="admin-page-heading">
+  <div><span class="admin-kicker">Operations overview</span><h1>Good to see you, {{ admin.display_name or admin.name }}.</h1><p>Platform activity, learner experience, and operational queues at a glance.</p></div>
+  <span class="admin-live-badge"><i data-lucide="lock-keyhole"></i>Privileged session · expires after 30 min idle</span>
+</section>
+<section class="admin-metrics" aria-label="Platform metrics">
+  <article class="admin-metric"><span><i data-lucide="users-round"></i> Learner accounts</span><strong>{{ total_users }}</strong><small>{{ active_users }} active in the last 30 days</small></article>
+  <article class="admin-metric"><span><i data-lucide="badge-check"></i> Active subscriptions</span><strong>{{ active_subscriptions }}</strong><small>Current subscription records</small></article>
+  <article class="admin-metric"><span><i data-lucide="receipt"></i> Demo checkout volume</span><strong>${{ '%.2f'|format(demo_total) }}</strong><small>{{ payment_count }} checkout records this month · not cash revenue</small></article>
+  <article class="admin-metric"><span><i data-lucide="book-open-check"></i> Completed sessions</span><strong>{{ completed_sessions }}</strong><small>Quiz attempt mean: {{ quiz_mean }}%</small></article>
+</section>
+<div class="admin-content-grid">
+  <section class="admin-card">
+    <div class="admin-section-heading"><div><span class="admin-kicker">Learner sentiment</span><h2>Feedback pulse</h2></div><a class="admin-text-link" href="{{ url_for('admin.feedback') }}">Review responses <i data-lucide="arrow-up-right"></i></a></div>
+    <div class="admin-feedback-total"><strong>{{ feedback.count }}</strong><span>anonymous rating submissions</span></div>
+    {% for label,score in satisfaction.items() %}
+    <div class="admin-chart-row"><span>{{ label }}</span><div class="admin-chart-track"><i style="width:{{ score * 20 }}%"></i></div><strong>{{ score }}/5</strong></div>
+    {% else %}<p class="admin-muted">Ratings will appear as learners share feedback.</p>{% endfor %}
+    <p class="admin-footnote">Each value is a descriptive arithmetic mean. Public landing-page aggregates require at least {{ feedback.minimum }} responses.</p>
+  </section>
+  <section class="admin-card admin-queue-card">
+    <div class="admin-section-heading"><div><span class="admin-kicker">Next actions</span><h2>Operations queue</h2></div></div>
+    <a class="admin-queue-link" href="{{ url_for('admin.issues') }}"><i data-lucide="life-buoy"></i><span><strong>Review issue reports</strong><small>Manually triage and post tracker updates</small></span><i data-lucide="arrow-up-right"></i></a>
+    <a class="admin-queue-link" href="{{ url_for('admin.feedback') }}"><i data-lucide="messages-square"></i><span><strong>Read private feedback</strong><small>Explore ratings and optionally analyze comments</small></span><i data-lucide="arrow-up-right"></i></a>
+    <a class="admin-queue-link" href="{{ url_for('admin.policies') }}"><i data-lucide="wrench"></i><span><strong>Maintenance & policies</strong><small>Set a maintenance window or revise guidance</small></span><i data-lucide="arrow-up-right"></i></a>
+    <div class="admin-session-note"><i data-lucide="chart-no-axes-combined"></i><span>Signals shown here come from saved product activity. They are operational indicators, not a controlled study.</span></div>
+  </section>
+  <section class="admin-card admin-activity-card">
+    <div class="admin-section-heading"><div><span class="admin-kicker">Last seven days</span><h2>Platform activity</h2><p class="admin-muted">New learner accounts and started learning sessions by day. This is activity, not uptime or response-time telemetry.</p></div></div>
+    <div class="admin-activity-chart" role="img" aria-label="Daily new accounts and started learning sessions for the last seven days">
+      {% for row in activity %}
+      <div class="admin-activity-day">
+        <strong>{{ row.sessions + row.signups }}</strong>
+        <div class="admin-activity-bars"><span class="sessions" style="height:{{ [row.sessions * 100 / activity_max, 4]|max }}%" title="{{ row.sessions }} sessions"></span><span class="signups" style="height:{{ [row.signups * 100 / activity_max, 4]|max }}%" title="{{ row.signups }} new accounts"></span></div>
+        <small>{{ row.day }}</small>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="admin-chart-legend"><span><i class="sessions"></i>Started sessions</span><span><i class="signups"></i>New accounts</span></div>
+  </section>
+  <section class="admin-card admin-audit-card">
+    <div class="admin-section-heading"><div><span class="admin-kicker">Recent changes</span><h2>Staff audit trail</h2></div></div>
+    {% for event in audit %}
+    <div class="admin-audit-row"><span class="admin-audit-icon"><i data-lucide="activity"></i></span><div><strong>{{ event.action|replace('_',' ')|title }}</strong><small>{{ event.target or "Staff session" }}</small></div><time>{{ event.created_at.strftime('%b %d · %H:%M UTC') }}</time></div>
+    {% else %}<p class="admin-muted">Administrative actions will be recorded here.</p>{% endfor %}
+  </section>
+</div>
+{% endblock %}

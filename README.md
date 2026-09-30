@@ -12,6 +12,8 @@ LearnOrbit is a Flask-based adaptive learning application. Students can study a 
 - [AI provider setup](#ai-provider-setup)
 - [Learning and analytics](#learning-and-analytics)
 - [Plans and access](#plans-and-access)
+- [Staff console and issue tracking](#staff-console-and-issue-tracking)
+- [Staff console and issue tracking](#staff-console-and-issue-tracking)
 - [Data and privacy](#data-and-privacy)
 - [External services](#external-services)
 - [Deployment notes](#deployment-notes)
@@ -69,7 +71,11 @@ learnorbit/
 │   │   ├── quiz.py                 # Quiz generation, submission, scoring
 │   │   ├── notes.py                # Persistent generated notes
 │   │   ├── games.py                # Games, usage limits, best scores
+│   │   ├── issues.py               # Learner issue reports and status tracking
+│   │   ├── admin.py                # Restricted staff console and platform controls
 │   │   ├── features.py             # Profiles, calendar, billing, utilities, video
+│   │   ├── issues.py               # Learner issue reports and status tracking
+│   │   ├── admin.py                # Restricted staff console and platform controls
 │   │   ├── study_rooms.py          # Scholar invite-code rooms and text chat
 │   │   ├── rewards.py              # Token wallet and cosmetic reward redemptions
 │   │   └── api.py                  # Theme and provider APIs
@@ -160,6 +166,28 @@ The signed-in billing page and public landing page show the same plan boundaries
 
 Explorer is the default plan and is not offered as a checkout selection. Session and quiz quotas are enforced on their server routes. Practice Code, PDF preview, and advanced analytics are gated by plan on the server as well as in the interface. Plans are changed using a simulated checkout and no money or card details are transmitted to a payment processor.
 
+## Staff console and issue tracking
+
+The public landing page links to a restricted Admin Panel. It has no registration route. Staff access requires an allowlisted email, a password hash, and a six-digit mobile OTP. During local debug development only, the OTP is written to the server terminal; production sends it through Twilio and fails closed if SMS credentials are missing. Configure `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`, and (if needed) `ADMIN_OTP_COUNTRY_CODE`.
+
+Admin identity records are read from `instance/admins.json`. The entire `instance/` directory is gitignored; the allowlist must be provisioned securely on each deployment and must not be committed or copied into a public backup. Keep filesystem permissions owner-only. Records include `email`, `password_hash`, `display_name`, `date_of_birth`, `sex`, `date_of_join`, `mobile`, and `role`. Generate password hashes with Werkzeug's `generate_password_hash`; never put a plaintext password in this file. Staff sessions expire after 30 minutes of inactivity, and administrative changes are recorded in an audit table.
+
+The console shows learner/account and learning activity, descriptive quiz and feedback statistics, demonstration checkout totals (not revenue), issue reports, and private feedback. Staff can block or delete learner accounts; deletion removes associated learning records and private uploaded files. Issue status changes are recorded in a timeline visible to the reporting learner. The learner-facing “Know LearnOrbit” guide explains the principal sections and measurements.
+
+Written feedback is private. An admin may explicitly request an LLM synthesis; up to 100 recent comments are then sent to Gemini (`GEMINI_API_KEY` or `GOOGLE_API_KEY`) or, if Gemini is not configured, Hugging Face (`HF_TOKEN` or `HUGGINGFACEHUB_API_TOKEN`). Obvious email addresses and phone numbers are scrubbed, but redaction is not guaranteed; learners are warned not to include identifying information, and the admin view repeats this caution. Review source comments before acting on generated themes.
+
+Gemini synthesis uses `GEMINI_FEEDBACK_MODEL`, defaulting to `gemini-3.1-flash-lite`. The public Terms & Conditions page is available at `/features/terms`.
+
+## Staff console and issue tracking
+
+The public landing page links to a restricted Admin Panel. It has no registration route. Staff access requires an allowlisted email, a password hash, and a six-digit mobile OTP. During local debug development only, the OTP is written to the server terminal; production sends it through Twilio and fails closed if SMS credentials are missing. Configure `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`, and (if needed) `ADMIN_OTP_COUNTRY_CODE`.
+
+Admin identity records are read from `instance/admins.json`. The entire `instance/` directory is gitignored; the allowlist must be provisioned securely on each deployment and must not be committed or copied into a public backup. Keep filesystem permissions owner-only. Records include `email`, `password_hash`, `display_name`, `date_of_birth`, `sex`, `date_of_join`, `mobile`, and `role`. Generate password hashes with Werkzeug's `generate_password_hash`; never put a plaintext password in this file. Staff sessions expire after 30 minutes of inactivity, and administrative changes are recorded in an audit table.
+
+The console shows learner/account and learning activity, descriptive quiz and feedback statistics, demonstration checkout totals (not revenue), issue reports, and private feedback. Staff can block or delete learner accounts; deletion removes associated learning records and private uploaded files. Issue status changes are recorded in a timeline visible to the reporting learner. The learner-facing “Know LearnOrbit” guide explains the principal sections and measurements.
+
+Written feedback is private. An admin may explicitly request an LLM synthesis; up to 100 recent comments are then sent to Gemini (`GEMINI_API_KEY` or `GOOGLE_API_KEY`) or, if Gemini is not configured, Hugging Face (`HF_TOKEN` or `HUGGINGFACEHUB_API_TOKEN`). Obvious email addresses and phone numbers are scrubbed, but redaction is not guaranteed; learners are warned not to include identifying information, and the admin view repeats this caution. Review source comments before acting on generated themes.
+
 ## Data and privacy
 
 SQLite is used by default. Set `DATABASE_URL` to use a supported production database. Principal data includes:
@@ -178,6 +206,8 @@ SQLite is used by default. Set `DATABASE_URL` to use a supported production data
 
 Tutor conversations, quiz answers, and notes are associated with the student's account. AI requests are sent to the configured provider. Avoid entering sensitive personal information into prompts. Uploaded session documents are removed when a tutor session is ended.
 
+Anonymous product feedback contains star ratings and an optional written comment. Comments are not published; admins can read them in the restricted console. Issue reports are tied to the reporting learner so the learner can track status updates. Account deletion removes issue reports, session-linked data, profile images, and uploaded session documents for that account.
+
 ## External services
 
 - [Chart.js](https://www.chartjs.org/) for the dashboard activity graph.
@@ -185,6 +215,8 @@ Tutor conversations, quiz answers, and notes are associated with the student's a
 - [MathJax](https://www.mathjax.org/) and Marked.js for mathematical notation and Markdown rendering.
 - [Lucide](https://lucide.dev/), Animate.css, CodeMirror 5, and Google Fonts for UI assets and editor presentation.
 - [Judge0 CE](https://judge0.com/) for Practice Code execution. Submitted programs run in an external sandbox; there is no live interactive shell.
+- Twilio for production staff mobile OTP delivery. No OTP is sent from a production instance without the required SMS configuration.
+- Gemini or Hugging Face may receive feedback comments only when an admin explicitly requests assisted synthesis.
 - Configured AI provider for tutor responses, notes, quiz content, and topic-map connections.
 
 Third-party services have their own availability, terms, and privacy policies. CDN-backed assets require an internet connection.
@@ -197,8 +229,9 @@ Before deploying:
 2. Configure a production `DATABASE_URL` and backups.
 3. Serve behind HTTPS; production cookies are marked secure.
 4. Configure SMTP for account verification and email receipts.
-5. Use encrypted secret storage and database encryption at rest for provider keys.
-6. Add deployment-appropriate rate limits, monitoring, and retention policies.
-7. Integrate a real payment provider before representing checkout as a real purchase.
+5. Provision `instance/admins.json` through a secure deployment secret process, set owner-only file permissions, and configure Twilio before enabling staff login.
+6. Use encrypted secret storage and database encryption at rest for provider keys.
+7. Add deployment-appropriate rate limits, monitoring, and retention policies.
+8. Integrate a real payment provider before representing checkout as a real purchase.
 
 `requirements.txt` contains the Python runtime dependencies. Front-end libraries are loaded from CDNs; there is no JavaScript build step.

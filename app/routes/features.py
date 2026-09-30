@@ -11,10 +11,51 @@ from werkzeug.utils import secure_filename
 from flask import Blueprint, current_app, render_template, request, jsonify, send_file, abort, session
 from flask_login import login_required, current_user
 from app import db
-from app.models import UserProfile, LearningSession, SessionDocument, CalendarEvent, Subscription, PaymentRecord, CodeSnippet, LearningBehavior, TopicMastery, EmailOTP, AttendanceStamp
+from app.models import UserProfile, LearningSession, SessionDocument, CalendarEvent, Subscription, PaymentRecord, CodeSnippet, LearningBehavior, TopicMastery, EmailOTP, AttendanceStamp, ApplicationPolicy
 
 features_bp = Blueprint("features", __name__)
 AVATARS = [f"orbit-{i}" for i in range(1, 16)]
+
+
+@features_bp.route("/guide")
+@login_required
+def application_guide():
+    sections = [
+        ("layout-dashboard", "Dashboard", "Your study overview: recent sessions, topic mastery, attendance, recall checks, and learning trends."),
+        ("brain", "AI Tutor", "Start a topic session, ask questions, save notes, and continue practicing with quizzes or exams."),
+        ("clipboard-check", "Quizzes and exams", "Quizzes are practice without negative marking. Exams are timed and apply negative marking only to objective questions."),
+        ("chart-no-axes-combined", "Topic mastery", "A per-topic estimate built from completed learning sessions and assessment evidence; more evidence makes the estimate more useful."),
+        ("rotate-cw", "Recall reviews", "A follow-up test is scheduled for each completed session. Completing it refreshes that session's next review date."),
+        ("coins", "Orbit Rewards", "Daily check-ins add tokens. The reward shop spends tokens on cosmetic badges; rewards do not affect grades."),
+        ("gamepad-2", "Brain Games", "Short break activities and, where available, game scoreboards. Game scores are separate from academic results."),
+        ("users-round", "Study Rooms", "Collaborative study rooms for learners on eligible plans. Do not share private information in room chat."),
+        ("message-square-heart", "Feedback", "Optional ratings help the team measure usability, learning value, accessibility, performance, and feature fit."),
+        ("life-buoy", "Issue tracker", "Report a problem and follow its status updates from the LearnOrbit team."),
+        ("badge-dollar-sign", "Plans & Billing", "Compare available demonstration plan features. The current checkout is a demo and does not charge a payment method."),
+        ("user-round", "My Profile and Settings", "Manage your learner profile, appearance, and your own AI-provider settings."),
+    ]
+    return render_template("features/guide.html", sections=sections)
+
+
+@features_bp.route("/policies")
+@login_required
+def learner_policies():
+    defaults = {
+        "privacy": ("Privacy and data", "Use only the information needed to provide learning features. Keep feedback and issue reports private."),
+        "community": ("Community guidelines", "Be respectful in shared study spaces. Do not post passwords, OTPs, or sensitive personal information."),
+    }
+    records = {row.policy_key: row for row in ApplicationPolicy.query.all()}
+    policies = [
+        (records[key].title, records[key].body) if key in records
+        else value
+        for key, value in defaults.items()
+    ]
+    return render_template("features/policies.html", policies=policies)
+
+
+@features_bp.route("/terms")
+def terms():
+    return render_template("features/terms.html")
 
 
 def _tokenize(text):

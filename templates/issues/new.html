@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Report an issue{% endblock %}
+{% block topbar_title %}<i data-lucide="life-buoy" aria-hidden="true"></i> Report an Issue{% endblock %}
+{% block content %}
+<section class="feature-page issue-page">
+  <header class="issue-hero">
+    <span class="feedback-eyebrow">We’ll take a look</span>
+    <h1>Tell us what went wrong</h1>
+    <p>Share what you were doing and what happened. You can follow every status update in your issue tracker.</p>
+  </header>
+  <form method="post" class="feature-card issue-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>Short title
+      <input class="form-input" name="title" maxlength="160" required placeholder="For example: My saved notes won't open">
+    </label>
+    <label>What kind of issue is it?
+      <select class="form-select" name="category" required>
+        {% for key,label in categories.items() %}<option value="{{ key }}">{{ label }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>LearnOrbit page (optional)
+      <input class="form-input" name="page" maxlength="200" placeholder="/features/calculator">
+      <small>Use a page path only. Do not include passwords, tokens, or private URLs.</small>
+    </label>
+    <label>What happened?
+      <textarea class="form-input" name="description" rows="6" maxlength="5000" required placeholder="What did you expect, what happened instead, and what steps can reproduce it?"></textarea>
+    </label>
+    <div class="issue-form-actions">
+      <a class="btn-secondary" href="{{ url_for('issues.index') }}"><i data-lucide="list-checks"></i>My issue tracker</a>
+      <button class="btn-primary" type="submit"><i data-lucide="send"></i>Send report</button>
+    </div>
+  </form>
+</section>
+{% endblock %}

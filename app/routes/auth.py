@@ -146,6 +146,11 @@ def login():
                 return jsonify({"success": False, "errors": ["Invalid credentials."]}), 401
             flash("Invalid email/username or password.", "error")
             return render_template("auth/login.html")
+        if user.is_blocked:
+            if request.is_json:
+                return jsonify({"success": False, "errors": ["This account is currently unavailable. Contact support for help."]}), 403
+            flash("This account is currently unavailable. Contact support for help.", "error")
+            return render_template("auth/login.html"), 403
 
         try:
             _send_otp(user, "login")
@@ -177,6 +182,10 @@ def verify_otp():
     if not check_password_hash(row.code_hash, str(data.get("code", ""))):
         db.session.commit(); return jsonify({"error": "That code does not match."}), 400
     user = User.query.get(user_id)
+    if not user or user.is_blocked:
+        session.pop("otp_pending_user", None)
+        session.pop("otp_pending_purpose", None)
+        return jsonify({"error": "This account is currently unavailable. Contact support for help."}), 403
     profile = UserProfile.query.filter_by(user_id=user.id).first()
     if profile: profile.email_verified = True
     user.last_login = datetime.utcnow(); db.session.delete(row); db.session.commit()

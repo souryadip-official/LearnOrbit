@@ -6,6 +6,7 @@ __pycache__/
 *.sqlite3
 exports/
 instance/
+instance/admins.json
 .venv/
 venv/
 node_modules/

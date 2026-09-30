@@ -106,33 +106,43 @@
   const btn = document.getElementById('nav-mobile-toggle');
   const nav = document.getElementById('mobile-nav');
   if (!btn || !nav) return;
-  btn.addEventListener('click', () => {
-    nav.classList.toggle('open');
-    btn.setAttribute('aria-label', nav.classList.contains('open') ? 'Close navigation' : 'Open navigation');
-    btn.innerHTML = `<i data-lucide="${nav.classList.contains('open') ? 'x' : 'menu'}" aria-hidden="true"></i>`;
+  const setOpen = (open) => {
+    nav.classList.toggle('open', open);
+    btn.setAttribute('aria-expanded', String(open));
+    btn.setAttribute('aria-label', open ? 'Close navigation' : 'Open navigation');
+    btn.innerHTML = `<i data-lucide="${open ? 'x' : 'menu'}" aria-hidden="true"></i>`;
     window.refreshIcons?.();
+  };
+  btn.addEventListener('click', () => {
+    setOpen(!nav.classList.contains('open'));
   });
-  nav.querySelectorAll('a').forEach(a => {
-    a.addEventListener('click', () => {
-      nav.classList.remove('open');
-      btn.setAttribute('aria-label', 'Open navigation');
-      btn.innerHTML = '<i data-lucide="menu" aria-hidden="true"></i>';
-      window.refreshIcons?.();
-    });
+  nav.querySelectorAll('a').forEach(link => link.addEventListener('click', () => setOpen(false)));
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && nav.classList.contains('open')) {
+      setOpen(false);
+      btn.focus();
+    }
+  });
+  window.addEventListener('resize', () => {
+    if (window.innerWidth > 980 && nav.classList.contains('open')) setOpen(false);
   });
 })();
 
 // ── Theme toggle on landing ───────────────────────────────
 (function initLandingTheme() {
-  const btn = document.getElementById('theme-btn');
-  if (!btn) return;
+  const buttons = document.querySelectorAll('.theme-btn-landing');
+  if (!buttons.length) return;
   const html = document.documentElement;
   function updateThemeIcon(theme) {
-    const icon = btn.querySelector('[data-lucide],svg');
-    if (!icon) return;
-    const name = theme === 'dark' ? 'sun' : 'moon';
-    if (icon.tagName.toLowerCase() === 'svg' && window.setLucideIcon) window.setLucideIcon(icon, name);
-    else icon.setAttribute('data-lucide', name);
+    buttons.forEach(button => {
+      const icon = button.querySelector('[data-lucide],svg');
+      if (!icon) return;
+      const name = theme === 'dark' ? 'sun' : 'moon';
+      if (icon.tagName.toLowerCase() === 'svg' && window.setLucideIcon) window.setLucideIcon(icon, name);
+      else icon.setAttribute('data-lucide', name);
+      const text = button.querySelector('span');
+      if (text) text.textContent = theme === 'dark' ? 'Light theme' : 'Dark theme';
+    });
     window.refreshIcons?.();
   }
   // Init from localStorage
@@ -146,12 +156,12 @@
     }
   });
 
-  btn.addEventListener('click', () => {
+  buttons.forEach(btn => btn.addEventListener('click', () => {
     const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
     html.setAttribute('data-theme', next);
     updateThemeIcon(next);
     localStorage.setItem('learnorbit-theme', next);
-  });
+  }));
 })();
 
 // ── Intersection observer for feature cards ───────────────
@@ -167,7 +177,7 @@
     });
   }, { threshold: 0.1 });
 
-  document.querySelectorAll('.feature-card, .step-item, .pricing-card, .game-preview-card').forEach(el => {
+  document.querySelectorAll('.feature-card, .step-item, .pricing-card, .game-preview-card, .tour-card, .orbit-story-copy, .orbit-story-map').forEach(el => {
     el.style.opacity = '0';
     el.style.transform = 'translateY(24px)';
     el.style.transition = 'opacity .5s ease, transform .5s ease';

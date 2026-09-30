@@ -23,6 +23,12 @@ def create_app(config_name=None):
     from .config import config
     cfg = config.get(config_name or os.getenv("FLASK_ENV", "development"))
     app.config.from_object(cfg)
+    if (not app.config.get("DEBUG") and not app.config.get("TESTING")
+            and app.config.get("SECRET_KEY") in {
+                None, "", "learnorbit-secret-change-in-prod-2024",
+                "change-this-to-a-long-random-string-in-production",
+            }):
+        raise RuntimeError("Set a unique SECRET_KEY before starting LearnOrbit in production.")
 
     # Init extensions
     db.init_app(app)
@@ -93,12 +99,48 @@ def create_app(config_name=None):
                 ))
             db.session.commit()
 
+    @app.before_request
+    def enforce_blocked_account():
+        from flask import redirect, url_for
+        from flask_login import current_user, logout_user
+
+        if (not request.path.startswith("/admin")
+                and current_user.is_authenticated
+                and getattr(current_user, "is_blocked", False)
+                and request.endpoint != "auth.logout"):
+            logout_user()
+            return redirect(url_for("auth.login"))
+
+    @app.before_request
+    def enforce_maintenance_mode():
+        from .models import ApplicationSetting
+
+        if request.endpoint == "static" or request.path.startswith("/admin"):
+            return
+        setting = ApplicationSetting.query.filter_by(setting_key="maintenance").first()
+        if setting and setting.value == "on" and request.endpoint not in {"index", "auth.logout"}:
+            message = ApplicationSetting.query.filter_by(
+                setting_key="maintenance_message"
+            ).first()
+            return render_template(
+                "maintenance.html",
+                message=(message.value if message and message.value else
+                         "LearnOrbit is undergoing a short maintenance window. Please check back soon."),
+            ), 503
+
     @app.errorhandler(CSRFError)
     def handle_csrf_error(error):
+        if request.path.startswith("/feedback"):
+            from .routes.feedback import csrf_error_response
+            return csrf_error_response()
         # AJAX callers expect JSON; Flask-WTF's default HTML 400 obscures the cause.
         if request.path.startswith(("/tutor/", "/api/", "/auth/")):
             return jsonify({"error": "Security token expired or missing. Refresh the page and try again."}), 400
-        return "Security token expired or missing. Please refresh and try again.", 400
+        return render_template(
+            "csrf_error.html",
+            title="Form security check expired",
+            message="Refresh the page to get a new security token, then submit the form again.",
+        ), 400
 
     login_manager.login_view = "auth.login"
     login_manager.login_message = "Please log in to continue your learning journey."
@@ -117,6 +159,8 @@ def create_app(config_name=None):
     from .routes.rewards import rewards_bp
     from .routes.feedback import feedback_bp
     from .routes.leaderboards import leaderboards_bp
+    from .routes.issues import issues_bp
+    from .routes.admin import admin_bp
 
     app.register_blueprint(auth_bp, url_prefix="/auth")
     app.register_blueprint(dashboard_bp, url_prefix="/dashboard")
@@ -130,6 +174,8 @@ def create_app(config_name=None):
     app.register_blueprint(rewards_bp, url_prefix="/rewards")
     app.register_blueprint(feedback_bp, url_prefix="/feedback")
     app.register_blueprint(leaderboards_bp, url_prefix="/leaderboards")
+    app.register_blueprint(issues_bp, url_prefix="/issues")
+    app.register_blueprint(admin_bp, url_prefix="/admin")
 
     # Landing page route
     from flask import render_template
@@ -156,11 +202,14 @@ def _migrate_legacy_schema():
     that already exist. This migration is additive and idempotent, preserving
     profile rows while supplying defaults for newly introduced fields.
     """
-    from .models import SessionDocument, UserProfile, User
+    from .models import SessionDocument, UserProfile, User, ProductFeedback
 
     # SQL defaults are needed for legacy rows; ORM defaults only run on inserts.
     migrations = {
-        "users": (User, {"accent_theme": "VARCHAR(24) DEFAULT 'garden'"}),
+        "users": (User, {
+            "accent_theme": "VARCHAR(24) DEFAULT 'garden'",
+            "is_blocked": "BOOLEAN NOT NULL DEFAULT 0",
+        }),
         "user_profiles": (UserProfile, {
             "desired_plan": "VARCHAR(16) DEFAULT 'free'",
             "email_verified": "BOOLEAN DEFAULT 1",
@@ -173,6 +222,12 @@ def _migrate_legacy_schema():
             "embedding_provider": "VARCHAR(32)",
             "embeddings_json": "TEXT",
             "created_at": "DATETIME",
+        }),
+        "product_feedback": (ProductFeedback, {
+            "performance_rating": "INTEGER NOT NULL DEFAULT 3",
+            "mobile_rating": "INTEGER NOT NULL DEFAULT 3",
+            "accessibility_rating": "INTEGER NOT NULL DEFAULT 3",
+            "features_rating": "INTEGER NOT NULL DEFAULT 3",
         }),
     }
     inspector = inspect(db.engine)

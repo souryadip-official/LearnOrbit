@@ -1,0 +1,55 @@
+<section class="feature-page feedback-page">
+  <header class="feedback-intro">
+    <span class="feedback-eyebrow">Help us improve</span>
+    <h1>Your feedback helps LearnOrbit grow</h1>
+    <p>A few quick ratings help us understand what is working and what needs attention.</p>
+  </header>
+
+  {% if submitted %}
+  <div class="feedback-success" role="status"><i data-lucide="circle-check"></i><span>Thank you. Your anonymous ratings have been added to LearnOrbit’s aggregate feedback.</span></div>
+  {% endif %}
+  {% if error %}
+  <div class="feedback-error" role="alert">{{ error }}</div>
+  {% endif %}
+
+  <form method="post" class="feature-card feedback-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label class="feedback-honeypot" aria-hidden="true">Leave this field empty<input name="website" tabindex="-1" autocomplete="off"></label>
+    {% for field, aspect in aspects.items() %}
+    <fieldset class="feedback-rating">
+      <legend>{{ aspect[0] }}</legend>
+      <p>{{ aspect[1] }}</p>
+      <div class="feedback-stars" role="radiogroup" aria-label="{{ aspect[0] }} rating">
+        {% for rating in range(5, 0, -1) %}
+        <input id="{{ field }}-{{ rating }}" type="radio" name="{{ field }}" value="{{ rating }}" required>
+        <label for="{{ field }}-{{ rating }}" aria-label="{{ rating }} out of 5 stars" title="{{ rating }} out of 5 stars">★</label>
+        {% endfor %}
+      </div>
+      <div class="feedback-rating-hint"><span>Not at all</span><span>Excellent</span></div>
+    </fieldset>
+    {% endfor %}
+    <label class="feedback-comment">Anything else you’d like us to know? <span>Optional · not shown publicly</span>
+      <textarea class="form-input" name="comment" maxlength="1000" rows="4" placeholder="Share a suggestion or describe a friction point. Please don’t include private information."></textarea>
+    </label>
+    <p class="feedback-privacy">Ratings are collected anonymously and shown publicly only as grouped statistics after at least five responses. Written comments are private and never displayed publicly; restricted staff may review them and may request an AI-generated theme summary. Do not include names, contact details, or other sensitive information.</p>
+    <button class="btn-primary feedback-submit" type="submit"><i data-lucide="send"></i>Send feedback</button>
+  </form>
+
+  <section class="feature-card feedback-results">
+    <h2>Feedback so far</h2>
+    {% if summary.visible %}
+    <p>Based on {{ summary.count }} anonymous responses. Ratings are the arithmetic mean of each required 1–5 star question.</p>
+    <div class="feedback-summary-grid">
+      {% for field, aspect in aspects.items() %}
+      <article class="feedback-summary-item">
+        <span>{{ aspect[0] }}</span>
+        <strong>{{ summary.ratings[field] }}<small>/5</small></strong>
+        <span class="feedback-summary-stars" style="--rating:{{ summary.ratings[field] * 20 }}%" aria-label="{{ summary.ratings[field] }} out of 5 stars">★★★★★</span>
+      </article>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p>{{ summary.count }} response{% if summary.count != 1 %}s{% endif %} so far. Public aggregate ratings appear after at least {{ summary.minimum }} responses to keep individual submissions private.</p>
+    {% endif %}
+  </section>
+</section>

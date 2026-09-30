@@ -22,6 +22,7 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(128), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(256), nullable=False)
     plan = db.Column(db.String(16), default="free")  # free | pro | team
+    is_blocked = db.Column(db.Boolean, nullable=False, default=False)
     theme = db.Column(db.String(8), default="light")  # light | dark
     accent_theme = db.Column(db.String(24), default="garden")
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -355,6 +356,10 @@ class ProductFeedback(db.Model):
         db.CheckConstraint("reliability_rating BETWEEN 1 AND 5"),
         db.CheckConstraint("design_rating BETWEEN 1 AND 5"),
         db.CheckConstraint("overall_rating BETWEEN 1 AND 5"),
+        db.CheckConstraint("performance_rating BETWEEN 1 AND 5"),
+        db.CheckConstraint("mobile_rating BETWEEN 1 AND 5"),
+        db.CheckConstraint("accessibility_rating BETWEEN 1 AND 5"),
+        db.CheckConstraint("features_rating BETWEEN 1 AND 5"),
     )
 
     id = db.Column(db.Integer, primary_key=True)
@@ -363,8 +368,86 @@ class ProductFeedback(db.Model):
     reliability_rating = db.Column(db.Integer, nullable=False)
     design_rating = db.Column(db.Integer, nullable=False)
     overall_rating = db.Column(db.Integer, nullable=False)
+    performance_rating = db.Column(db.Integer, nullable=False, default=3)
+    mobile_rating = db.Column(db.Integer, nullable=False, default=3)
+    accessibility_rating = db.Column(db.Integer, nullable=False, default=3)
+    features_rating = db.Column(db.Integer, nullable=False, default=3)
     comment = db.Column(db.String(1000))
     submitted_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
+
+
+class IssueReport(db.Model):
+    __tablename__ = "issue_reports"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    title = db.Column(db.String(160), nullable=False)
+    category = db.Column(db.String(40), nullable=False)
+    page = db.Column(db.String(200), nullable=False, default="")
+    description = db.Column(db.Text, nullable=False)
+    status = db.Column(db.String(24), nullable=False, default="submitted", index=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class IssueStatusUpdate(db.Model):
+    __tablename__ = "issue_status_updates"
+
+    id = db.Column(db.Integer, primary_key=True)
+    issue_id = db.Column(db.Integer, db.ForeignKey("issue_reports.id"), nullable=False, index=True)
+    status = db.Column(db.String(24), nullable=False)
+    message = db.Column(db.String(500), nullable=False, default="")
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
+
+
+class ApplicationPolicy(db.Model):
+    __tablename__ = "application_policies"
+
+    id = db.Column(db.Integer, primary_key=True)
+    policy_key = db.Column(db.String(40), unique=True, nullable=False, index=True)
+    title = db.Column(db.String(100), nullable=False)
+    body = db.Column(db.Text, nullable=False, default="")
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class ApplicationSetting(db.Model):
+    __tablename__ = "application_settings"
+
+    id = db.Column(db.Integer, primary_key=True)
+    setting_key = db.Column(db.String(40), unique=True, nullable=False, index=True)
+    value = db.Column(db.Text, nullable=False, default="")
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class AdminAuditEvent(db.Model):
+    __tablename__ = "admin_audit_events"
+
+    id = db.Column(db.Integer, primary_key=True)
+    admin_email = db.Column(db.String(128), nullable=False, index=True)
+    action = db.Column(db.String(80), nullable=False)
+    target = db.Column(db.String(180), nullable=False, default="")
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
+
+
+class AdminOTP(db.Model):
+    __tablename__ = "admin_otps"
+
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(128), nullable=False, unique=True, index=True)
+    code_hash = db.Column(db.String(256), nullable=False)
+    expires_at = db.Column(db.DateTime, nullable=False, index=True)
+    attempts = db.Column(db.Integer, nullable=False, default=0)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+
+class AdminAuthAttempt(db.Model):
+    __tablename__ = "admin_auth_attempts"
+
+    id = db.Column(db.Integer, primary_key=True)
+    address_hash = db.Column(db.String(64), nullable=False, unique=True, index=True)
+    failures = db.Column(db.Integer, nullable=False, default=0)
+    locked_until = db.Column(db.DateTime)
+    last_otp_sent_at = db.Column(db.DateTime)
 
 
 class CalendarEvent(db.Model):
