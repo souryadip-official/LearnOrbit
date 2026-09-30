@@ -115,6 +115,8 @@ def create_app(config_name=None):
     from .routes.features import features_bp
     from .routes.study_rooms import study_rooms_bp
     from .routes.rewards import rewards_bp
+    from .routes.feedback import feedback_bp
+    from .routes.leaderboards import leaderboards_bp
 
     app.register_blueprint(auth_bp, url_prefix="/auth")
     app.register_blueprint(dashboard_bp, url_prefix="/dashboard")
@@ -126,12 +128,18 @@ def create_app(config_name=None):
     app.register_blueprint(features_bp, url_prefix="/features")
     app.register_blueprint(study_rooms_bp, url_prefix="/study-rooms")
     app.register_blueprint(rewards_bp, url_prefix="/rewards")
+    app.register_blueprint(feedback_bp, url_prefix="/feedback")
+    app.register_blueprint(leaderboards_bp, url_prefix="/leaderboards")
 
     # Landing page route
     from flask import render_template
     @app.route("/")
     def index():
-        return render_template("landing.html")
+        from .routes.feedback import public_feedback_summary
+        return render_template(
+            "landing.html",
+            feedback_summary=public_feedback_summary(),
+        )
 
     # Create tables
     with app.app_context():

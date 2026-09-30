@@ -3,7 +3,7 @@ LearnOrbit Games Routes — Brain Break Zone
 """
 
 from datetime import datetime, timedelta
-from flask import Blueprint, render_template, jsonify, request, current_app
+from flask import Blueprint, render_template, jsonify, request, current_app, redirect, url_for
 from flask_login import login_required, current_user
 from app import db, csrf
 from app.models import GameUsage, GameScore, User
@@ -21,6 +21,46 @@ GAMES = [
     {"id": "reaction", "name": "Reaction Lab", "icon": "mouse-pointer-2", "desc": "Test your focus and reaction time.", "color": "#06b6d4", "unit": "ms", "better": "low", "instructions": "Start a round and wait for the signal to change; click or tap as soon as it does. Do not click early. A lower time in milliseconds is better."},
 ]
 GAMES_BY_ID = {game["id"]: game for game in GAMES}
+LEADERBOARD_PALETTES = [
+    ["#ef476f", "#f78c6b", "#ffd166", "#06d6a0", "#118ab2"],
+    ["#7b2cbf", "#9d4edd", "#c77dff", "#4cc9f0", "#4895ef"],
+    ["#2a9d8f", "#52b788", "#95d5b2", "#f4a261", "#e76f51"],
+    ["#e63946", "#f77f00", "#fcbf49", "#90be6d", "#43aa8b"],
+    ["#4361ee", "#4895ef", "#4cc9f0", "#b5179e", "#f72585"],
+    ["#fb5607", "#ff006e", "#8338ec", "#3a86ff", "#06d6a0"],
+    ["#0081a7", "#00afb9", "#fdfcdc", "#fed9b7", "#f07167"],
+    ["#6a4c93", "#1982c4", "#8ac926", "#ffca3a", "#ff595e"],
+]
+
+
+def _game_leaderboards():
+    from sqlalchemy import func
+
+    boards = []
+    for game_index, game in enumerate(GAMES):
+        score_value = func.min(GameScore.score) if game["better"] == "low" else func.max(GameScore.score)
+        rows = (db.session.query(User.username, score_value.label("score"))
+                .join(GameScore, GameScore.user_id == User.id)
+                .filter(GameScore.game_id == game["id"])
+                .group_by(User.id, User.username)
+                .order_by(score_value.asc() if game["better"] == "low" else score_value.desc())
+                .limit(5).all())
+        top_score = float(rows[0][1]) if rows else 0
+        players = []
+        for rank, (username, score) in enumerate(rows):
+            score = float(score)
+            if game["better"] == "low":
+                width = (top_score / score * 100) if score > 0 and top_score > 0 else 100
+            else:
+                width = (score / top_score * 100) if top_score > 0 else 0
+            players.append({
+                "username": username,
+                "score": int(score) if score.is_integer() else round(score, 1),
+                "width": min(100, max(8, width)),
+                "color": LEADERBOARD_PALETTES[game_index][rank % 5],
+            })
+        boards.append({"game": game, "players": players})
+    return boards
 
 
 @games_bp.route("/")
@@ -32,7 +72,16 @@ def index():
     remaining = max(0, 900 - int(used))
     if remaining == 0:
         return render_template("features/games_locked.html", seconds_left=remaining), 429
-    return render_template("games/index.html", games=GAMES, game_seconds_left=remaining)
+    rankings_enabled = current_app.config["PRICING"].get(current_user.plan, {}).get(
+        "global_leaderboard", False
+    )
+    return render_template(
+        "games/index.html",
+        games=GAMES,
+        game_seconds_left=remaining,
+        boards=_game_leaderboards() if rankings_enabled else [],
+        rankings_locked=not rankings_enabled,
+    )
 
 
 @games_bp.route("/<game_id>")
@@ -100,18 +149,4 @@ def scores():
 @games_bp.route("/leaderboard")
 @login_required
 def leaderboard():
-    if not current_app.config["PRICING"].get(current_user.plan, {}).get("global_leaderboard", False):
-        return render_template("games/leaderboard.html", boards=[], locked=True)
-    from sqlalchemy import func
-
-    boards = []
-    for game in GAMES:
-        score_value = func.min(GameScore.score) if game["better"] == "low" else func.max(GameScore.score)
-        rows = (db.session.query(User.username, score_value.label("score"))
-                .join(GameScore, GameScore.user_id == User.id)
-                .filter(GameScore.game_id == game["id"])
-                .group_by(User.id, User.username)
-                .order_by(score_value.asc() if game["better"] == "low" else score_value.desc())
-                .limit(10).all())
-        boards.append({"game": game, "players": rows})
-    return render_template("games/leaderboard.html", boards=boards, locked=False)
+    return redirect(url_for("games.index"))

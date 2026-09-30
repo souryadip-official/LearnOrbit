@@ -102,8 +102,11 @@
       <a href="{{ url_for('games.index') }}" class="nav-item {% if 'games' in request.endpoint %}active{% endif %}">
         <span class="nav-icon"><i data-lucide="gamepad-2" aria-hidden="true"></i></span><span class="nav-label">Brain Games</span>
       </a>
-      <a href="{{ url_for('games.leaderboard') }}" class="nav-item {% if request.endpoint == 'games.leaderboard' %}active{% endif %}">
-        <span class="nav-icon"><i data-lucide="trophy" aria-hidden="true"></i></span><span class="nav-label">Global Leaderboard</span>
+      <a href="{{ url_for('leaderboards.academics') }}" class="nav-item {% if request.endpoint == 'leaderboards.academics' %}active{% endif %}">
+        <span class="nav-icon"><i data-lucide="graduation-cap" aria-hidden="true"></i></span><span class="nav-label">Academic Leaderboard</span>
+      </a>
+      <a href="{{ url_for('feedback.index') }}" class="nav-item {% if request.endpoint == 'feedback.index' %}active{% endif %}">
+        <span class="nav-icon"><i data-lucide="message-square-heart" aria-hidden="true"></i></span><span class="nav-label">Feedback</span>
       </a>
       <a href="{{ url_for('rewards.index') }}" class="nav-item {% if 'rewards.' in request.endpoint %}active{% endif %}">
         <span class="nav-icon"><i data-lucide="coins" aria-hidden="true"></i></span><span class="nav-label">Orbit Rewards</span>

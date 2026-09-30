@@ -10,8 +10,42 @@
     <p>A short, limited play window keeps games a break between focused study sessions.</p>
     <div class="feature-card"><strong>Time left this hour: <span id="game-time-left">{{ (game_seconds_left // 60) }}m {{ (game_seconds_left % 60) }}s</span></strong><p>15 minutes of play time in a rolling hour.</p></div>
     <div class="games-joke" id="games-joke">Loading a study joke…</div>
-    <a class="btn-secondary leaderboard-link" href="{{ url_for('games.leaderboard') }}"><i data-lucide="trophy"></i><span>{% if current_user.plan == 'team' %}Global leaderboard{% else %}Global leaderboard · Academy{% endif %}</span></a>
   </div>
+
+  <section class="game-leaderboards" aria-labelledby="game-leaderboards-title">
+    <div class="game-leaderboards-heading">
+      <div><h2 id="game-leaderboards-title"><i data-lucide="trophy"></i> Global game leaderboards</h2>
+        <p>Best score per player. Reaction Lab ranks the fastest time first.</p></div>
+      {% if rankings_locked %}<a class="btn-secondary" href="{{ url_for('features.pricing') }}">Unlock with Academy</a>{% endif %}
+    </div>
+    {% if rankings_locked %}
+    <div class="game-leaderboard-locked"><i data-lucide="lock-keyhole"></i><span>Community rankings are an Academy feature. Your own best scores are always shown below.</span></div>
+    {% else %}
+    <div class="game-leaderboard-grid">
+      {% for board in boards %}
+      <section class="feature-card leaderboard-card">
+        <h3><span class="leaderboard-game-icon"><i data-lucide="{{ board.game.icon }}"></i></span>{{ board.game.name }}</h3>
+        <div class="leaderboard-chart" role="list" aria-label="{{ board.game.name }} top scores">
+          {% for player in board.players %}
+          <article class="leaderboard-row leaderboard-row-{{ loop.index }}" role="listitem">
+            <div class="leaderboard-player-line">
+              <span class="leaderboard-rank" aria-label="Rank {{ loop.index }}">{{ loop.index }}</span>
+              <strong title="{{ player.username }}">{{ player.username }}</strong>
+              <span class="leaderboard-score">{{ player.score }} <small>{{ board.game.unit }}</small></span>
+            </div>
+            <div class="leaderboard-track" role="img" aria-label="{{ player.username }}, rank {{ loop.index }} of {{ board.game.name }}">
+              <span class="leaderboard-bar" style="--bar-width:{{ player.width }}%;--bar-color:{{ player.color }};--bar-rank:{{ loop.index0 }}"></span>
+            </div>
+          </article>
+          {% else %}
+          <div class="leaderboard-empty"><i data-lucide="chart-no-axes-column-increasing"></i><p>No scores here yet.</p><span>Play {{ board.game.name }} to get on the board.</span></div>
+          {% endfor %}
+        </div>
+      </section>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </section>
 
   <div class="games-grid">
     {% for game in games %}

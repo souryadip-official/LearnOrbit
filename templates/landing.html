@@ -29,6 +29,7 @@
       <div class="nav-links">
         <a href="#features" class="nav-link">Features</a>
         <a href="#how-it-works" class="nav-link">How it Works</a>
+        <a href="#feedbacks" class="nav-link">Feedback</a>
         <a href="#faqs" class="nav-link">FAQs</a>
         <a href="#pricing" class="nav-link">Pricing</a>
         <a href="#games" class="nav-link">Brain Games</a>
@@ -46,6 +47,7 @@
   <div class="mobile-nav" id="mobile-nav">
     <a href="#features">Features</a>
     <a href="#how-it-works">Learning cycle</a>
+    <a href="#feedbacks">Feedback</a>
     <a href="#faqs">FAQs</a>
     <a href="#pricing">Pricing</a>
     <a href="{{ url_for('auth.login') }}">Log In</a>
@@ -244,6 +246,29 @@
     </div>
   </section>
 
+  <section class="feedback-public-section" id="feedbacks">
+    <div class="section-container">
+      <div class="section-header">
+        <span class="feedback-eyebrow">Built with learners</span>
+        <h2 class="section-title">Feedback from users</h2>
+        <p class="section-sub">An honest snapshot from anonymous LearnOrbit feedback. No testimonials are invented or individual comments published.</p>
+      </div>
+      {% if feedback_summary.visible %}
+      <div class="public-feedback-proof">
+        <div class="public-feedback-overall"><span>Overall rating</span><strong>{{ feedback_summary.ratings.overall_rating }}<small>/5</small></strong><span class="feedback-summary-stars" style="--rating:{{ feedback_summary.ratings.overall_rating * 20 }}%" aria-label="{{ feedback_summary.ratings.overall_rating }} out of 5 stars">★★★★★</span><small>From {{ feedback_summary.count }} anonymous responses</small></div>
+        <div class="public-feedback-aspects">
+          {% for field,label in [('ease_rating','Ease of use'),('learning_rating','Learning value'),('reliability_rating','Reliability'),('design_rating','Design')] %}
+          <div class="public-feedback-row"><span>{{ label }}</span><div class="public-feedback-track"><span style="--feedback-width:{{ feedback_summary.ratings[field] * 20 }}%;--feedback-color:{{ ['#ef476f','#118ab2','#2a9d8f','#8338ec'][loop.index0] }}"></span></div><strong>{{ feedback_summary.ratings[field] }}</strong></div>
+          {% endfor %}
+        </div>
+      </div>
+      {% else %}
+      <div class="public-feedback-empty"><i data-lucide="message-square-heart"></i><p>Help shape the learning experience. Aggregate ratings appear here after {{ feedback_summary.minimum }} responses.</p></div>
+      {% endif %}
+      <a class="btn-secondary public-feedback-cta" href="{{ url_for('feedback.index') }}"><i data-lucide="star"></i>Share your feedback</a>
+    </div>
+  </section>
+
   <section class="faq-section" id="faqs">
     <div class="section-container">
       <div class="section-header"><h2 class="section-title">Frequently asked questions</h2><p class="section-sub">A few useful details before your first session.</p></div>
@@ -331,7 +356,7 @@
         <span class="brand-text">LearnOrbit</span>
       </div>
       <p class="footer-tagline">Adaptive AI Learning Intelligence — because understanding beats memorising.</p>
-      <div class="footer-links"><div><strong>Explore</strong><a href="#features">Learning tools</a><a href="#how-it-works">How it works</a><a href="#pricing">Plans</a></div><div><strong>Your account</strong><a href="{{ url_for('auth.login') }}">Log in</a><a href="{{ url_for('auth.register') }}">Create account</a></div><div><strong>Learning promise</strong><span>Mastery over message volume</span><span>Bring your own learning material</span></div></div>
+      <div class="footer-links"><div><strong>Explore</strong><a href="#features">Learning tools</a><a href="#how-it-works">How it works</a><a href="#pricing">Plans</a><a href="{{ url_for('feedback.index') }}">Share feedback</a></div><div><strong>Your account</strong><a href="{{ url_for('auth.login') }}">Log in</a><a href="{{ url_for('auth.register') }}">Create account</a></div><div><strong>Learning promise</strong><span>Mastery over message volume</span><span>Bring your own learning material</span></div></div>
       <div class="footer-credit"><span class="footer-built">Designed and built by <strong>Souryadip Mallick</strong></span><div class="footer-credit-links"><a href="https://www.linkedin.com/in/souryadip-mallick-03b303294/" target="_blank" rel="noopener noreferrer"><i data-lucide="linkedin" aria-hidden="true"></i><span>Connect on LinkedIn</span></a><a href="https://github.com/souryadip-official/" target="_blank" rel="noopener noreferrer"><i data-lucide="coffee" aria-hidden="true"></i><span>Buy me a coffee</span></a></div></div>
       <p class="footer-copy">© 2026 LearnOrbit · AI APIs: OpenAI, Google Gemini, Anthropic, xAI and Hugging Face · Code runner: Judge0 · Icons: Lucide · Math: MathJax · Charts: LearnOrbit Canvas plotter. Subscription screens are demonstrative until a billing provider is connected.</p>
     </div>

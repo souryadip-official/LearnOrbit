@@ -70,8 +70,8 @@
             {% endif %}
             <a href="{{ url_for('notes.view_notes', session_id=s.id) }}" class="session-link" title="View notes"><i data-lucide="notebook-text" aria-hidden="true"></i><span>Notes</span></a>
             {% endif %}
-            <button class="session-delete" type="button" data-session-id="{{ s.id }}" aria-label="Delete {{ s.topic }} session" title="Delete session"><i data-lucide="trash-2"></i></button>
           </div>
+          <button class="session-delete" type="button" data-session-id="{{ s.id }}" aria-label="Delete {{ s.topic }} session" title="Delete session"><i data-lucide="trash-2" aria-hidden="true"></i><span>Delete session</span></button>
         </div>
         {% endfor %}
       </div>

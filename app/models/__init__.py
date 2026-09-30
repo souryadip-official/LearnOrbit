@@ -347,6 +347,26 @@ class GameScore(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
+class ProductFeedback(db.Model):
+    __tablename__ = "product_feedback"
+    __table_args__ = (
+        db.CheckConstraint("ease_rating BETWEEN 1 AND 5"),
+        db.CheckConstraint("learning_rating BETWEEN 1 AND 5"),
+        db.CheckConstraint("reliability_rating BETWEEN 1 AND 5"),
+        db.CheckConstraint("design_rating BETWEEN 1 AND 5"),
+        db.CheckConstraint("overall_rating BETWEEN 1 AND 5"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    ease_rating = db.Column(db.Integer, nullable=False)
+    learning_rating = db.Column(db.Integer, nullable=False)
+    reliability_rating = db.Column(db.Integer, nullable=False)
+    design_rating = db.Column(db.Integer, nullable=False)
+    overall_rating = db.Column(db.Integer, nullable=False)
+    comment = db.Column(db.String(1000))
+    submitted_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
+
+
 class CalendarEvent(db.Model):
     __tablename__ = "calendar_events"
     id = db.Column(db.Integer, primary_key=True)
