@@ -1,251 +1,523 @@
 {% from "_macros.html" import avatar_svg %}
-<!DOCTYPE html>
-<html lang="en" data-theme="{{ current_user.theme if current_user.is_authenticated else 'light' }}" data-accent="{{ current_user.accent_theme if current_user.is_authenticated else 'garden' }}">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="csrf-token" content="{{ csrf_token() }}">
-  <title>{% block title %}LearnOrbit{% endblock %} — AI Learning Intelligence</title>
-  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/learnorbit-mark.svg') }}" />
-  <script>try{const saved=localStorage.getItem('learnorbit-theme')||localStorage.getItem('lo-theme');if(saved==='dark'||saved==='light')document.documentElement.dataset.theme=saved}catch(e){}</script>
-
-  <!-- Google Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-
-  <!-- MathJax for LaTeX rendering -->
-  <script>
-    window.MathJax = {
-      tex: {
-        inlineMath: [['$','$'], ['\\(','\\)']],
-        displayMath: [['$$','$$'], ['\\[','\\]']],
-        processEscapes: true,
-        processEnvironments: true,
-        packages: {'[+]': ['ams', 'boldsymbol']}
-      },
-      svg: { fontCache: 'global' },
-      options: { skipHtmlTags: ['script','noscript','style','textarea','pre'] }
-    };
-  </script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.min.js" crossorigin="anonymous"></script>
-
-  <!-- Marked.js for markdown rendering -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js" crossorigin="anonymous"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.10.0/highlight.min.js" crossorigin="anonymous"></script>
-
-  <script>
-    // Protect TeX from Markdown emphasis/escaping, then restore it for MathJax.
-    window.renderMarkdownMath = function (source) {
-      const text = String(source ?? '');
-      if (typeof marked === 'undefined') return text;
-      const math = [];
-      const protectedText = text.replace(/\\\[[\s\S]*?\\\]|\\\([\s\S]*?\\\)|\$\$[\s\S]*?\$\$|\$(?!\$)(?:\\.|[^\n$\\])+?\$/g, (formula) => {
-        const token = `MATHJAXFORMULATOKEN${math.length}END`;
-        math.push(formula);
-        return token;
-      });
-      marked.setOptions({breaks: true, gfm: true});
-      let html = marked.parse(protectedText);
-      math.forEach((formula, index) => { html = html.replace(`MATHJAXFORMULATOKEN${index}END`, formula.replace(/\\\*/g, '\\cdot ')); });
-      return html;
-    };
-    window.typesetMath = function (root = document.body) {
-      if (root) {
-        const codeBlocks = root.matches?.('.markdown-body pre > code')
-          ? [root]
-          : root.querySelectorAll?.('.markdown-body pre > code, pre > code') || [];
-        codeBlocks.forEach(code => {
-          const pre = code.parentElement;
-          if (!pre || pre.parentElement?.classList.contains('assistant-code-shell')) return;
-          const shell = document.createElement('div');
-          shell.className = 'assistant-code-shell';
-          const toolbar = document.createElement('div');
-          toolbar.className = 'assistant-code-toolbar';
-          const language = document.createElement('span');
-          const languageClass = [...code.classList].find(name => name.startsWith('language-'));
-          language.textContent = languageClass ? languageClass.slice(9).toUpperCase() : 'CODE';
-          const copy = document.createElement('button');
-          copy.type = 'button';
-          copy.className = 'assistant-code-copy';
-          copy.dataset.codeCopy = '';
-          copy.setAttribute('aria-label', 'Copy code');
-          copy.innerHTML = '<i data-lucide="copy" aria-hidden="true"></i><span>Copy</span>';
-          toolbar.append(language, copy);
-          pre.parentNode.insertBefore(shell, pre);
-          shell.append(toolbar, pre);
-          if (window.hljs && !code.dataset.highlighted) window.hljs.highlightElement(code);
-        });
-        if (codeBlocks.length) window.refreshIcons?.();
-      }
-      if (!window.MathJax?.typesetPromise || !root) return Promise.resolve();
-      if (window.MathJax.typesetClear) window.MathJax.typesetClear([root]);
-      return window.MathJax.typesetPromise([root]).catch(error => console.warn('MathJax rendering failed:', error));
-    };
-    document.addEventListener('click', async event => {
-      const button = event.target instanceof Element ? event.target.closest('[data-code-copy]') : null;
-      if (!button) return;
-      const code = button.closest('.assistant-code-shell')?.querySelector('pre code');
-      if (!code) return;
+<!doctype html>
+<html
+  lang="en"
+  data-theme="{{ current_user.theme if current_user.is_authenticated else 'light' }}"
+  data-accent="{{ current_user.accent_theme if current_user.is_authenticated else 'garden' }}"
+>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="csrf-token" content="{{ csrf_token() }}" />
+    <title>
+      {% block title %}LearnOrbit{% endblock %} — AI Learning Intelligence
+    </title>
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="{{ url_for('static', filename='img/learnorbit-mark.svg') }}"
+    />
+    <script>
       try {
-        await navigator.clipboard.writeText(code.textContent || '');
-        button.querySelector('span').textContent = 'Copied';
-        window.setTimeout(() => { button.querySelector('span').textContent = 'Copy'; }, 1400);
-      } catch (error) {
-        console.warn('Could not copy the code block.', error);
-        window.showToast?.('Could not copy this code block. Select and copy it manually.', 'error');
-      }
-    });
-  </script>
+        const saved =
+          localStorage.getItem("learnorbit-theme") ||
+          localStorage.getItem("lo-theme");
+        if (saved === "dark" || saved === "light")
+          document.documentElement.dataset.theme = saved;
+      } catch (e) {}
+    </script>
 
-  <!-- Animate.css -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,800&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
 
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}" />
-  {% block head %}{% endblock %}
-</head>
-<body class="{% block body_class %}{% endblock %}" data-user-id="{{ current_user.id if current_user.is_authenticated else '' }}">
+    <!-- MathJax for LaTeX rendering -->
+    <script>
+      window.MathJax = {
+        tex: {
+          inlineMath: [
+            ["$", "$"],
+            ["\\(", "\\)"],
+          ],
+          displayMath: [
+            ["$$", "$$"],
+            ["\\[", "\\]"],
+          ],
+          processEscapes: true,
+          processEnvironments: true,
+          packages: { "[+]": ["ams", "boldsymbol"] },
+        },
+        svg: { fontCache: "global" },
+        options: {
+          skipHtmlTags: ["script", "noscript", "style", "textarea", "pre"],
+        },
+      };
+    </script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.min.js"
+      crossorigin="anonymous"
+    ></script>
 
-  <!-- Loading overlay -->
-  <div id="page-loader" class="page-loader">
-    <div class="loader-orbit">
-      <div class="orbit-ring"></div>
-      <div class="orbit-planet"></div>
-      <div class="orbit-core"><i data-lucide="orbit" aria-hidden="true"></i></div>
-    </div>
-    <p class="loader-text">{% block loader_text %}Orbiting Knowledge…{% endblock %}</p>
-  </div>
+    <!-- Marked.js for markdown rendering -->
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.10.0/highlight.min.js"
+      crossorigin="anonymous"
+    ></script>
 
-  <!-- Toast container -->
-  <div id="toast-container" aria-live="polite"></div>
-  {% with messages = get_flashed_messages(with_categories=true) %}
-    {% for category, message in messages %}
-      <script>document.addEventListener('DOMContentLoaded',()=>showToast({{ message|tojson }}, {{ category|tojson }}));</script>
-    {% endfor %}
-  {% endwith %}
+    <script>
+      // Protect TeX from Markdown emphasis/escaping, then restore it for MathJax.
+      window.renderMarkdownMath = function (source) {
+        const text = String(source ?? "");
+        if (typeof marked === "undefined") return text;
+        const math = [];
+        const protectedText = text.replace(
+          /\\\[[\s\S]*?\\\]|\\\([\s\S]*?\\\)|\$\$[\s\S]*?\$\$|\$(?!\$)(?:\\.|[^\n$\\])+?\$/g,
+          (formula) => {
+            const token = `MATHJAXFORMULATOKEN${math.length}END`;
+            math.push(formula);
+            return token;
+          },
+        );
+        marked.setOptions({ breaks: true, gfm: true });
+        let html = marked.parse(protectedText);
+        math.forEach((formula, index) => {
+          html = html.replace(
+            `MATHJAXFORMULATOKEN${index}END`,
+            formula.replace(/\\\*/g, "\\cdot "),
+          );
+        });
+        return html;
+      };
+      window.typesetMath = function (root = document.body) {
+        if (root) {
+          const codeBlocks = root.matches?.(".markdown-body pre > code")
+            ? [root]
+            : root.querySelectorAll?.(
+                ".markdown-body pre > code, pre > code",
+              ) || [];
+          codeBlocks.forEach((code) => {
+            const pre = code.parentElement;
+            if (
+              !pre ||
+              pre.parentElement?.classList.contains("assistant-code-shell")
+            )
+              return;
+            const shell = document.createElement("div");
+            shell.className = "assistant-code-shell";
+            const toolbar = document.createElement("div");
+            toolbar.className = "assistant-code-toolbar";
+            const language = document.createElement("span");
+            const languageClass = [...code.classList].find((name) =>
+              name.startsWith("language-"),
+            );
+            language.textContent = languageClass
+              ? languageClass.slice(9).toUpperCase()
+              : "CODE";
+            const copy = document.createElement("button");
+            copy.type = "button";
+            copy.className = "assistant-code-copy";
+            copy.dataset.codeCopy = "";
+            copy.setAttribute("aria-label", "Copy code");
+            copy.innerHTML =
+              '<i data-lucide="copy" aria-hidden="true"></i><span>Copy</span>';
+            toolbar.append(language, copy);
+            pre.parentNode.insertBefore(shell, pre);
+            shell.append(toolbar, pre);
+            if (window.hljs && !code.dataset.highlighted)
+              window.hljs.highlightElement(code);
+          });
+          if (codeBlocks.length) window.refreshIcons?.();
+        }
+        if (!window.MathJax?.typesetPromise || !root) return Promise.resolve();
+        if (window.MathJax.typesetClear) window.MathJax.typesetClear([root]);
+        return window.MathJax.typesetPromise([root]).catch((error) =>
+          console.warn("MathJax rendering failed:", error),
+        );
+      };
+      document.addEventListener("click", async (event) => {
+        const button =
+          event.target instanceof Element
+            ? event.target.closest("[data-code-copy]")
+            : null;
+        if (!button) return;
+        const code = button
+          .closest(".assistant-code-shell")
+          ?.querySelector("pre code");
+        if (!code) return;
+        try {
+          await navigator.clipboard.writeText(code.textContent || "");
+          button.querySelector("span").textContent = "Copied";
+          window.setTimeout(() => {
+            button.querySelector("span").textContent = "Copy";
+          }, 1400);
+        } catch (error) {
+          console.warn("Could not copy the code block.", error);
+          window.showToast?.(
+            "Could not copy this code block. Select and copy it manually.",
+            "error",
+          );
+        }
+      });
+    </script>
 
-  {% if current_user.is_authenticated %}
-  <audio id="global-focus-audio" preload="metadata"></audio>
-  <!-- Sidebar nav -->
-  <aside class="sidebar" id="sidebar">
-    <div class="sidebar-brand">
-      <span class="brand-icon"><i data-lucide="orbit" aria-hidden="true"></i></span>
-      <span class="brand-name">LearnOrbit</span>
-      <button class="sidebar-close" id="sidebar-close" aria-label="Close sidebar"><i data-lucide="x" aria-hidden="true"></i><span class="sr-only">Close menu</span></button>
-    </div>
+    <!-- Animate.css -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"
+    />
 
-    <nav class="sidebar-nav">
-      <a href="{{ url_for('dashboard.home') }}" class="nav-item {% if request.endpoint == 'dashboard.home' %}active{% endif %}">
-        <span class="nav-icon"><i data-lucide="house" aria-hidden="true"></i></span><span class="nav-label">Home</span>
-      </a>
-      <a href="{{ url_for('tutor.new_session') }}" class="nav-item {% if 'tutor' in request.endpoint %}active{% endif %}">
-        <span class="nav-icon"><i data-lucide="brain" aria-hidden="true"></i></span><span class="nav-label">AI Tutor</span>
-      </a>
-      <a href="{{ url_for('games.index') }}" class="nav-item {% if 'games' in request.endpoint %}active{% endif %}">
-        <span class="nav-icon"><i data-lucide="gamepad-2" aria-hidden="true"></i></span><span class="nav-label">Brain Games</span>
-      </a>
-      <a href="{{ url_for('leaderboards.academics') }}" class="nav-item {% if request.endpoint == 'leaderboards.academics' %}active{% endif %}">
-        <span class="nav-icon"><i data-lucide="graduation-cap" aria-hidden="true"></i></span><span class="nav-label">Academic Leaderboard</span>
-      </a>
-      <a href="{{ url_for('rewards.index') }}" class="nav-item {% if 'rewards.' in request.endpoint %}active{% endif %}">
-        <span class="nav-icon"><i data-lucide="coins" aria-hidden="true"></i></span><span class="nav-label">Orbit Rewards</span>
-      </a>
-      <a href="{{ url_for('study_rooms.index') }}" class="nav-item {% if 'study_rooms' in request.endpoint %}active{% endif %}">
-        <span class="nav-icon"><i data-lucide="users-round" aria-hidden="true"></i></span><span class="nav-label">Study Rooms</span>
-      </a>
-      <a href="{{ url_for('features.relax') }}" class="nav-item {% if request.endpoint == 'features.relax' %}active{% endif %}"><span class="nav-icon"><i data-lucide="timer"></i></span><span class="nav-label">Relax & Break</span></a>
-      <a href="{{ url_for('features.music') }}" class="nav-item {% if request.endpoint == 'features.music' %}active{% endif %}"><span class="nav-icon"><i data-lucide="audio-lines"></i></span><span class="nav-label">Focus Music</span></a>
-      <a href="{{ url_for('features.calendar') }}" class="nav-item {% if request.endpoint == 'features.calendar' %}active{% endif %}"><span class="nav-icon"><i data-lucide="calendar-days"></i></span><span class="nav-label">Calendar</span></a>
-      <a href="{{ url_for('features.calculator') }}" class="nav-item {% if request.endpoint == 'features.calculator' %}active{% endif %}"><span class="nav-icon"><i data-lucide="calculator"></i></span><span class="nav-label">Calculator</span></a>
-      <a href="{{ url_for('features.video') }}" class="nav-item {% if request.endpoint == 'features.video' %}active{% endif %}"><span class="nav-icon"><i data-lucide="clapperboard"></i></span><span class="nav-label">Video Study</span></a>
-      <a href="{{ url_for('features.practice_code') }}" class="nav-item {% if request.endpoint == 'features.practice_code' %}active{% endif %}"><span class="nav-icon"><i data-lucide="square-terminal"></i></span><span class="nav-label">Practice Code</span></a>
-      <a href="{{ url_for('features.pricing') }}" class="nav-item {% if request.endpoint in ('features.pricing','features.checkout','features.checkout_page') %}active{% endif %}"><span class="nav-icon"><i data-lucide="badge-dollar-sign"></i></span><span class="nav-label">Plans & Billing</span></a>
-      <a href="{{ url_for('issues.index') }}" class="nav-item {% if request.endpoint in ('issues.index','issues.create') %}active{% endif %}">
-        <span class="nav-icon"><i data-lucide="life-buoy" aria-hidden="true"></i></span><span class="nav-label">Report & Track an Issue</span>
-      </a>
-      <a href="{{ url_for('feedback.index') }}" class="nav-item {% if request.endpoint == 'feedback.index' %}active{% endif %}">
-        <span class="nav-icon"><i data-lucide="message-square-heart" aria-hidden="true"></i></span><span class="nav-label">Feedback</span>
-      </a>
-      <a href="{{ url_for('features.profile') }}" class="nav-item {% if request.endpoint == 'features.profile' %}active{% endif %}">
-        <span class="nav-icon"><i data-lucide="user-round" aria-hidden="true"></i></span><span class="nav-label">My Profile</span>
-      </a>
-      <a href="{{ url_for('auth.settings') }}" class="nav-item {% if 'settings' in request.endpoint %}active{% endif %}">
-        <span class="nav-icon"><i data-lucide="settings-2" aria-hidden="true"></i></span><span class="nav-label">Settings</span>
-      </a>
-      <a href="{{ url_for('features.application_guide') }}" class="nav-item {% if request.endpoint == 'features.application_guide' %}active{% endif %}">
-        <span class="nav-icon"><i data-lucide="circle-help" aria-hidden="true"></i></span><span class="nav-label">Know LearnOrbit</span>
-      </a>
-    </nav>
-
-    <div class="sidebar-footer">
-      <div class="user-pill">
-        {% if user_profile and user_profile.picture_path %}<img class="user-avatar" src="{{ url_for('features.profile_picture') }}?v={{ user_profile.updated_at.timestamp()|int if user_profile.updated_at else 0 }}" alt="Profile picture">{% elif user_profile %}<span class="user-avatar profile-avatar-art profile-avatar-{{ user_profile.avatar.replace('orbit-', '') }}" aria-label="Selected profile avatar">{{ avatar_svg(user_profile.avatar.replace('orbit-','')|int) }}</span>{% else %}<span class="user-avatar">{{ current_user.username[0].upper() }}</span>{% endif %}
-        <div class="user-info">
-          <span class="user-name">{{ current_user.username }}</span>
-          <span class="user-plan plan-{{ current_user.plan }}">{{ current_user.plan_label }}</span>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/main.css') }}"
+    />
+    {% block head %}{% endblock %}
+  </head>
+  <body
+    class="{% block body_class %}{% endblock %}"
+    data-user-id="{{ current_user.id if current_user.is_authenticated else '' }}"
+  >
+    <!-- Loading overlay -->
+    <div id="page-loader" class="page-loader">
+      <div class="loader-orbit">
+        <div class="orbit-ring"></div>
+        <div class="orbit-planet"></div>
+        <div class="orbit-core">
+          <i data-lucide="orbit" aria-hidden="true"></i>
         </div>
       </div>
-      <button class="theme-toggle" id="theme-toggle" title="Toggle dark mode">
-        <i id="theme-icon" data-lucide="{% if current_user.theme == 'dark' %}sun{% else %}moon{% endif %}" aria-hidden="true"></i><span>Theme</span>
-      </button>
-      <a href="{{ url_for('auth.logout') }}" class="logout-btn" title="Log out"><i data-lucide="log-out" aria-hidden="true"></i><span>Log Out</span></a>
+      <p class="loader-text">
+        {% block loader_text %}Orbiting Knowledge…{% endblock %}
+      </p>
     </div>
-  </aside>
 
-  <!-- Sidebar overlay -->
-  <div class="sidebar-overlay" id="sidebar-overlay"></div>
-
-  <!-- Main layout -->
-  <div class="app-layout">
-    <!-- Top bar -->
-    <header class="topbar">
-      <button class="topbar-menu" id="sidebar-toggle" aria-label="Open menu"><i data-lucide="menu" aria-hidden="true"></i><span class="sr-only">Open menu</span></button>
-      <div class="topbar-center">{% block topbar_title %}{% endblock %}</div>
-      <div class="topbar-right">
-        <span class="live-clock" id="live-clock" aria-label="Local time"></span>
-        <button class="music-island hidden" id="music-island" type="button" aria-label="Toggle focus music" aria-pressed="false"><i data-lucide="audio-lines" aria-hidden="true"></i><span>Focus track</span></button>
-        <span id="topbar-actions">{% block topbar_actions %}{% endblock %}</span>
-        <button class="theme-toggle-top" id="theme-toggle-top" title="Toggle theme">
-          <i id="theme-icon-top" data-lucide="{% if current_user.theme == 'dark' %}sun{% else %}moon{% endif %}" aria-hidden="true"></i><span>Theme</span>
+    <!-- Toast container -->
+    <div id="toast-container" aria-live="polite"></div>
+    {% with messages = get_flashed_messages(with_categories=true) %} {% for
+    category, message in messages %}
+    <script>
+      document.addEventListener('DOMContentLoaded',()=>showToast({{ message|tojson }}, {{ category|tojson }}));
+    </script>
+    {% endfor %} {% endwith %} {% if current_user.is_authenticated %}
+    <audio id="global-focus-audio" preload="metadata"></audio>
+    <!-- Sidebar nav -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <span class="brand-icon"
+          ><i data-lucide="orbit" aria-hidden="true"></i
+        ></span>
+        <span class="brand-name">LearnOrbit</span>
+        <button
+          class="sidebar-close"
+          id="sidebar-close"
+          aria-label="Close sidebar"
+        >
+          <i data-lucide="x" aria-hidden="true"></i
+          ><span class="sr-only">Close menu</span>
         </button>
       </div>
-    </header>
 
-    <main class="main-content">
-      {% block content %}{% endblock %}
-    </main>
-    <footer class="app-footer"><a class="footer-brand-link" href="{{ url_for('index') }}">LearnOrbit</a><span>Built by Souryadip Mallick</span><a href="{{ url_for('features.terms') }}">Terms & Conditions</a><a href="https://www.linkedin.com/in/souryadip-mallick-03b303294/" target="_blank" rel="noopener noreferrer">LinkedIn</a><a href="https://github.com/souryadip-official/" target="_blank" rel="noopener noreferrer"><i data-lucide="coffee"></i> Buy me a coffee</a><small>AI providers: OpenAI, Google Gemini, Anthropic, xAI, Hugging Face · Code runner: Judge0 · Editor: CodeMirror · Charts: Chart.js · Icons: Lucide · Math: MathJax</small></footer>
-  </div>
-  {% else %}
-  <!-- Unauthenticated layout -->
-  <main>
-    {% block public_content %}{% endblock %}
-  </main>
-  {% if request.endpoint != 'index' %}<footer class="app-footer public-app-footer"><a class="footer-brand-link" href="{{ url_for('index') }}">LearnOrbit</a><span>Built by Souryadip Mallick</span><a href="{{ url_for('features.terms') }}">Terms & Conditions</a><a href="https://www.linkedin.com/in/souryadip-mallick-03b303294/" target="_blank" rel="noopener noreferrer">LinkedIn</a><a href="https://github.com/souryadip-official/" target="_blank" rel="noopener noreferrer"><i data-lucide="coffee"></i> Buy me a coffee</a><small>AI providers: OpenAI, Google Gemini, Anthropic, xAI, Hugging Face · Code runner: Judge0 · Editor: CodeMirror · Charts: Chart.js · Icons: Lucide · Math: MathJax</small></footer>{% endif %}
-  {% endif %}
+      <nav class="sidebar-nav">
+        <a
+          href="{{ url_for('dashboard.home') }}"
+          class="nav-item {% if request.endpoint == 'dashboard.home' %}active{% endif %}"
+        >
+          <span class="nav-icon"
+            ><i data-lucide="house" aria-hidden="true"></i></span
+          ><span class="nav-label">Home</span>
+        </a>
+        <a
+          href="{{ url_for('tutor.new_session') }}"
+          class="nav-item {% if 'tutor' in request.endpoint %}active{% endif %}"
+        >
+          <span class="nav-icon"
+            ><i data-lucide="brain" aria-hidden="true"></i></span
+          ><span class="nav-label">AI Tutor</span>
+        </a>
+        <a
+          href="{{ url_for('games.index') }}"
+          class="nav-item {% if 'games' in request.endpoint %}active{% endif %}"
+        >
+          <span class="nav-icon"
+            ><i data-lucide="gamepad-2" aria-hidden="true"></i></span
+          ><span class="nav-label">Brain Games</span>
+        </a>
+        <a
+          href="{{ url_for('leaderboards.academics') }}"
+          class="nav-item {% if request.endpoint == 'leaderboards.academics' %}active{% endif %}"
+        >
+          <span class="nav-icon"
+            ><i data-lucide="graduation-cap" aria-hidden="true"></i></span
+          ><span class="nav-label">Academic Leaderboard</span>
+        </a>
+        <a
+          href="{{ url_for('rewards.index') }}"
+          class="nav-item {% if 'rewards.' in request.endpoint %}active{% endif %}"
+        >
+          <span class="nav-icon"
+            ><i data-lucide="coins" aria-hidden="true"></i></span
+          ><span class="nav-label">Orbit Rewards</span>
+        </a>
+        <a
+          href="{{ url_for('study_rooms.index') }}"
+          class="nav-item {% if 'study_rooms' in request.endpoint %}active{% endif %}"
+        >
+          <span class="nav-icon"
+            ><i data-lucide="users-round" aria-hidden="true"></i></span
+          ><span class="nav-label">Study Rooms</span>
+        </a>
+        <a
+          href="{{ url_for('features.relax') }}"
+          class="nav-item {% if request.endpoint == 'features.relax' %}active{% endif %}"
+          ><span class="nav-icon"><i data-lucide="timer"></i></span
+          ><span class="nav-label">Relax & Break</span></a
+        >
+        <a
+          href="{{ url_for('features.music') }}"
+          class="nav-item {% if request.endpoint == 'features.music' %}active{% endif %}"
+          ><span class="nav-icon"><i data-lucide="audio-lines"></i></span
+          ><span class="nav-label">Focus Music</span></a
+        >
+        <a
+          href="{{ url_for('features.calendar') }}"
+          class="nav-item {% if request.endpoint == 'features.calendar' %}active{% endif %}"
+          ><span class="nav-icon"><i data-lucide="calendar-days"></i></span
+          ><span class="nav-label">Calendar</span></a
+        >
+        <a
+          href="{{ url_for('features.calculator') }}"
+          class="nav-item {% if request.endpoint == 'features.calculator' %}active{% endif %}"
+          ><span class="nav-icon"><i data-lucide="calculator"></i></span
+          ><span class="nav-label">Calculator</span></a
+        >
+        <a
+          href="{{ url_for('features.video') }}"
+          class="nav-item {% if request.endpoint == 'features.video' %}active{% endif %}"
+          ><span class="nav-icon"><i data-lucide="clapperboard"></i></span
+          ><span class="nav-label">Video Study</span></a
+        >
+        <a
+          href="{{ url_for('features.practice_code') }}"
+          class="nav-item {% if request.endpoint == 'features.practice_code' %}active{% endif %}"
+          ><span class="nav-icon"><i data-lucide="square-terminal"></i></span
+          ><span class="nav-label">Practice Code</span></a
+        >
+        <a
+          href="{{ url_for('features.pricing') }}"
+          class="nav-item {% if request.endpoint in ('features.pricing','features.checkout','features.checkout_page') %}active{% endif %}"
+          ><span class="nav-icon"><i data-lucide="badge-dollar-sign"></i></span
+          ><span class="nav-label">Plans & Billing</span></a
+        >
+        <a
+          href="{{ url_for('issues.index') }}"
+          class="nav-item {% if request.endpoint in ('issues.index','issues.create') %}active{% endif %}"
+        >
+          <span class="nav-icon"
+            ><i data-lucide="life-buoy" aria-hidden="true"></i></span
+          ><span class="nav-label">Report & Track an Issue</span>
+        </a>
+        <a
+          href="{{ url_for('feedback.index') }}"
+          class="nav-item {% if request.endpoint == 'feedback.index' %}active{% endif %}"
+        >
+          <span class="nav-icon"
+            ><i data-lucide="message-square-heart" aria-hidden="true"></i></span
+          ><span class="nav-label">Feedback</span>
+        </a>
+        <a
+          href="{{ url_for('features.profile') }}"
+          class="nav-item {% if request.endpoint == 'features.profile' %}active{% endif %}"
+        >
+          <span class="nav-icon"
+            ><i data-lucide="user-round" aria-hidden="true"></i></span
+          ><span class="nav-label">My Profile</span>
+        </a>
+        <a
+          href="{{ url_for('auth.settings') }}"
+          class="nav-item {% if 'settings' in request.endpoint %}active{% endif %}"
+        >
+          <span class="nav-icon"
+            ><i data-lucide="settings-2" aria-hidden="true"></i></span
+          ><span class="nav-label">Settings</span>
+        </a>
+        <a
+          href="{{ url_for('features.application_guide') }}"
+          class="nav-item {% if request.endpoint == 'features.application_guide' %}active{% endif %}"
+        >
+          <span class="nav-icon"
+            ><i data-lucide="circle-help" aria-hidden="true"></i></span
+          ><span class="nav-label">Know LearnOrbit</span>
+        </a>
+      </nav>
 
-  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
-  <script src="https://unpkg.com/lucide@latest"></script>
-  <script>
-    window.refreshIcons = () => window.lucide?.createIcons();
-    window.setLucideIcon = (node, name) => {
-      if (!node) return;
-      const icon = document.createElement('i');
-      icon.id = node.id;
-      icon.setAttribute('data-lucide', name);
-      icon.setAttribute('aria-hidden', 'true');
-      node.replaceWith(icon);
+      <div class="sidebar-footer">
+        <div class="user-pill">
+          {% if user_profile and user_profile.picture_path %}<img
+            class="user-avatar"
+            src="{{ url_for('features.profile_picture') }}?v={{ user_profile.updated_at.timestamp()|int if user_profile.updated_at else 0 }}"
+            alt="Profile picture"
+          />{% elif user_profile %}<span
+            class="user-avatar profile-avatar-art profile-avatar-{{ user_profile.avatar.replace('orbit-', '') }}"
+            aria-label="Selected profile avatar"
+            >{{ avatar_svg(user_profile.avatar.replace('orbit-','')|int)
+            }}</span
+          >{% else %}<span class="user-avatar"
+            >{{ current_user.username[0].upper() }}</span
+          >{% endif %}
+          <div class="user-info">
+            <span class="user-name">{{ current_user.username }}</span>
+            <span class="user-plan plan-{{ current_user.plan }}"
+              >{{ current_user.plan_label }}</span
+            >
+          </div>
+        </div>
+        <button class="theme-toggle" id="theme-toggle" title="Toggle dark mode">
+          <i
+            id="theme-icon"
+            data-lucide="{% if current_user.theme == 'dark' %}sun{% else %}moon{% endif %}"
+            aria-hidden="true"
+          ></i
+          ><span>Theme</span>
+        </button>
+        <a
+          href="{{ url_for('auth.logout') }}"
+          class="logout-btn"
+          title="Log out"
+          ><i data-lucide="log-out" aria-hidden="true"></i
+          ><span>Log Out</span></a
+        >
+      </div>
+    </aside>
+
+    <!-- Sidebar overlay -->
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+    <!-- Main layout -->
+    <div class="app-layout">
+      <!-- Top bar -->
+      <header class="topbar">
+        <button class="topbar-menu" id="sidebar-toggle" aria-label="Open menu">
+          <i data-lucide="menu" aria-hidden="true"></i
+          ><span class="sr-only">Open menu</span>
+        </button>
+        <div class="topbar-center">{% block topbar_title %}{% endblock %}</div>
+        <div class="topbar-right">
+          <span
+            class="live-clock"
+            id="live-clock"
+            aria-label="Local time"
+          ></span>
+          <button
+            class="music-island hidden"
+            id="music-island"
+            type="button"
+            aria-label="Toggle focus music"
+            aria-pressed="false"
+          >
+            <i data-lucide="audio-lines" aria-hidden="true"></i
+            ><span>Focus track</span>
+          </button>
+          <span id="topbar-actions"
+            >{% block topbar_actions %}{% endblock %}</span
+          >
+          <button
+            class="theme-toggle-top"
+            id="theme-toggle-top"
+            title="Toggle theme"
+          >
+            <i
+              id="theme-icon-top"
+              data-lucide="{% if current_user.theme == 'dark' %}sun{% else %}moon{% endif %}"
+              aria-hidden="true"
+            ></i
+            ><span>Theme</span>
+          </button>
+        </div>
+      </header>
+
+      <main class="main-content">{% block content %}{% endblock %}</main>
+      <footer class="app-footer">
+        <a class="footer-brand-link" href="{{ url_for('index') }}">LearnOrbit</a
+        ><span>Built by Souryadip Mallick</span
+        ><a href="{{ url_for('features.terms') }}">Terms & Conditions</a
+        ><a
+          href="https://www.linkedin.com/in/souryadip-mallick-03b303294/"
+          target="_blank"
+          rel="noopener noreferrer"
+          >LinkedIn</a
+        ><a
+          href="https://github.com/souryadip-official/"
+          target="_blank"
+          rel="noopener noreferrer"
+          ><i data-lucide="coffee"></i> Buy me a coffee</a
+        ><small
+          >AI providers: OpenAI, Google Gemini, Anthropic, xAI, Hugging Face ·
+          Code runner: Judge0 · Editor: CodeMirror · Charts: Chart.js · Icons:
+          Lucide · Math: MathJax</small
+        >
+      </footer>
+    </div>
+    {% else %}
+    <!-- Unauthenticated layout -->
+    <main>{% block public_content %}{% endblock %}</main>
+    {% if request.endpoint != 'index' %}
+    <footer class="app-footer public-app-footer">
+      <a class="footer-brand-link" href="{{ url_for('index') }}">LearnOrbit</a
+      ><span>Built by Souryadip Mallick</span
+      ><a href="{{ url_for('features.terms') }}">Terms & Conditions</a
+      ><a
+        href="https://www.linkedin.com/in/souryadip-mallick-03b303294/"
+        target="_blank"
+        rel="noopener noreferrer"
+        >LinkedIn</a
+      ><a
+        href="https://github.com/souryadip-official/"
+        target="_blank"
+        rel="noopener noreferrer"
+        ><i data-lucide="coffee"></i> Buy me a coffee</a
+      ><small
+        >AI providers: OpenAI, Google Gemini, Anthropic, xAI, Hugging Face ·
+        Code runner: Judge0 · Editor: CodeMirror · Charts: Chart.js · Icons:
+        Lucide · Math: MathJax</small
+      >
+    </footer>
+    {% endif %} {% endif %}
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+      window.refreshIcons = () => window.lucide?.createIcons();
+      window.setLucideIcon = (node, name) => {
+        if (!node) return;
+        const icon = document.createElement("i");
+        icon.id = node.id;
+        icon.setAttribute("data-lucide", name);
+        icon.setAttribute("aria-hidden", "true");
+        node.replaceWith(icon);
+        window.refreshIcons();
+      };
       window.refreshIcons();
-    };
-    window.refreshIcons();
-    (() => {
-      let stored = null;
-      try { stored = localStorage.getItem('learnorbit-theme'); }
-      catch (error) { console.warn('Could not read the saved theme preference.', error); }
-      const theme = stored === 'dark' || stored === 'light' ? stored : document.documentElement.dataset.theme;
-      document.documentElement.dataset.theme = theme;
-    })();
-  </script>
-  <div id="page-scripts">{% block scripts %}{% endblock %}</div>
-</body>
+      (() => {
+        let stored = null;
+        try {
+          stored = localStorage.getItem("learnorbit-theme");
+        } catch (error) {
+          console.warn("Could not read the saved theme preference.", error);
+        }
+        const theme =
+          stored === "dark" || stored === "light"
+            ? stored
+            : document.documentElement.dataset.theme;
+        document.documentElement.dataset.theme = theme;
+      })();
+    </script>
+    <div id="page-scripts">{% block scripts %}{% endblock %}</div>
+  </body>
 </html>

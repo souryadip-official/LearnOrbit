@@ -1,17 +1,50 @@
-{% extends "admin/base.html" %}
-{% block title %}Staff profile{% endblock %}
-{% block content %}
-<section class="admin-page-heading"><div><span class="admin-kicker">Private staff identity</span><h1>My staff profile</h1><p>Details are loaded from the local, gitignored admin allowlist.</p></div></section>
+{% extends "admin/base.html" %} {% block title %}Staff profile{% endblock %} {%
+block content %}
+<section class="admin-page-heading">
+  <div>
+    <span class="admin-kicker">Private staff identity</span>
+    <h1>My staff profile</h1>
+    <p>Details are loaded from the local, gitignored admin allowlist.</p>
+  </div>
+</section>
 <section class="admin-card admin-profile-card">
-  <div class="admin-profile-identity">{% include "admin/_avatar.html" %}<div><span class="admin-kicker">{{ admin.role|replace('_',' ')|title }}</span><h2>{{ admin.display_name or admin.name }}</h2><p>{{ admin.job_title or 'LearnOrbit staff' }}</p></div></div>
+  <div class="admin-profile-identity">
+    {% include "admin/_avatar.html" %}
+    <div>
+      <span class="admin-kicker">{{ admin.role|replace('_',' ')|title }}</span>
+      <h2>{{ admin.display_name or admin.name }}</h2>
+      <p>{{ admin.job_title or 'LearnOrbit staff' }}</p>
+    </div>
+  </div>
   <dl class="admin-profile-details">
-    <div><dt>Staff email</dt><dd>{{ admin.email }}</dd></div>
-    <div><dt>Date of birth</dt><dd>{{ admin.date_of_birth or 'Not set' }}</dd></div>
-    <div><dt>Sex</dt><dd>{{ admin.sex or 'Not set' }}</dd></div>
-    <div><dt>Joined</dt><dd>{{ admin.date_of_join or 'Not set' }}</dd></div>
-    <div><dt>Mobile for sign-in OTP</dt><dd>{{ admin.mobile or 'Not set' }}</dd></div>
-    <div><dt>Access type</dt><dd>Password + one-time mobile code</dd></div>
+    <div>
+      <dt>Staff email</dt>
+      <dd>{{ admin.email }}</dd>
+    </div>
+    <div>
+      <dt>Date of birth</dt>
+      <dd>{{ admin.date_of_birth or 'Not set' }}</dd>
+    </div>
+    <div>
+      <dt>Sex</dt>
+      <dd>{{ admin.sex or 'Not set' }}</dd>
+    </div>
+    <div>
+      <dt>Joined</dt>
+      <dd>{{ admin.date_of_join or 'Not set' }}</dd>
+    </div>
+    <div>
+      <dt>Mobile for sign-in OTP</dt>
+      <dd>{{ admin.mobile or 'Not set' }}</dd>
+    </div>
+    <div>
+      <dt>Access type</dt>
+      <dd>Password + one-time mobile code</dd>
+    </div>
   </dl>
-  <p class="admin-footnote"><i data-lucide="lock-keyhole"></i> Sensitive identity and password changes are managed in the private server allowlist, not from this browser page.</p>
+  <p class="admin-footnote">
+    <i data-lucide="lock-keyhole"></i> Sensitive identity and password changes
+    are managed in the private server allowlist, not from this browser page.
+  </p>
 </section>
 {% endblock %}

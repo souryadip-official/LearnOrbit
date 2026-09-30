@@ -1,34 +1,133 @@
-{% extends "admin/base.html" %}
-{% block title %}Feedback intelligence{% endblock %}
-{% block content %}
-<section class="admin-page-heading"><div><span class="admin-kicker">Private staff view</span><h1>Feedback intelligence</h1><p>Review submitted ratings and comments to prioritize improvements. Comments are never published publicly.</p></div><span class="admin-live-badge"><i data-lucide="lock-keyhole"></i>{{ summary.count }} responses</span></section>
+{% extends "admin/base.html" %} {% block title %}Feedback intelligence{%
+endblock %} {% block content %}
+<section class="admin-page-heading">
+  <div>
+    <span class="admin-kicker">Private staff view</span>
+    <h1>Feedback intelligence</h1>
+    <p>
+      Review submitted ratings and comments to prioritize improvements. Comments
+      are never published publicly.
+    </p>
+  </div>
+  <span class="admin-live-badge"
+    ><i data-lucide="lock-keyhole"></i>{{ summary.count }} responses</span
+  >
+</section>
 <section class="admin-card admin-llm-card">
-  <div class="admin-section-heading"><div><span class="admin-kicker">Optional assisted synthesis</span><h2>Find recurring themes</h2></div><i data-lucide="sparkles"></i></div>
-  <p class="admin-muted">When you request analysis, up to 100 recent written comments are lightly scrubbed for obvious email addresses and phone numbers, then sent to the configured Gemini or Hugging Face provider. Avoid entering identifying information in feedback; text may still contain identifying details.</p>
-  <form method="post" data-analysis-form><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="admin-button primary" type="submit" data-analysis-submit><i data-lucide="scan-search" aria-hidden="true"></i><span>Analyze recent comments</span></button><div class="admin-analysis-progress" role="status" aria-live="polite" hidden><span class="admin-analysis-orbit" aria-hidden="true"><i></i></span><span><strong>Analyzing recent comments</strong><small>Grouping themes and checking recurring requests…</small></span><span class="admin-analysis-dots" aria-hidden="true"><i></i><i></i><i></i></span></div></form>
+  <div class="admin-section-heading">
+    <div>
+      <span class="admin-kicker">Optional assisted synthesis</span>
+      <h2>Find recurring themes</h2>
+    </div>
+    <i data-lucide="sparkles"></i>
+  </div>
+  <p class="admin-muted">
+    When you request analysis, up to 100 recent written comments are lightly
+    scrubbed for obvious email addresses and phone numbers, then sent to the
+    configured Gemini or Hugging Face provider. Avoid entering identifying
+    information in feedback; text may still contain identifying details.
+  </p>
+  <form method="post" data-analysis-form>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" /><button
+      class="admin-button primary"
+      type="submit"
+      data-analysis-submit
+    >
+      <i data-lucide="scan-search" aria-hidden="true"></i
+      ><span>Analyze recent comments</span>
+    </button>
+    <div
+      class="admin-analysis-progress"
+      role="status"
+      aria-live="polite"
+      hidden
+    >
+      <span class="admin-analysis-orbit" aria-hidden="true"><i></i></span
+      ><span
+        ><strong>Analyzing recent comments</strong
+        ><small>Grouping themes and checking recurring requests…</small></span
+      ><span class="admin-analysis-dots" aria-hidden="true"
+        ><i></i><i></i><i></i
+      ></span>
+    </div>
+  </form>
 </section>
 {% if analysis %}
 <section class="admin-card">
-  <div class="admin-section-heading"><div><span class="admin-kicker">Provider synthesis</span><h2>Patterns to consider</h2></div></div>
+  <div class="admin-section-heading">
+    <div>
+      <span class="admin-kicker">Provider synthesis</span>
+      <h2>Patterns to consider</h2>
+    </div>
+  </div>
   <div class="admin-analysis-grid">
-    {% for key,title in [('themes','Recurring themes'),('feature_requests','Feature requests'),('friction_points','Friction points'),('suggested_priorities','Suggested priorities')] %}
-    <article><h3>{{ title }}</h3>{% if analysis[key] %}<ul>{% for item in analysis[key] %}<li>{{ item }}</li>{% endfor %}</ul>{% else %}<p class="admin-muted">No clear signal returned.</p>{% endif %}</article>
+    {% for key,title in [('themes','Recurring
+    themes'),('feature_requests','Feature
+    requests'),('friction_points','Friction
+    points'),('suggested_priorities','Suggested priorities')] %}
+    <article>
+      <h3>{{ title }}</h3>
+      {% if analysis[key] %}
+      <ul>
+        {% for item in analysis[key] %}
+        <li>{{ item }}</li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="admin-muted">No clear signal returned.</p>
+      {% endif %}
+    </article>
     {% endfor %}
   </div>
-  <p class="admin-footnote">AI-generated synthesis can be wrong. Verify every theme against the original comments and product evidence before making decisions.</p>
+  <p class="admin-footnote">
+    AI-generated synthesis can be wrong. Verify every theme against the original
+    comments and product evidence before making decisions.
+  </p>
 </section>
 {% endif %}
 <section class="admin-card">
-  <div class="admin-section-heading"><div><span class="admin-kicker">Ratings summary</span><h2>How learners rated LearnOrbit</h2></div></div>
-  <div class="admin-rating-grid">{% for field,aspect in aspects.items() %}<article><span>{{ aspect[0] }}</span><strong>{{ summary.ratings[field] }}<small>/5</small></strong><div class="admin-chart-track"><i style="width:{{ summary.ratings[field] * 20 }}%"></i></div></article>{% endfor %}</div>
+  <div class="admin-section-heading">
+    <div>
+      <span class="admin-kicker">Ratings summary</span>
+      <h2>How learners rated LearnOrbit</h2>
+    </div>
+  </div>
+  <div class="admin-rating-grid">
+    {% for field,aspect in aspects.items() %}
+    <article>
+      <span>{{ aspect[0] }}</span
+      ><strong>{{ summary.ratings[field] }}<small>/5</small></strong>
+      <div class="admin-chart-track">
+        <i style="width:{{ summary.ratings[field] * 20 }}%"></i>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
 </section>
 <section class="admin-card">
-  <div class="admin-section-heading"><div><span class="admin-kicker">Never public</span><h2>Recent written responses</h2></div></div>
+  <div class="admin-section-heading">
+    <div>
+      <span class="admin-kicker">Never public</span>
+      <h2>Recent written responses</h2>
+    </div>
+  </div>
   {% for row in rows %}
   <article class="admin-comment-row">
-    <div><strong>{{ row.submitted_at.strftime('%b %d, %Y · %H:%M UTC') }}</strong><span>Overall {{ row.overall_rating }}/5 · Ease {{ row.ease_rating }}/5 · Learning {{ row.learning_rating }}/5</span></div>
-    {% if row.comment %}<p>{{ row.comment }}</p>{% else %}<p class="admin-muted">No written comment was submitted.</p>{% endif %}
+    <div>
+      <strong>{{ row.submitted_at.strftime('%b %d, %Y · %H:%M UTC') }}</strong
+      ><span
+        >Overall {{ row.overall_rating }}/5 · Ease {{ row.ease_rating }}/5 ·
+        Learning {{ row.learning_rating }}/5</span
+      >
+    </div>
+    {% if row.comment %}
+    <p>{{ row.comment }}</p>
+    {% else %}
+    <p class="admin-muted">No written comment was submitted.</p>
+    {% endif %}
   </article>
-  {% else %}<p class="admin-muted">No feedback submissions yet.</p>{% endfor %}
+  {% else %}
+  <p class="admin-muted">No feedback submissions yet.</p>
+  {% endfor %}
 </section>
 {% endblock %}

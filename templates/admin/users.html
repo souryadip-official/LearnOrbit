@@ -1,34 +1,107 @@
-{% extends "admin/base.html" %}
-{% block title %}Learner accounts{% endblock %}
+{% extends "admin/base.html" %} {% block title %}Learner accounts{% endblock %}
 {% block content %}
-<section class="admin-page-heading"><div><span class="admin-kicker">Account operations</span><h1>Learner accounts</h1><p>Review account status and plans. Account deletion permanently removes linked sessions and learning records.</p></div></section>
+<section class="admin-page-heading">
+  <div>
+    <span class="admin-kicker">Account operations</span>
+    <h1>Learner accounts</h1>
+    <p>
+      Review account status and plans. Account deletion permanently removes
+      linked sessions and learning records.
+    </p>
+  </div>
+</section>
 <div class="admin-table-wrap admin-card">
   <table class="admin-table">
-    <thead><tr><th>Learner</th><th>Plan</th><th>Joined</th><th>Last active</th><th>Status</th><th>Actions</th></tr></thead>
+    <thead>
+      <tr>
+        <th>Learner</th>
+        <th>Plan</th>
+        <th>Joined</th>
+        <th>Last active</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
     <tbody>
       {% for learner in users %}
       <tr>
-        <td><strong>{{ learner.username }}</strong><small>{{ learner.email }}</small></td>
+        <td>
+          <strong>{{ learner.username }}</strong
+          ><small>{{ learner.email }}</small>
+        </td>
         <td>{{ learner.plan_label }}</td>
-        <td>{{ learner.created_at.strftime('%b %d, %Y') if learner.created_at else '—' }}</td>
-        <td>{{ learner.last_login.strftime('%b %d, %Y') if learner.last_login else 'Not yet' }}</td>
-        <td><span class="admin-account-status {% if learner.is_blocked %}blocked{% else %}active{% endif %}">{{ 'Blocked' if learner.is_blocked else 'Active' }}</span></td>
+        <td>
+          {{ learner.created_at.strftime('%b %d, %Y') if learner.created_at else
+          '—' }}
+        </td>
+        <td>
+          {{ learner.last_login.strftime('%b %d, %Y') if learner.last_login else
+          'Not yet' }}
+        </td>
+        <td>
+          <span
+            class="admin-account-status {% if learner.is_blocked %}blocked{% else %}active{% endif %}"
+            >{{ 'Blocked' if learner.is_blocked else 'Active' }}</span
+          >
+        </td>
         <td class="admin-actions-cell">
-          <form method="post" action="{{ url_for('admin.update_user_status',user_id=learner.id) }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <input type="hidden" name="blocked" value="{{ '0' if learner.is_blocked else '1' }}">
-            <button class="admin-button small {% if learner.is_blocked %}quiet{% else %}warning{% endif %}" type="submit"><i data-lucide="{% if learner.is_blocked %}lock-open{% else %}ban{% endif %}"></i>{{ 'Unblock' if learner.is_blocked else 'Block' }}</button>
+          <form
+            method="post"
+            action="{{ url_for('admin.update_user_status',user_id=learner.id) }}"
+          >
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <input
+              type="hidden"
+              name="blocked"
+              value="{{ '0' if learner.is_blocked else '1' }}"
+            />
+            <button
+              class="admin-button small {% if learner.is_blocked %}quiet{% else %}warning{% endif %}"
+              type="submit"
+            >
+              <i
+                data-lucide="{% if learner.is_blocked %}lock-open{% else %}ban{% endif %}"
+              ></i
+              >{{ 'Unblock' if learner.is_blocked else 'Block' }}
+            </button>
           </form>
-          <details class="admin-delete-details"><summary>Delete</summary><form method="post" action="{{ url_for('admin.delete_user',user_id=learner.id) }}" class="admin-delete-form">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <label>Type {{ learner.email }} to confirm<input class="admin-input" type="email" name="confirm_email" autocomplete="off" required></label>
-            <button class="admin-button danger" type="submit"><i data-lucide="trash-2"></i>Permanently delete</button>
-          </form></details>
+          <details class="admin-delete-details">
+            <summary>Delete</summary>
+            <form
+              method="post"
+              action="{{ url_for('admin.delete_user',user_id=learner.id) }}"
+              class="admin-delete-form"
+            >
+              <input
+                type="hidden"
+                name="csrf_token"
+                value="{{ csrf_token() }}"
+              />
+              <label
+                >Type {{ learner.email }} to confirm<input
+                  class="admin-input"
+                  type="email"
+                  name="confirm_email"
+                  autocomplete="off"
+                  required
+              /></label>
+              <button class="admin-button danger" type="submit">
+                <i data-lucide="trash-2"></i>Permanently delete
+              </button>
+            </form>
+          </details>
         </td>
       </tr>
-      {% else %}<tr><td colspan="6">No learner accounts found.</td></tr>{% endfor %}
+      {% else %}
+      <tr>
+        <td colspan="6">No learner accounts found.</td>
+      </tr>
+      {% endfor %}
     </tbody>
   </table>
-  <p class="admin-footnote">Showing up to 200 most recently created accounts. Do not export or share personally identifying account information.</p>
+  <p class="admin-footnote">
+    Showing up to 200 most recently created accounts. Do not export or share
+    personally identifying account information.
+  </p>
 </div>
 {% endblock %}

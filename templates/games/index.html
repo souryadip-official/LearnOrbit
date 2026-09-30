@@ -1,44 +1,96 @@
-{% extends "base.html" %}
-{% block title %}Brain Games{% endblock %}
-{% block topbar_title %}<i data-lucide="gamepad-2" aria-hidden="true"></i> Brain Games{% endblock %}
-{% block loader_text %}Loading the fun stuff…{% endblock %}
-
-{% block content %}
+{% extends "base.html" %} {% block title %}Brain Games{% endblock %} {% block
+topbar_title %}<i data-lucide="gamepad-2" aria-hidden="true"></i> Brain Games{%
+endblock %} {% block loader_text %}Loading the fun stuff…{% endblock %} {% block
+content %}
 <div class="games-page">
   <div class="games-header">
     <h1><i data-lucide="gamepad-2" aria-hidden="true"></i> Brain Games</h1>
-    <p>A short, limited play window keeps games a break between focused study sessions.</p>
-    <div class="feature-card"><strong>Time left this hour: <span id="game-time-left">{{ (game_seconds_left // 60) }}m {{ (game_seconds_left % 60) }}s</span></strong><p>15 minutes of play time in a rolling hour.</p></div>
+    <p>
+      A short, limited play window keeps games a break between focused study
+      sessions.
+    </p>
+    <div class="feature-card">
+      <strong
+        >Time left this hour:
+        <span id="game-time-left"
+          >{{ (game_seconds_left // 60) }}m {{ (game_seconds_left % 60)
+          }}s</span
+        ></strong
+      >
+      <p>15 minutes of play time in a rolling hour.</p>
+    </div>
     <div class="games-joke" id="games-joke">Loading a study joke…</div>
   </div>
 
   <section class="game-leaderboards" aria-labelledby="game-leaderboards-title">
     <div class="game-leaderboards-heading">
-      <div><h2 id="game-leaderboards-title"><i data-lucide="trophy"></i> Global game leaderboards</h2>
-        <p>Best score per player. Reaction Lab ranks the fastest time first.</p></div>
-      {% if rankings_locked %}<a class="btn-secondary" href="{{ url_for('features.pricing') }}">Unlock with Academy</a>{% endif %}
+      <div>
+        <h2 id="game-leaderboards-title">
+          <i data-lucide="trophy"></i> Global game leaderboards
+        </h2>
+        <p>Best score per player. Reaction Lab ranks the fastest time first.</p>
+      </div>
+      {% if rankings_locked %}<a
+        class="btn-secondary"
+        href="{{ url_for('features.pricing') }}"
+        >Unlock with Academy</a
+      >{% endif %}
     </div>
     {% if rankings_locked %}
-    <div class="game-leaderboard-locked"><i data-lucide="lock-keyhole"></i><span>Community rankings are an Academy feature. Your own best scores are always shown below.</span></div>
+    <div class="game-leaderboard-locked">
+      <i data-lucide="lock-keyhole"></i
+      ><span
+        >Community rankings are an Academy feature. Your own best scores are
+        always shown below.</span
+      >
+    </div>
     {% else %}
     <div class="game-leaderboard-grid">
       {% for board in boards %}
       <section class="feature-card leaderboard-card">
-        <h3><span class="leaderboard-game-icon"><i data-lucide="{{ board.game.icon }}"></i></span>{{ board.game.name }}</h3>
-        <div class="leaderboard-chart" role="list" aria-label="{{ board.game.name }} top scores">
+        <h3>
+          <span class="leaderboard-game-icon"
+            ><i data-lucide="{{ board.game.icon }}"></i></span
+          >{{ board.game.name }}
+        </h3>
+        <div
+          class="leaderboard-chart"
+          role="list"
+          aria-label="{{ board.game.name }} top scores"
+        >
           {% for player in board.players %}
-          <article class="leaderboard-row leaderboard-row-{{ loop.index }}" role="listitem">
+          <article
+            class="leaderboard-row leaderboard-row-{{ loop.index }}"
+            role="listitem"
+          >
             <div class="leaderboard-player-line">
-              <span class="leaderboard-rank" aria-label="Rank {{ loop.index }}">{{ loop.index }}</span>
-              <strong title="{{ player.username }}">{{ player.username }}</strong>
-              <span class="leaderboard-score">{{ player.score }} <small>{{ board.game.unit }}</small></span>
+              <span class="leaderboard-rank" aria-label="Rank {{ loop.index }}"
+                >{{ loop.index }}</span
+              >
+              <strong title="{{ player.username }}"
+                >{{ player.username }}</strong
+              >
+              <span class="leaderboard-score"
+                >{{ player.score }} <small>{{ board.game.unit }}</small></span
+              >
             </div>
-            <div class="leaderboard-track" role="img" aria-label="{{ player.username }}, rank {{ loop.index }} of {{ board.game.name }}">
-              <span class="leaderboard-bar" style="--bar-width:{{ player.width }}%;--bar-color:{{ player.color }};--bar-rank:{{ loop.index0 }}"></span>
+            <div
+              class="leaderboard-track"
+              role="img"
+              aria-label="{{ player.username }}, rank {{ loop.index }} of {{ board.game.name }}"
+            >
+              <span
+                class="leaderboard-bar"
+                style="--bar-width:{{ player.width }}%;--bar-color:{{ player.color }};--bar-rank:{{ loop.index0 }}"
+              ></span>
             </div>
           </article>
           {% else %}
-          <div class="leaderboard-empty"><i data-lucide="chart-no-axes-column-increasing"></i><p>No scores here yet.</p><span>Play {{ board.game.name }} to get on the board.</span></div>
+          <div class="leaderboard-empty">
+            <i data-lucide="chart-no-axes-column-increasing"></i>
+            <p>No scores here yet.</p>
+            <span>Play {{ board.game.name }} to get on the board.</span>
+          </div>
           {% endfor %}
         </div>
       </section>
@@ -50,36 +102,76 @@
   <div class="games-grid">
     {% for game in games %}
     <div class="game-card-with-help">
-      <a href="{{ url_for('games.play', game_id=game.id) }}" class="game-card" style="--gc:{{ game.color }}">
-        <div class="game-emoji"><i data-lucide="{{ game.icon }}" aria-hidden="true"></i><span>{{ game.name }}</span></div>
+      <a
+        href="{{ url_for('games.play', game_id=game.id) }}"
+        class="game-card"
+        style="--gc:{{ game.color }}"
+      >
+        <div class="game-emoji">
+          <i data-lucide="{{ game.icon }}" aria-hidden="true"></i
+          ><span>{{ game.name }}</span>
+        </div>
         <div class="game-name">{{ game.name }}</div>
         <div class="game-desc">{{ game.desc }}</div>
-        <div class="game-play-btn"><i data-lucide="play" aria-hidden="true"></i><span>Play game</span></div>
+        <div class="game-play-btn">
+          <i data-lucide="play" aria-hidden="true"></i><span>Play game</span>
+        </div>
       </a>
-      <details class="game-help"><summary>How to play</summary><p>{{ game.instructions }}</p></details>
+      <details class="game-help">
+        <summary>How to play</summary>
+        <p>{{ game.instructions }}</p>
+      </details>
     </div>
     {% endfor %}
   </div>
 
   <div class="games-tip">
-    <i data-lucide="lightbulb" aria-hidden="true"></i><strong>Pro tip:</strong> Take a 5-10 minute game break after every 45 minutes of studying.
+    <i data-lucide="lightbulb" aria-hidden="true"></i
+    ><strong>Pro tip:</strong> Take a 5-10 minute game break after every 45
+    minutes of studying.
   </div>
-  <section class="feature-card"><h2>Your best scores</h2><div class="mastery-list" id="game-scores">Loading saved scores…</div></section>
+  <section class="feature-card">
+    <h2>Your best scores</h2>
+    <div class="mastery-list" id="game-scores">Loading saved scores…</div>
+  </section>
 </div>
-{% endblock %}
-
-{% block scripts %}
+{% endblock %} {% block scripts %}
 <script>
-const jokes = [
-  "Why did the student eat his homework? Because the teacher told him it was a piece of cake!",
-  "Why is math book always stressed? Because it has too many problems.",
-  "What do you call a fish without eyes? A fsh.",
-  "Why did the math teacher look so sad? She had too many problems.",
-  "I asked the library if they had books about paranoia. They whispered: 'They're right behind you!'",
-  "Why don't scientists trust atoms? Because they make up everything!",
-  "I told my physics teacher I had potential energy. She said I needed to convert it to kinetic!",
-];
-document.getElementById('games-joke').textContent = jokes[Math.floor(Math.random()*jokes.length)];
-fetch('/games/scores').then(r=>r.json()).then(scores=>{const el=document.getElementById('game-scores');el.innerHTML='';for(const [id,info] of Object.entries(scores)){const label=document.createElement('div');label.className='best-score-card';label.style.setProperty('--gc',info.color||'#6366f1');const icon=document.createElement('i');icon.setAttribute('data-lucide','trophy');const name=document.createElement('span');name.textContent=info.name||id.replaceAll('-',' ');const score=document.createElement('strong');score.textContent=`${info.score} ${info.unit||''}`.trim();const caption=document.createElement('small');caption.textContent='personal best';label.append(icon,name,score,caption);el.appendChild(label)}if(!Object.keys(scores).length)el.textContent='Play a game and your best scores will be saved here.';window.refreshIcons?.()}).catch(()=>{});
+  const jokes = [
+    "Why did the student eat his homework? Because the teacher told him it was a piece of cake!",
+    "Why is math book always stressed? Because it has too many problems.",
+    "What do you call a fish without eyes? A fsh.",
+    "Why did the math teacher look so sad? She had too many problems.",
+    "I asked the library if they had books about paranoia. They whispered: 'They're right behind you!'",
+    "Why don't scientists trust atoms? Because they make up everything!",
+    "I told my physics teacher I had potential energy. She said I needed to convert it to kinetic!",
+  ];
+  document.getElementById("games-joke").textContent =
+    jokes[Math.floor(Math.random() * jokes.length)];
+  fetch("/games/scores")
+    .then((r) => r.json())
+    .then((scores) => {
+      const el = document.getElementById("game-scores");
+      el.innerHTML = "";
+      for (const [id, info] of Object.entries(scores)) {
+        const label = document.createElement("div");
+        label.className = "best-score-card";
+        label.style.setProperty("--gc", info.color || "#6366f1");
+        const icon = document.createElement("i");
+        icon.setAttribute("data-lucide", "trophy");
+        const name = document.createElement("span");
+        name.textContent = info.name || id.replaceAll("-", " ");
+        const score = document.createElement("strong");
+        score.textContent = `${info.score} ${info.unit || ""}`.trim();
+        const caption = document.createElement("small");
+        caption.textContent = "personal best";
+        label.append(icon, name, score, caption);
+        el.appendChild(label);
+      }
+      if (!Object.keys(scores).length)
+        el.textContent = "Play a game and your best scores will be saved here.";
+      window.refreshIcons?.();
+    })
+    .catch(() => {});
 </script>
 {% endblock %}

@@ -420,13 +420,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const musicIsland = document.getElementById('music-island');
   const player = document.getElementById('global-focus-audio');
   if (musicIsland && player) {
-    const state = () => {
+    const state = (persist = true) => {
       musicIsland.classList.toggle('hidden', !player.src);
       const label = musicIsland.querySelector('span');
       if (label) label.textContent = player.paused ? 'Resume focus music' : 'Music playing';
       musicIsland.setAttribute('aria-label', player.paused ? 'Resume focus music' : 'Pause focus music');
       musicIsland.setAttribute('aria-pressed', String(!player.paused && !!player.src));
-      localStorage.setItem('learnorbit-music-active', String(!player.paused && !!player.src));
+      if (persist && player.src) {
+        localStorage.setItem('learnorbit-music-active', String(!player.paused));
+      }
     };
     const restore = async () => {
       player.volume = Math.max(0, Math.min(1, Number(localStorage.getItem('learnorbit-music-volume') || .65)));
@@ -434,23 +436,68 @@ document.addEventListener('DOMContentLoaded', () => {
         const open = indexedDB.open('learnorbit-focus-audio', 1);
         open.onupgradeneeded = () => open.result.createObjectStore('tracks');
         open.onsuccess = () => {
-          const db = open.result, req = db.transaction('tracks').objectStore('tracks').get('current');
-          req.onsuccess = () => {
-            const file = req.result;
-            if (!file) return;
-            player.src = URL.createObjectURL(file);
-            player.addEventListener('loadedmetadata', () => {
+          const db = open.result;
+          const store = db.transaction('tracks').objectStore('tracks');
+          const keysRequest = store.getAllKeys();
+          keysRequest.onsuccess = () => {
+            const activeId = localStorage.getItem('learnorbit-active-track');
+            const trackId = activeId && keysRequest.result.includes(activeId)
+              ? activeId
+              : keysRequest.result.includes('current')
+                ? 'current'
+                : keysRequest.result[keysRequest.result.length - 1];
+            if (trackId === undefined) { db.close(); return; }
+            const trackRequest = store.get(trackId);
+            trackRequest.onsuccess = () => {
+              const storedTrack = trackRequest.result;
+              const file = storedTrack && typeof storedTrack === 'object' && 'blob' in storedTrack
+                ? storedTrack.blob
+                : storedTrack;
+              if (!(file instanceof Blob)) { db.close(); return; }
+              const resolvedTrackId = typeof storedTrack === 'object' && storedTrack && 'id' in storedTrack
+                ? String(storedTrack.id)
+                : String(trackId);
               const shouldResume = localStorage.getItem('learnorbit-music-active') === 'true';
-              player.currentTime = Math.min(Number(localStorage.getItem('learnorbit-music-position') || 0), player.duration || 0);
-              state();
-              if (shouldResume) player.play().catch(state);
-            }, {once:true});
+              localStorage.setItem('learnorbit-active-track', resolvedTrackId);
+              const restorePosition = () => {
+                player.currentTime = Math.min(Number(localStorage.getItem('learnorbit-music-position') || 0), player.duration || 0);
+                state(false);
+                if (shouldResume) {
+                  localStorage.setItem('learnorbit-music-active', 'true');
+                  player.play().catch(error => {
+                    state(false);
+                    localStorage.setItem('learnorbit-music-active', 'true');
+                    console.info('Focus music is ready; playback needs a user gesture in this browser.', error);
+                  });
+                }
+              };
+              if (player.dataset.trackId !== resolvedTrackId) {
+                player.dataset.trackId = resolvedTrackId;
+                player.addEventListener('loadedmetadata', restorePosition, {once:true});
+                player.src = URL.createObjectURL(file);
+              } else if (player.readyState >= 1) {
+                restorePosition();
+              } else {
+                player.addEventListener('loadedmetadata', restorePosition, {once:true});
+              }
+              db.close();
+            };
+            trackRequest.onerror = () => { console.warn('Could not restore the saved focus track.', trackRequest.error); db.close(); };
           };
+          keysRequest.onerror = () => { console.warn('Could not list saved focus tracks.', keysRequest.error); db.close(); };
         };
-      } catch (_) {}
+        open.onerror = () => console.warn('Could not open saved focus tracks.', open.error);
+      } catch (error) {
+        console.warn('Could not restore focus music.', error);
+      }
     };
     player.addEventListener('play', state); player.addEventListener('pause', state);
     player.addEventListener('timeupdate', () => localStorage.setItem('learnorbit-music-position', String(player.currentTime || 0)));
+    window.addEventListener('pagehide', () => {
+      if (!player.src) return;
+      localStorage.setItem('learnorbit-music-position', String(player.currentTime || 0));
+      localStorage.setItem('learnorbit-music-active', String(!player.paused));
+    });
     musicIsland.addEventListener('click', () => player.paused ? player.play().catch(state) : player.pause());
     restore();
   }
