@@ -68,9 +68,29 @@ def create_app(config_name=None):
         from datetime import date
         if not current_user.is_authenticated or request.endpoint == "static":
             return
-        from .models import AttendanceStamp
+        from .models import (
+            AttendanceStamp,
+            OrbitTokenTransaction,
+            OrbitWallet,
+        )
         if not AttendanceStamp.query.filter_by(user_id=current_user.id, attended_on=date.today()).first():
             db.session.add(AttendanceStamp(user_id=current_user.id, attended_on=date.today()))
+            wallet = OrbitWallet.query.filter_by(user_id=current_user.id).first()
+            if wallet is None:
+                wallet = OrbitWallet(user_id=current_user.id, balance=0)
+                db.session.add(wallet)
+                db.session.flush()
+            event_key = f"daily-attendance:{date.today().isoformat()}"
+            if not OrbitTokenTransaction.query.filter_by(
+                user_id=current_user.id, event_key=event_key
+            ).first():
+                wallet.balance += 3
+                db.session.add(OrbitTokenTransaction(
+                    user_id=current_user.id,
+                    amount=3,
+                    event_key=event_key,
+                    description="Daily learning check-in",
+                ))
             db.session.commit()
 
     @app.errorhandler(CSRFError)
@@ -93,6 +113,8 @@ def create_app(config_name=None):
     from .routes.games import games_bp
     from .routes.api import api_bp
     from .routes.features import features_bp
+    from .routes.study_rooms import study_rooms_bp
+    from .routes.rewards import rewards_bp
 
     app.register_blueprint(auth_bp, url_prefix="/auth")
     app.register_blueprint(dashboard_bp, url_prefix="/dashboard")
@@ -102,6 +124,8 @@ def create_app(config_name=None):
     app.register_blueprint(games_bp, url_prefix="/games")
     app.register_blueprint(api_bp, url_prefix="/api")
     app.register_blueprint(features_bp, url_prefix="/features")
+    app.register_blueprint(study_rooms_bp, url_prefix="/study-rooms")
+    app.register_blueprint(rewards_bp, url_prefix="/rewards")
 
     # Landing page route
     from flask import render_template

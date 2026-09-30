@@ -26,6 +26,12 @@ class BaseConfig:
             "quizzes_per_session": 1,
             "games_access": True,
             "split_screen": False,
+            "analytics_dashboard": False,
+            "study_rooms": False,
+            "exam_mode": False,
+            "global_leaderboard": False,
+            "debate_mode": False,
+            "teach_back_mode": False,
         },
         "pro": {
             "name": "Scholar",
@@ -34,6 +40,12 @@ class BaseConfig:
             "quizzes_per_session": -1,
             "games_access": True,
             "split_screen": True,
+            "analytics_dashboard": False,
+            "study_rooms": True,
+            "exam_mode": True,
+            "global_leaderboard": False,
+            "debate_mode": True,
+            "teach_back_mode": True,
         },
         "team": {
             "name": "Academy",
@@ -42,6 +54,12 @@ class BaseConfig:
             "quizzes_per_session": -1,
             "games_access": True,
             "split_screen": True,
+            "analytics_dashboard": True,
+            "study_rooms": True,
+            "exam_mode": True,
+            "global_leaderboard": True,
+            "debate_mode": True,
+            "teach_back_mode": True,
         },
     }
 

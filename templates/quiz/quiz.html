@@ -12,9 +12,16 @@
       <div class="quiz-icon"><i data-lucide="clipboard-list" aria-hidden="true"></i></div>
       <h1>Ready to test yourself?</h1>
       <p class="quiz-sub">Topic: <strong>{{ session.topic }}</strong></p>
-      <p>10 adaptive multiple-choice questions across easy, medium, and hard. Take your time and show what you know.</p>
+      {% if due_recall %}<div class="quiz-recall-due" role="status"><i data-lucide="calendar-clock"></i><span>Your 10-day recall check is due. Complete this short test to measure retention and start your next cycle.</span></div>{% endif %}
+      <p id="mode-description">10 adaptive practice questions across easy, medium, and hard. Take your time and show what you know.</p>
+      <label class="quiz-mode-picker">Assessment mode
+        <select class="form-select" id="quiz-mode">
+          <option value="quiz">Practice quiz · untimed, no penalty</option>
+          <option value="exam" {% if current_user.plan == 'free' %}disabled{% endif %}>Timed exam · 30 minutes, objective-question penalties{% if current_user.plan == 'free' %} · Scholar{% endif %}</option>
+        </select>
+      </label>
       <div class="quiz-meta-row">
-        <div class="quiz-meta-item"><i data-lucide="list-ordered" aria-hidden="true"></i><span>10 Questions</span></div>
+        <div class="quiz-meta-item"><i data-lucide="list-ordered" aria-hidden="true"></i><span id="question-count-label">10 Questions</span></div>
         <div class="quiz-meta-item"><i data-lucide="clock-3" aria-hidden="true"></i><span>No time limit</span></div>
         <div class="quiz-meta-item"><i data-lucide="repeat-2" aria-hidden="true"></i><span>Unlimited attempts</span></div>
       </div>
@@ -34,6 +41,7 @@
         <div class="quiz-progress-bar" id="quiz-progress-bar"></div>
       </div>
       <div class="quiz-counter" id="quiz-counter">Q 1 / 10</div>
+      <div class="quiz-counter hidden" id="exam-timer" role="timer" aria-live="polite"></div>
     </div>
 
     <div id="questions-list"></div>
@@ -54,6 +62,13 @@
       </div>
       <h2 id="result-title">Great work!</h2>
       <p id="result-msg"></p>
+      <section class="quiz-blueprint hidden" id="quiz-blueprint" aria-live="polite">
+        <h3><i data-lucide="scan-eye"></i> Why this paper exists</h3>
+        <p>Question-setter intent revealed after submission. Use this blueprint to notice what the assessment tested—not just your score.</p>
+        <div id="quiz-blueprint-items"></div>
+        <p id="quiz-negative-marking" class="small-muted"></p>
+      </section>
+      <div id="recall-result" class="quiz-recall-result hidden"></div>
 
       <div class="result-actions">
         <button class="btn-secondary" id="review-btn"><i data-lucide="list-checks" aria-hidden="true"></i><span>Review Answers</span></button>
@@ -77,6 +92,20 @@ const SESSION_ID = {{ session.id }};
 const CSRF = document.querySelector('meta[name="csrf-token"]')?.content || '';
 let questions = [];
 let userAnswers = {};
+let examTimer = null;
+let examSeconds = 30 * 60;
+let generationId = null;
+let generationKey = '';
+let assessmentMode = 'quiz';
+const modeSelect = document.getElementById('quiz-mode');
+modeSelect.addEventListener('change', () => {
+  const exam = modeSelect.value === 'exam';
+  document.getElementById('question-count-label').textContent = exam ? '20 Questions' : '10 Questions';
+  document.getElementById('mode-description').textContent = exam
+    ? '20 exam-style questions. You have 30 minutes; only wrong MCQ/MSQ answers lose marks. Written responses earn rubric-based partial credit.'
+    : '10 adaptive practice questions across easy, medium, and hard. Untimed, with no penalty for mistakes.';
+  document.querySelector('.quiz-meta-item:nth-child(2) span').textContent = exam ? '30-minute limit' : 'No time limit';
+});
 
 document.getElementById('generate-quiz-btn').addEventListener('click', async () => {
   const btn = document.getElementById('generate-quiz-btn');
@@ -85,19 +114,47 @@ document.getElementById('generate-quiz-btn').addEventListener('click', async () 
   btn.disabled = true;
 
   try {
-    const res = await fetch(`/quiz/${SESSION_ID}/generate`, {
+    const mode = modeSelect.value;
+    const res = await fetch(`/quiz/${SESSION_ID}/generate?mode=${encodeURIComponent(mode)}`, {
       method: 'POST', headers: {'X-CSRFToken': CSRF}
     });
     const json = await res.json();
-    if (json.error) { showToast(json.error, 'error'); return; }
+    if (!res.ok || json.error) throw new Error(json.error || `Quiz generation failed (${res.status}).`);
+    if (!Array.isArray(json.questions) || !json.questions.length) throw new Error('The assessment response did not contain questions. Please try again.');
     questions = json.questions;
+    generationId = json.generation_id;
+    generationKey = json.generation_key || '';
+    assessmentMode = json.mode || mode;
+    if (assessmentMode === 'recall') {
+      document.getElementById('mode-description').textContent = '10-day retention check. Your score will update this session’s recall curve and schedule the next check in 10 days.';
+    }
     renderQuiz();
     document.getElementById('quiz-intro').classList.add('hidden');
     document.getElementById('quiz-container').classList.remove('hidden');
+    if (assessmentMode === 'exam') startExamTimer();
     scrollToTop();
-  } catch { showToast('Failed to generate quiz. Try again.', 'error'); }
+  } catch (error) { showToast(error.message || 'Failed to generate quiz. Try again.', 'error'); }
   finally { btn.querySelector('.btn-text').classList.remove('hidden'); btn.querySelector('.btn-spinner').classList.add('hidden'); btn.disabled=false; }
 });
+
+function startExamTimer() {
+  examSeconds = 30 * 60;
+  const display = document.getElementById('exam-timer');
+  display.classList.remove('hidden');
+  const tick = () => {
+    display.textContent = `Time left ${Math.floor(examSeconds / 60)}:${String(examSeconds % 60).padStart(2, '0')}`;
+    if (examSeconds <= 0) {
+      clearInterval(examTimer);
+      const submitButton = document.getElementById('submit-quiz-btn');
+      submitButton.disabled = false;
+      submitButton.click();
+      return;
+    }
+    examSeconds -= 1;
+  };
+  tick();
+  examTimer = setInterval(tick, 1000);
+}
 
 function renderQuiz() {
   const list = document.getElementById('questions-list');
@@ -110,16 +167,27 @@ function renderQuiz() {
       <div class="q-header">
         <span class="q-num">Q${i+1}</span>
         <span class="q-diff diff-${q.difficulty}">${q.difficulty}</span>
+        <span class="bloom-tag">${escapeHtml(q.bloom_level||['remember','understand','apply','analyze','evaluate','create'][i%6])}</span>
+        <span class="q-type-tag">${({mcq:'MCQ',msq:'Select all that apply',short_answer:'Short answer',long_answer:'Written response'})[q.type]||'Question'}</span>
       </div>
       <div class="q-text markdown-body">${renderMd(q.question)}</div>
       <div class="q-options">
-        ${Object.entries(q.options).map(([k,v])=>`
+        ${['mcq','msq'].includes(q.type) ? Object.entries(q.options).map(([k,v])=>`
           <label class="option-label" data-qid="${q.id}" data-key="${k}">
-            <input type="radio" name="q_${q.id}" value="${k}" class="option-radio" />
-            <span class="option-key">${k}</span>
-          <span class="option-text">${escapeHtml(String(v))}</span>
+            <input type="${q.type==='msq'?'checkbox':'radio'}" name="q_${q.id}" value="${escapeHtml(k)}" class="option-input" />
+            <span class="option-key">${escapeHtml(k)}</span>
+            <span class="option-text">${escapeHtml(String(v))}</span>
           </label>
-        `).join('')}
+        `).join('') : `
+          <label class="written-answer-label" for="answer-${q.id}">${q.type==='long_answer'?'Explain your reasoning':'Write a short answer'}</label>
+          <textarea id="answer-${q.id}" class="form-input written-answer" data-answer-qid="${q.id}" maxlength="5000" rows="${q.type==='long_answer'?6:3}" placeholder="${q.type==='long_answer'?'Show the key steps and reasoning…':'Enter your answer…'}"></textarea>
+          <small class="written-answer-hint">Assessed on accuracy, reasoning, and coverage of key ideas. Partial credit is available.</small>
+        `}
+        <label class="confidence-prompt" for="confidence-${q.id}">How confident are you?</label>
+        <select id="confidence-${q.id}" class="form-select confidence-select" data-confidence-qid="${q.id}">
+          <option value="">Choose your confidence</option><option value="1">1 — Guessing</option><option value="2">2 — Unsure</option>
+          <option value="3">3 — Somewhat sure</option><option value="4">4 — Confident</option><option value="5">5 — Very confident</option>
+        </select>
       </div>`;
   list.appendChild(card);
   });
@@ -128,22 +196,36 @@ function renderQuiz() {
   typesetMath(list);
 
   // Track answers
-  document.querySelectorAll('.option-radio').forEach(radio => {
-    radio.addEventListener('change', function() {
+  document.querySelectorAll('.option-input').forEach(input => {
+    input.addEventListener('change', function() {
       const qid = this.closest('[data-qid]')?.dataset.qid || this.name.replace('q_','');
-      userAnswers[qid] = this.value;
+      if (this.type === 'checkbox') {
+        const selected = [...document.querySelectorAll(`input[name="q_${CSS.escape(qid)}"]:checked`)].map(option => option.value);
+        userAnswers[qid] = selected;
+      } else {
+        userAnswers[qid] = this.value;
+      }
       updateProgress();
     });
   });
+  document.querySelectorAll('.written-answer').forEach(input => input.addEventListener('input', () => {
+    userAnswers[input.dataset.answerQid] = input.value;
+    updateProgress();
+  }));
+  document.querySelectorAll('.confidence-select').forEach(select => select.addEventListener('change', updateProgress));
+  updateProgress();
 }
 
 function updateProgress() {
-  const answered = Object.keys(userAnswers).length;
+  const answered = questions.filter(question => {
+    const answer = userAnswers[String(question.id)];
+    return Array.isArray(answer) ? answer.length > 0 : typeof answer === 'string' && answer.trim().length > 0;
+  }).length;
   const total = questions.length;
   const pct = (answered/total*100).toFixed(0);
   document.getElementById('quiz-progress-bar').style.width = pct+'%';
   document.getElementById('quiz-counter').textContent = `${answered} / ${total} answered`;
-  document.getElementById('submit-quiz-btn').disabled = answered < total;
+  document.getElementById('submit-quiz-btn').disabled = assessmentMode !== 'exam' && answered < total;
 }
 
 function renderMd(text) {
@@ -156,20 +238,33 @@ function escapeHtml(text) {
 
 document.getElementById('submit-quiz-btn').addEventListener('click', async () => {
   const btn = document.getElementById('submit-quiz-btn');
+  clearInterval(examTimer);
   btn.textContent = 'Evaluating…'; btn.disabled = true;
   try {
     const res = await fetch(`/quiz/${SESSION_ID}/submit`, {
       method: 'POST',
       headers: {'Content-Type':'application/json','X-CSRFToken': CSRF},
-      body: JSON.stringify({answers: userAnswers, questions})
+      body: JSON.stringify({
+        answers: userAnswers,
+        confidence: Object.fromEntries([...document.querySelectorAll('.confidence-select')].map(input => [input.dataset.confidenceQid, input.value])),
+        mode: assessmentMode,
+        generation_id: generationId,
+        generation_key: generationKey
+      })
     });
     const json = await res.json();
+    if (!res.ok || json.error) throw new Error(json.error || 'Could not submit quiz.');
     showResults(json);
-  } catch { showToast('Submission failed. Try again.', 'error'); }
+    if (json.review_url) {
+      showToast('Your score is under 40%. Opening a focused tutor review of the questions you missed.', 'info', 6000);
+      setTimeout(() => { window.location.href = json.review_url; }, 1800);
+    }
+  } catch (error) { showToast(error.message || 'Submission failed. Try again.', 'error'); }
   finally { btn.textContent = 'Submit Answers →'; btn.disabled=false; }
 });
 
 function showResults(data) {
+  clearInterval(examTimer);
   document.getElementById('quiz-container').classList.add('hidden');
   document.getElementById('quiz-results').classList.remove('hidden');
   scrollToTop();
@@ -190,6 +285,28 @@ function showResults(data) {
   ];
   document.getElementById('result-title').textContent = titles;
   document.getElementById('result-msg').textContent = msgs.join('');
+  const blueprintSection=document.getElementById('quiz-blueprint');
+  const blueprintItems=document.getElementById('quiz-blueprint-items');
+  blueprintItems.replaceChildren();
+  for(const item of data.blueprint||[]){
+    const row=document.createElement('div');row.className='blueprint-result-row';
+    const label=document.createElement('strong');label.textContent=item.intent.replaceAll('-',' ');
+    const count=document.createElement('span');count.textContent=`${item.count} question${item.count===1?'':'s'} · ${item.percent}%`;
+    const bar=document.createElement('span');bar.className='blueprint-result-bar';bar.style.width=`${item.percent}%`;bar.setAttribute('aria-hidden','true');
+    const track=document.createElement('div');track.className='blueprint-result-track';track.append(bar);
+    row.append(label,count,track);blueprintItems.append(row);
+  }
+  blueprintSection.classList.toggle('hidden',!(data.blueprint||[]).length);
+  const penaltyLine=document.getElementById('quiz-negative-marking');
+  penaltyLine.textContent=data.mode==='exam'
+    ? `Exam marking: ${data.negative_points} points deducted for incorrect objective answers; written answers received partial-credit rubric scores.`
+    : 'Practice quiz: no negative marking. Written answers received partial-credit rubric scores.';
+  const recallBox=document.getElementById('recall-result');
+  if(data.recall){
+    const dueDate=new Date(data.recall.next_test_at);
+    recallBox.textContent=`10-day recall check complete. Your next check is scheduled for ${dueDate.toLocaleDateString()}.${data.recall.stability_days?` Estimated recall stability: ${data.recall.stability_days} days.`:''}`;
+    recallBox.classList.remove('hidden');
+  } else recallBox.classList.add('hidden');
 
   // Build review
   const review = document.getElementById('answer-review');
@@ -200,10 +317,13 @@ function showResults(data) {
         <div class="review-q markdown-body">${renderMd(q.question)}</div>
       </div>
       <div class="review-answers">
-        <div class="review-row"><span class="lbl">Your answer:</span><span class="${q.is_correct?'ans-correct':'ans-wrong'}">${q.options[q.user_answer]||'(not answered)'}</span></div>
-        ${!q.is_correct?`<div class="review-row"><span class="lbl">Correct:</span><span class="ans-correct">${q.options[q.correct]}</span></div>`:''}
+        <div class="review-row"><span class="lbl">Your answer:</span><span class="${q.is_correct?'ans-correct':'ans-wrong'}">${escapeHtml(Array.isArray(q.user_answer) ? q.user_answer.map(key=>q.options[key]||key).join(', ') : q.options[q.user_answer]||q.user_answer||'(not answered)')}</span></div>
+        ${['mcq','msq'].includes(q.type||'mcq')&&!q.is_correct?`<div class="review-row"><span class="lbl">Correct:</span><span class="ans-correct">${escapeHtml(Array.isArray(q.correct) ? q.correct.map(key=>q.options[key]).join(', ') : q.options[q.correct]||'')}</span></div>`:''}
+        ${q.reference_answer?`<div class="review-row"><span class="lbl">Model answer:</span><span>${escapeHtml(q.reference_answer)}</span></div>`:''}
+        ${q.written_feedback?`<div class="review-row"><span class="lbl">Rubric feedback:</span><span>${escapeHtml(q.written_feedback)} (${q.earned_points}/1 credit)</span></div>`:''}
       </div>
-      <div class="review-explanation"><i data-lucide="lightbulb" aria-hidden="true"></i><span>${q.explanation}</span></div>
+      <div class="review-explanation"><i data-lucide="lightbulb" aria-hidden="true"></i><span>${escapeHtml(q.explanation||'Review the correct choice and compare it with your reasoning.')}</span></div>
+      <p class="confidence-evidence">Your confidence: ${q.confidence || '—'} / 5</p>
     </div>`).join('');
 
   typesetMath(review);
@@ -216,6 +336,11 @@ document.getElementById('review-btn').addEventListener('click', () => {
 
 document.getElementById('retry-btn').addEventListener('click', () => {
   userAnswers = {};
+  questions = [];
+  generationId = null;
+  generationKey = '';
+  assessmentMode = 'quiz';
+  clearInterval(examTimer);
   document.getElementById('quiz-results').classList.add('hidden');
   document.getElementById('answer-review').classList.add('hidden');
   document.getElementById('quiz-intro').classList.remove('hidden');

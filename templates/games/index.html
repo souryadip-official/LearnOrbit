@@ -10,16 +10,20 @@
     <p>A short, limited play window keeps games a break between focused study sessions.</p>
     <div class="feature-card"><strong>Time left this hour: <span id="game-time-left">{{ (game_seconds_left // 60) }}m {{ (game_seconds_left % 60) }}s</span></strong><p>15 minutes of play time in a rolling hour.</p></div>
     <div class="games-joke" id="games-joke">Loading a study joke…</div>
+    <a class="btn-secondary leaderboard-link" href="{{ url_for('games.leaderboard') }}"><i data-lucide="trophy"></i><span>{% if current_user.plan == 'team' %}Global leaderboard{% else %}Global leaderboard · Academy{% endif %}</span></a>
   </div>
 
   <div class="games-grid">
     {% for game in games %}
-    <a href="{{ url_for('games.play', game_id=game.id) }}" class="game-card" style="--gc:{{ game.color }}">
-      <div class="game-emoji"><i data-lucide="{{ game.icon }}" aria-hidden="true"></i><span>{{ game.name }}</span></div>
-      <div class="game-name">{{ game.name }}</div>
-      <div class="game-desc">{{ game.desc }}</div>
-      <div class="game-play-btn"><i data-lucide="play" aria-hidden="true"></i><span>Play game</span></div>
-    </a>
+    <div class="game-card-with-help">
+      <a href="{{ url_for('games.play', game_id=game.id) }}" class="game-card" style="--gc:{{ game.color }}">
+        <div class="game-emoji"><i data-lucide="{{ game.icon }}" aria-hidden="true"></i><span>{{ game.name }}</span></div>
+        <div class="game-name">{{ game.name }}</div>
+        <div class="game-desc">{{ game.desc }}</div>
+        <div class="game-play-btn"><i data-lucide="play" aria-hidden="true"></i><span>Play game</span></div>
+      </a>
+      <details class="game-help"><summary>How to play</summary><p>{{ game.instructions }}</p></details>
+    </div>
     {% endfor %}
   </div>
 
@@ -42,6 +46,6 @@ const jokes = [
   "I told my physics teacher I had potential energy. She said I needed to convert it to kinetic!",
 ];
 document.getElementById('games-joke').textContent = jokes[Math.floor(Math.random()*jokes.length)];
-fetch('/games/scores').then(r=>r.json()).then(scores=>{const el=document.getElementById('game-scores');el.innerHTML='';for(const [id,value] of Object.entries(scores)){const label=document.createElement('div');label.className='best-score-card';const icon=document.createElement('i');icon.setAttribute('data-lucide','trophy');const name=document.createElement('span');name.textContent=id.replaceAll('-',' ');const score=document.createElement('strong');score.textContent=value;const caption=document.createElement('small');caption.textContent='personal best';label.append(icon,name,score,caption);el.appendChild(label)}if(!Object.keys(scores).length)el.textContent='Play a game and your best scores will be saved here.';window.refreshIcons?.()}).catch(()=>{});
+fetch('/games/scores').then(r=>r.json()).then(scores=>{const el=document.getElementById('game-scores');el.innerHTML='';for(const [id,info] of Object.entries(scores)){const label=document.createElement('div');label.className='best-score-card';label.style.setProperty('--gc',info.color||'#6366f1');const icon=document.createElement('i');icon.setAttribute('data-lucide','trophy');const name=document.createElement('span');name.textContent=info.name||id.replaceAll('-',' ');const score=document.createElement('strong');score.textContent=`${info.score} ${info.unit||''}`.trim();const caption=document.createElement('small');caption.textContent='personal best';label.append(icon,name,score,caption);el.appendChild(label)}if(!Object.keys(scores).length)el.textContent='Play a game and your best scores will be saved here.';window.refreshIcons?.()}).catch(()=>{});
 </script>
 {% endblock %}

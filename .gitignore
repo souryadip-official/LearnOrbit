@@ -15,6 +15,7 @@ dist/
 build/
 .pytest_cache/
 htmlcov/
-README.md
+# Keep the project documentation versioned.
+!README.md
 .myvenv/
 log.txt

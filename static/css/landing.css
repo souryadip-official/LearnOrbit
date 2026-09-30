@@ -25,15 +25,21 @@
     box-shadow 0.3s;
 }
 .landing-nav.scrolled {
-  background: transparent;
-  box-shadow: none;
-  backdrop-filter: none;
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  box-shadow: 0 10px 34px rgba(20, 20, 50, .13);
+  backdrop-filter: blur(16px);
 }
-.landing-nav.scrolled .nav-container { animation: nav-capsule-roll .32s cubic-bezier(.2,.8,.2,1); }
-@keyframes nav-capsule-roll { from { transform:translateY(-12px) scale(.96); border-radius:36px; opacity:.84; } to { transform:translateY(0) scale(1); border-radius:24px 24px 24px 8px; opacity:1; } }
+.landing-nav.scrolled .nav-container { animation: none; }
 [data-theme="dark"] .landing-nav.scrolled {
   background: rgba(15, 14, 30, 0.95);
 }
+#landing-toast {
+  position: fixed; z-index: 1000; right: 24px; bottom: 24px; padding: 14px 20px;
+  color: var(--text); background: var(--surface); border: 1px solid var(--border);
+  border-left: 4px solid var(--brand); border-radius: 12px; box-shadow: var(--shadow-lg);
+  opacity: 0; transform: translateY(12px); transition: opacity .2s, transform .2s;
+}
+#landing-toast.visible { opacity: 1; transform: translateY(0); }
 .nav-container {
   max-width: 1100px;
   margin: 0 auto;
@@ -691,7 +697,10 @@
 .footer-copy {
   color: var(--text-3);
   font-size: 0.78rem;
+  overflow-wrap: anywhere;
 }
+.footer-credit a { display:inline-flex; align-items:center; gap:6px; overflow-wrap:anywhere; }
+.footer-credit a svg { width:16px; height:16px; flex:0 0 16px; }
 
 @media (max-width: 900px) {
   .features-grid {
@@ -966,6 +975,44 @@ html[data-theme="dark"] .cta-section .cta-content p { color: #34483f; }
   html[data-theme="dark"] .mobile-nav a:hover, html[data-theme="dark"] .mobile-nav a:focus-visible { background: #345e56; }
   html[data-theme="dark"] .mobile-nav a.btn-primary-landing { background: #286b5b; }
 }
+
+  .tour-section,.faq-section { position:relative; z-index:1; padding-block:clamp(50px,7vw,84px); }
+  .tour-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:18px; }
+  .tour-card { position:relative; min-width:0; padding:26px; background:#fffdf6; border:2px solid #202b26; border-radius:23px 23px 23px 8px; box-shadow:4px 5px 0 #202b26; }
+  .tour-card > svg { width:32px; height:32px; color:#286b5b; }
+  .tour-card h3 { margin:15px 0 8px; font:800 1.25rem var(--display); color:#202b26; }
+  .tour-card p { margin:0; color:#58645c; line-height:1.65; }
+  .tour-number { position:absolute; top:18px; right:19px; color:#8a948d; font:700 .78rem var(--mono); }
+  .learning-cycle { display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) auto minmax(0,1fr) auto minmax(0,1fr); gap:12px; align-items:stretch; margin:28px 0 50px; }
+  .learning-cycle article { display:grid; justify-items:center; align-content:start; gap:9px; padding:20px 14px; text-align:center; background:#fffdf6; border:2px solid #202b26; border-radius:20px 20px 20px 7px; box-shadow:3px 4px 0 #202b26; }
+  .cycle-icon { display:grid; place-items:center; width:52px; height:52px; border:1.5px solid #202b26; border-radius:16px; background:#dff2e8; color:#286b5b; }
+  .cycle-icon svg { width:25px; height:25px; }
+  .learning-cycle article strong { font:800 1.1rem var(--display); color:#202b26; }
+  .learning-cycle article p { margin:0; color:#58645c; font-size:.88rem; line-height:1.5; }
+  .cycle-arrow { align-self:center; color:#286b5b; font-size:1.4rem; font-weight:900; }
+  .faq-list { display:grid; gap:12px; max-width:900px; margin-inline:auto; }
+  .faq-list details { padding:17px 20px; background:#fffdf6; border:2px solid #202b26; border-radius:16px 16px 16px 6px; box-shadow:2px 3px 0 rgba(32,43,38,.16); }
+  .faq-list summary { color:#202b26; font-weight:800; cursor:pointer; }
+  .faq-list details p { margin:12px 0 0; color:#58645c; line-height:1.65; }
+  html[data-theme="dark"] .tour-card,html[data-theme="dark"] .learning-cycle article,html[data-theme="dark"] .faq-list details { background:#27313e; border-color:#111820; color:#f5f2e9; }
+  html[data-theme="dark"] .tour-card h3,html[data-theme="dark"] .learning-cycle article strong,html[data-theme="dark"] .faq-list summary { color:#f5f2e9; }
+  html[data-theme="dark"] .tour-card p,html[data-theme="dark"] .learning-cycle article p,html[data-theme="dark"] .faq-list details p { color:#c5cec9; }
+  html[data-theme="dark"] .cycle-icon { border-color:#111820; background:#345e56; color:#ecfff8; }
+  @media(max-width:900px) {
+    .tour-grid { grid-template-columns:1fr; }
+    .learning-cycle { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .cycle-arrow { display:none; }
+  }
+  @media(max-width:640px) {
+    .learning-cycle { grid-template-columns:1fr; }
+    .tour-card,.faq-list details { padding:16px; }
+    .faq-list summary { line-height:1.45; }
+    .nav-actions .btn-primary-landing { color:#fff; }
+    .mobile-nav a.btn-primary-landing { color:#fff; }
+  }
+  @media(prefers-reduced-motion:reduce) {
+    .tour-card { transition:none; }
+  }
 @media (prefers-reduced-motion: reduce) {
   .landing-roll-item { transform: none; opacity: 1; filter: none; will-change: auto; }
 }

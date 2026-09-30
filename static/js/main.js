@@ -7,7 +7,7 @@
 window.addEventListener('load', () => {
   const loader = document.getElementById('page-loader');
   if (loader) {
-    setTimeout(() => loader.classList.add('hidden'), 400);
+    setTimeout(() => loader.classList.add('hidden'), 850);
   }
 });
 
@@ -19,7 +19,12 @@ function showToast(message, type = 'info', duration = 4000) {
   const icons = { success: 'circle-check', error: 'circle-x', warning: 'triangle-alert', info: 'info' };
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
-  toast.innerHTML = `<i data-lucide="${icons[type] || 'message-circle'}" aria-hidden="true"></i><span>${message}</span>`;
+  const icon = document.createElement('i');
+  icon.dataset.lucide = icons[type] || 'message-circle';
+  icon.setAttribute('aria-hidden', 'true');
+  const text = document.createElement('span');
+  text.textContent = message;
+  toast.append(icon, text);
   container.appendChild(toast);
   window.refreshIcons?.();
 
@@ -61,6 +66,7 @@ function initTheme() {
   async function setTheme(theme) {
     html.setAttribute('data-theme', theme);
     localStorage.setItem('learnorbit-theme', theme);
+    document.dispatchEvent(new CustomEvent('learnorbit:themechange', {detail: {theme}}));
     ['#theme-icon', '#theme-icon-top'].forEach(sel => {
       const el = document.querySelector(sel);
       if (el) window.setLucideIcon?.(el, theme === 'dark' ? 'sun' : 'moon');
@@ -68,12 +74,15 @@ function initTheme() {
     window.refreshIcons?.();
     // Persist via API if authenticated
     try {
-      await fetch('/api/theme', {
+      const response = await fetch('/api/theme', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRF() },
         body: JSON.stringify({ theme })
       });
-    } catch (_) {}
+      if (!response.ok) throw new Error(`Theme update failed (${response.status}).`);
+    } catch (error) {
+      console.warn('Could not synchronize theme with the account:', error);
+    }
   }
 
   document.querySelectorAll('#theme-toggle, #theme-toggle-top').forEach(btn => {
@@ -83,6 +92,20 @@ function initTheme() {
     });
   });
 }
+
+window.addEventListener('storage', event => {
+  const html = document.documentElement;
+  if (event.key === 'learnorbit-theme' && ['dark', 'light'].includes(event.newValue)) {
+    html.dataset.theme = event.newValue;
+    document.dispatchEvent(new CustomEvent('learnorbit:themechange', {detail: {theme: event.newValue}}));
+    ['#theme-icon', '#theme-icon-top'].forEach(selector => {
+      const icon = document.querySelector(selector);
+      if (icon) window.setLucideIcon?.(icon, event.newValue === 'dark' ? 'sun' : 'moon');
+    });
+    window.refreshIcons?.();
+  }
+  if (event.key === 'learnorbit-accent' && event.newValue) html.dataset.accent = event.newValue;
+});
 
 // ── CSRF helper ───────────────────────────────────────────
 function getCSRF() {
@@ -147,6 +170,103 @@ function initFloatingNav() {
   update();
 }
 
+function initCalendarReminders() {
+  const userId = document.body.dataset.userId;
+  if (!userId || !document.getElementById('sidebar')) return;
+  const cursorKey = `learnorbit-calendar-reminder-cursor-${userId}`;
+  const firedKey = `learnorbit-calendar-reminders-fired-${userId}`;
+  async function check() {
+    if (document.visibilityState === 'hidden') return;
+    let since = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    let fired = [];
+    try {
+      since = localStorage.getItem(cursorKey) || since;
+      fired = JSON.parse(localStorage.getItem(firedKey) || '[]');
+      if (!Array.isArray(fired)) fired = [];
+    } catch (error) {
+      console.warn('Calendar reminder storage is unavailable:', error);
+    }
+    try {
+      const query = new URLSearchParams({since});
+      const response = await fetch(`/features/calendar/reminders?${query}`, {
+        headers: {'X-CSRFToken': getCSRF()}
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Could not check calendar reminders.');
+      const known = new Set(fired.map(String));
+      for (const event of data.events || []) {
+        if (known.has(String(event.id))) continue;
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification('LearnOrbit reminder', {body: event.title});
+        } else {
+          showToast(`Reminder: ${event.title}`, 'info');
+        }
+        known.add(String(event.id));
+      }
+      localStorage.setItem(firedKey, JSON.stringify(Array.from(known).slice(-100)));
+      if (data.checked_at) localStorage.setItem(cursorKey, data.checked_at);
+    } catch (error) {
+      console.warn('Calendar reminder check failed:', error);
+    }
+  }
+  check();
+  const timer = setInterval(check, 30000);
+  document.addEventListener('visibilitychange', check);
+  window.addEventListener('pagehide', () => {
+    clearInterval(timer);
+    document.removeEventListener('visibilitychange', check);
+  }, {once: true});
+}
+
+function initRecallReminders() {
+  const userId = document.body.dataset.userId;
+  if (!userId) return;
+  const storageKey = `learnorbit-recall-reminders-seen-${userId}`;
+  let checking = false;
+  async function check() {
+    if (checking || document.visibilityState === 'hidden') return;
+    checking = true;
+    try {
+      const response = await fetch('/dashboard/api/recall-due', {
+        headers: {'X-CSRFToken': getCSRF()}
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Could not check session recall tests.');
+      let seen = [];
+      try {
+        const stored = JSON.parse(localStorage.getItem(storageKey) || '[]');
+        if (Array.isArray(stored)) seen = stored.map(String);
+      } catch (error) {
+        console.warn('Recall reminder storage is unavailable:', error);
+      }
+      const seenSet = new Set(seen);
+      const unseen = (data.checks || []).filter(check => {
+        const key = `${check.session_id}-${check.cycle_number}`;
+        if (seenSet.has(key)) return false;
+        seenSet.add(key);
+        return true;
+      });
+      if (unseen.length) {
+        const names = unseen.slice(0, 2).map(check => check.topic).join(', ');
+        const extra = unseen.length > 2 ? ` and ${unseen.length - 2} more` : '';
+        showToast(`${unseen.length} session recall test${unseen.length === 1 ? ' is' : 's are'} due: ${names}${extra}. Open the dashboard to take them.`, 'info', 8000);
+        localStorage.setItem(storageKey, JSON.stringify(Array.from(seenSet).slice(-1000)));
+      }
+    } catch (error) {
+      console.warn('Session recall reminder check failed:', error);
+    } finally {
+      checking = false;
+    }
+  }
+  check();
+  const timer = setInterval(check, 60000);
+  document.addEventListener('visibilitychange', check);
+  window.addEventListener('pagehide', () => {
+    clearInterval(timer);
+    document.removeEventListener('visibilitychange', check);
+  }, {once:true});
+}
+
 // ── Active nav highlight (MathJax cleanup helper) ─────────
 function renderMathInElement(el) {
   if (window.MathJax && el) {
@@ -154,6 +274,134 @@ function renderMathInElement(el) {
   }
 }
 window.renderMathInElement = renderMathInElement;
+
+// ── Persistent-audio navigation (pjax) ────────────────────
+// Swaps only the main content region for sidebar destinations so the
+// global focus-music <audio> element is never torn down by a full
+// page reload, letting music keep playing while the user moves
+// between tabs.
+function initPjaxNav() {
+  const sidebar = document.getElementById('sidebar');
+  if (!sidebar) return;
+
+  async function go(url, push) {
+    const loader = document.getElementById('page-loader');
+    const startedAt = Date.now();
+    loader?.classList.remove('hidden');
+    if (window.matchMedia('(max-width: 768px)').matches) {
+      sidebar.classList.remove('open');
+      document.getElementById('sidebar-overlay')?.classList.remove('show');
+      document.body.style.overflow = '';
+    }
+    try {
+      const res = await fetch(url, { headers: { 'X-Pjax': '1' } });
+      const contentType = res.headers.get('content-type') || '';
+      if (!res.ok || !contentType.includes('text/html')) { window.location.href = url; return; }
+      const html = await res.text();
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      const newMain = doc.querySelector('.main-content');
+      const curMain = document.querySelector('.main-content');
+      if (!newMain || !curMain) { window.location.href = url; return; }
+
+      document.dispatchEvent(new CustomEvent('learnorbit:beforepagechange'));
+      document.querySelectorAll('link[data-pjax-head]').forEach(link => link.remove());
+      const pageStyles = Array.from(doc.head.querySelectorAll('link[data-pjax-head]'));
+      await Promise.all(pageStyles.map(source => new Promise((resolve, reject) => {
+        const link = document.createElement('link');
+        Array.from(source.attributes).forEach(attribute => link.setAttribute(attribute.name, attribute.value));
+        link.addEventListener('load', resolve, {once:true});
+        link.addEventListener('error', () => reject(new Error(`Could not load page stylesheet ${link.href}`)), {once:true});
+        document.head.appendChild(link);
+        if (link.sheet) resolve();
+      })));
+      window.Chart?.getChart?.(document.getElementById('learning-chart'))?.destroy();
+      window.Chart?.getChart?.(document.getElementById('retention-chart'))?.destroy();
+      document.title = doc.title;
+      curMain.replaceWith(newMain);
+
+      const newTitle = doc.querySelector('.topbar-center');
+      const curTitle = document.querySelector('.topbar-center');
+      if (newTitle && curTitle) curTitle.replaceWith(newTitle);
+
+      const newActions = doc.getElementById('topbar-actions');
+      const curActions = document.getElementById('topbar-actions');
+      if (newActions && curActions) curActions.replaceWith(newActions);
+
+      const newScripts = doc.getElementById('page-scripts');
+      const curScripts = document.getElementById('page-scripts');
+      if (newScripts && curScripts) curScripts.replaceWith(newScripts);
+
+      let targetPath;
+      try { targetPath = new URL(url, location.href).pathname; } catch (_) { targetPath = url; }
+      document.querySelectorAll('#sidebar .nav-item').forEach(a => {
+        try { a.classList.toggle('active', new URL(a.href, location.href).pathname === targetPath); } catch (_) {}
+      });
+
+      if (push) history.pushState({ pjax: true }, '', url);
+
+      // Recreate scripts in document order; page code is isolated so revisiting
+      // a route cannot fail on duplicate top-level lexical declarations. Keep
+      // neighboring inline scripts together so they share their page scope.
+      const scripts = Array.from(document.getElementById('page-scripts')?.querySelectorAll('script') || []);
+      let inlineGroup = [];
+      const runInlineGroup = () => {
+        if (!inlineGroup.length) return;
+        const [first, ...rest] = inlineGroup;
+        const runner = document.createElement('script');
+        runner.textContent = `(()=>{\n${inlineGroup.map(script => script.textContent).join('\n;\n')}\n})();`;
+        first.replaceWith(runner);
+        rest.forEach(script => script.remove());
+        inlineGroup = [];
+      };
+      for (const old of scripts) {
+        if (!old.src) {
+          inlineGroup.push(old);
+          continue;
+        }
+        runInlineGroup();
+        const fresh = document.createElement('script');
+        Array.from(old.attributes).forEach(attr => fresh.setAttribute(attr.name, attr.value));
+        old.replaceWith(fresh);
+        if (fresh.src) {
+          fresh.async = false;
+          await new Promise((resolve, reject) => {
+            fresh.addEventListener('load', resolve, {once: true});
+            fresh.addEventListener('error', () => reject(new Error(`Could not load ${fresh.src}`)), {once: true});
+          });
+        }
+      }
+      runInlineGroup();
+
+      window.refreshIcons?.();
+      initAutoResize();
+      window.scrollTo(0, 0);
+      document.dispatchEvent(new CustomEvent('learnorbit:pagechange', {detail: {url}}));
+    } catch (_) {
+      window.location.href = url;
+    } finally {
+      const minimumDuration = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 650;
+      const remaining = minimumDuration - (Date.now() - startedAt);
+      if (remaining > 0) await new Promise(resolve => setTimeout(resolve, remaining));
+      loader?.classList.add('hidden');
+    }
+  }
+
+  window.navigateLearnOrbit = url => go(url, true);
+
+  sidebar.querySelectorAll('a.nav-item').forEach(a => {
+    a.addEventListener('click', e => {
+      if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || a.target === '_blank') return;
+      let url;
+      try { url = new URL(a.href, location.href); } catch (_) { return; }
+      if (url.origin !== location.origin) return;
+      if (url.pathname === location.pathname) { e.preventDefault(); return; }
+      e.preventDefault();
+      go(a.href, true);
+    });
+  });
+
+  window.addEventListener('popstate', () => go(location.href, false));
+}
 
 // ── Init all ──────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
@@ -163,6 +411,9 @@ document.addEventListener('DOMContentLoaded', () => {
   initShortcuts();
   initSmoothScroll();
   initFloatingNav();
+  initPjaxNav();
+  initCalendarReminders();
+  initRecallReminders();
   const clock = document.getElementById('live-clock');
   const paintClock = () => { if (clock) clock.textContent = new Intl.DateTimeFormat([], {hour:'2-digit', minute:'2-digit'}).format(new Date()); };
   paintClock(); setInterval(paintClock, 15000);
@@ -176,6 +427,7 @@ document.addEventListener('DOMContentLoaded', () => {
       localStorage.setItem('learnorbit-music-active', String(!player.paused && !!player.src));
     };
     const restore = async () => {
+      player.volume = Math.max(0, Math.min(1, Number(localStorage.getItem('learnorbit-music-volume') || .65)));
       try {
         const open = indexedDB.open('learnorbit-focus-audio', 1);
         open.onupgradeneeded = () => open.result.createObjectStore('tracks');

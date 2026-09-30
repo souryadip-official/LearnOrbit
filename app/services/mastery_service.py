@@ -64,3 +64,6 @@ def recalculate_all_topic_mastery(user_id: int) -> None:
     slugs = {topic_slug(session.topic) for session in completed}
     for slug in slugs:
         recalculate_topic_mastery(user_id, slug)
+    for mastery in TopicMastery.query.filter_by(user_id=user_id).all():
+        if mastery.topic_slug not in slugs:
+            db.session.delete(mastery)

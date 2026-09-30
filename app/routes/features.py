@@ -5,7 +5,7 @@ import re
 import math
 import mimetypes
 from collections import Counter
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta, date, timezone
 import calendar as pycalendar
 from werkzeug.utils import secure_filename
 from flask import Blueprint, current_app, render_template, request, jsonify, send_file, abort, session
@@ -180,6 +180,20 @@ def delete_account():
     SessionDocument.query.filter_by(user_id=user.id).delete(synchronize_session=False)
     CalendarEvent.query.filter_by(user_id=user.id).delete(synchronize_session=False)
     from app.models import GameUsage, GameScore
+    from app.models import (
+        OrbitReward,
+        OrbitTokenTransaction,
+        OrbitWallet,
+        QuizGeneration,
+        SessionRecallSchedule,
+        TopicReviewSchedule,
+    )
+    from app.routes.study_rooms import (
+        StudyRoom,
+        StudyRoomMembership,
+        StudyRoomMessage,
+    )
+    from sqlalchemy import or_
     GameUsage.query.filter_by(user_id=user.id).delete(synchronize_session=False)
     GameScore.query.filter_by(user_id=user.id).delete(synchronize_session=False)
     Subscription.query.filter_by(user_id=user.id).delete(synchronize_session=False)
@@ -189,6 +203,23 @@ def delete_account():
     LearningBehavior.query.filter_by(user_id=user.id).delete(synchronize_session=False)
     TopicMastery.query.filter_by(user_id=user.id).delete(synchronize_session=False)
     AttendanceStamp.query.filter_by(user_id=user.id).delete(synchronize_session=False)
+    QuizGeneration.query.filter_by(user_id=user.id).delete(synchronize_session=False)
+    SessionRecallSchedule.query.filter_by(user_id=user.id).delete(synchronize_session=False)
+    TopicReviewSchedule.query.filter_by(user_id=user.id).delete(synchronize_session=False)
+    OrbitReward.query.filter_by(user_id=user.id).delete(synchronize_session=False)
+    OrbitTokenTransaction.query.filter_by(user_id=user.id).delete(synchronize_session=False)
+    OrbitWallet.query.filter_by(user_id=user.id).delete(synchronize_session=False)
+    owned_room_ids = [room_id for (room_id,) in
+                      db.session.query(StudyRoom.id).filter_by(owner_id=user.id).all()]
+    room_scope = [StudyRoomMessage.user_id == user.id]
+    membership_scope = [StudyRoomMembership.user_id == user.id]
+    if owned_room_ids:
+        room_scope.append(StudyRoomMessage.room_id.in_(owned_room_ids))
+        membership_scope.append(StudyRoomMembership.room_id.in_(owned_room_ids))
+    db.session.query(StudyRoomMessage).filter(or_(*room_scope)).delete(synchronize_session=False)
+    db.session.query(StudyRoomMembership).filter(or_(*membership_scope)).delete(synchronize_session=False)
+    if owned_room_ids:
+        StudyRoom.query.filter(StudyRoom.id.in_(owned_room_ids)).delete(synchronize_session=False)
     UserProfile.query.filter_by(user_id=user.id).delete(synchronize_session=False)
     for folder in (os.path.join(current_app.instance_path, "documents", str(user.id)), os.path.join(current_app.instance_path, "avatars", str(user.id))):
         if os.path.isdir(folder):
@@ -268,11 +299,25 @@ def music(): return render_template("features/music.html")
 @login_required
 def calendar():
     if request.method == "POST":
-        data = request.get_json() or {}
-        try: starts = datetime.fromisoformat(data.get("starts_at", ""))
-        except ValueError: return jsonify({"error": "Choose a valid date and time."}), 400
-        event = CalendarEvent(user_id=current_user.id, title=data.get("title", "")[:160], details=data.get("details", "")[:1000], starts_at=starts)
-        if not event.title: return jsonify({"error": "Event title is required."}), 400
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            return jsonify({"error": "Event details could not be read."}), 400
+        try:
+            starts = datetime.fromisoformat(data.get("starts_at", ""))
+        except (TypeError, ValueError):
+            return jsonify({"error": "Choose a valid date and time."}), 400
+        title = data.get("title", "")
+        details = data.get("details", "")
+        if not isinstance(title, str) or not title.strip():
+            return jsonify({"error": "Event title is required."}), 400
+        if not isinstance(details, str):
+            return jsonify({"error": "Event details must be text."}), 400
+        event = CalendarEvent(
+            user_id=current_user.id,
+            title=title.strip()[:160],
+            details=details[:1000],
+            starts_at=starts,
+        )
         db.session.add(event); db.session.commit()
         return jsonify({"success": True, "id": event.id})
     now = datetime.utcnow()
@@ -292,6 +337,30 @@ def calendar():
         view_month=month, month_name=pycalendar.month_name[month], today=date.today(), attendance=attendance,
         event_days=event_days, month_attendance=month_attendance, year_attendance=len(attendance),
         prev_month=prev_month, next_month=next_month)
+
+
+@features_bp.route("/calendar/reminders")
+@login_required
+def calendar_reminders():
+    since_value = request.args.get("since", "")
+    try:
+        since = datetime.fromisoformat(since_value) if since_value else datetime.utcnow() - timedelta(minutes=10)
+    except ValueError:
+        return jsonify({"error": "Invalid reminder cursor."}), 400
+    now = datetime.utcnow()
+    if since.tzinfo is not None:
+        since = since.astimezone(timezone.utc).replace(tzinfo=None)
+    since = max(since, now - timedelta(hours=24))
+    events = CalendarEvent.query.filter(
+        CalendarEvent.user_id == current_user.id,
+        CalendarEvent.starts_at > since,
+        CalendarEvent.starts_at <= now,
+    ).order_by(CalendarEvent.starts_at).limit(30).all()
+    return jsonify({
+        "events": [{"id": event.id, "title": event.title, "starts_at": event.starts_at.isoformat()}
+                   for event in events],
+        "checked_at": now.isoformat(),
+    })
 
 
 @features_bp.route("/calculator")
@@ -506,13 +575,42 @@ def run_code():
     now_ts = datetime.utcnow().timestamp(); runs = [stamp for stamp in session.get("code_run_times", []) if now_ts - stamp < 60]
     if len(runs) >= 5: return jsonify({"error": "Please wait a minute before running more code."}), 429
     runs.append(now_ts); session["code_run_times"] = runs
-    data = request.get_json() or {}; language = data.get("language", "python")
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({"error": "Code-runner options could not be read."}), 400
+    language = data.get("language", "python")
     ids = {"python": 71, "javascript": 63, "java": 62, "cpp": 54, "c": 50}
-    if language not in ids or len(data.get("source_code", "")) > 20000: return jsonify({"error": "Unsupported language or code is too long."}), 400
+    source_code = data.get("source_code", "")
+    stdin = data.get("stdin", "")
+    compiler_options = data.get("compiler_options", "")
+    command_line_arguments = data.get("command_line_arguments", "")
+    if (language not in ids or not isinstance(source_code, str) or len(source_code) > 20000
+            or not isinstance(stdin, str) or len(stdin) > 4000
+            or not isinstance(compiler_options, str) or len(compiler_options) > 200
+            or not isinstance(command_line_arguments, str) or len(command_line_arguments) > 300):
+        return jsonify({"error": "Unsupported language or one of the code-runner fields is invalid or too long."}), 400
+    try:
+        cpu_time_limit = max(1, min(5, int(data.get("cpu_time_limit", 2))))
+        memory_limit = max(64000, min(256000, int(data.get("memory_limit", 128000))))
+    except (TypeError, ValueError):
+        return jsonify({"error": "Choose valid CPU and memory limits."}), 400
+    compiler_languages = {"c", "cpp", "java"}
+    if compiler_options and language not in compiler_languages:
+        return jsonify({"error": "Compiler options are supported only for C, C++, and Java."}), 400
     endpoint = os.getenv("JUDGE0_ENDPOINT", "https://ce.judge0.com")
     try:
         import requests
-        response = requests.post(endpoint.rstrip("/") + "/submissions?base64_encoded=false&wait=true", json={"language_id": ids[language], "source_code": data.get("source_code", ""), "stdin": data.get("stdin", "")[:4000]}, timeout=15)
+        payload = {
+            "language_id": ids[language],
+            "source_code": source_code,
+            "stdin": stdin,
+            "cpu_time_limit": cpu_time_limit,
+            "memory_limit": memory_limit,
+            "command_line_arguments": command_line_arguments,
+        }
+        if compiler_options:
+            payload["compiler_options"] = compiler_options
+        response = requests.post(endpoint.rstrip("/") + "/submissions?base64_encoded=false&wait=true", json=payload, timeout=15)
         response.raise_for_status(); result = response.json()
         return jsonify({"stdout": result.get("stdout"), "stderr": result.get("stderr"), "compile_output": result.get("compile_output"), "status": (result.get("status") or {}).get("description", "Unknown"), "time": result.get("time"), "memory": result.get("memory")})
     except Exception as exc:

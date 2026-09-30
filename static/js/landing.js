@@ -94,6 +94,13 @@
   requestUpdate();
 })();
 
+(function showLogoutToast() {
+  const toast = document.getElementById('landing-toast');
+  if (!toast) return;
+  window.setTimeout(() => toast.classList.add('visible'), 0);
+  window.setTimeout(() => toast.classList.remove('visible'), 4200);
+})();
+
 // ── Mobile nav ────────────────────────────────────────────
 (function initMobileNav() {
   const btn = document.getElementById('nav-mobile-toggle');
@@ -132,6 +139,12 @@
   const saved = localStorage.getItem('learnorbit-theme') || localStorage.getItem('lo-theme') || 'light';
   html.setAttribute('data-theme', saved);
   updateThemeIcon(saved);
+  window.addEventListener('storage', event => {
+    if (event.key === 'learnorbit-theme' && ['dark', 'light'].includes(event.newValue)) {
+      html.setAttribute('data-theme', event.newValue);
+      updateThemeIcon(event.newValue);
+    }
+  });
 
   btn.addEventListener('click', () => {
     const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';

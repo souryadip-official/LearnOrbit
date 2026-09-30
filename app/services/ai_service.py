@@ -25,7 +25,11 @@ def _call_openai_compatible(base_url: str, api_key: str, model: str, messages: l
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
     payload = {"model": model, "messages": payload_messages}
     if temperature is not None: payload["temperature"] = temperature
-    if max_tokens is not None: payload["max_tokens"] = max_tokens
+    if max_tokens is not None:
+        if model.lower().startswith(("o1", "o3", "o4", "gpt-5", "gpt-6")):
+            payload["max_completion_tokens"] = max_tokens
+        else:
+            payload["max_tokens"] = max_tokens
 
     resp = requests.post(f"{base_url}/chat/completions", headers=headers,
                          json=payload, timeout=60)
@@ -111,7 +115,9 @@ def call_ai(provider: str, model: str, api_key: str, messages: list,
     try:
         if provider == "openai":
             return _call_openai_compatible(
-                "https://api.openai.com/v1", api_key, model, messages, system, temperature=temperature, max_tokens=max_tokens)
+                "https://api.openai.com/v1", api_key, model, messages, system,
+                temperature=temperature if supports_temperature(provider, model) else None,
+                max_tokens=max_tokens)
         elif provider == "xai":
             return _call_openai_compatible(
                 "https://api.x.ai/v1", api_key, model, messages, system, temperature=temperature, max_tokens=max_tokens)
@@ -156,7 +162,7 @@ def supports_temperature(provider: str, model: str) -> bool:
     """Whether the selected API/model accepts a temperature parameter."""
     provider = (provider or "").lower()
     model = (model or "").lower()
-    if provider == "openai" and model.startswith(("o1", "o3", "o4", "gpt-5")):
+    if provider == "openai" and model.startswith(("o1", "o3", "o4", "gpt-5", "gpt-6")):
         return False
     return provider in {"openai", "xai", "anthropic", "google"}
 
@@ -183,30 +189,41 @@ DIFFICULTY LEVEL: {difficulty}
 LEARNING STYLE: {style}
 """
 
-QUIZ_SYSTEM = """You are LearnOrbit Quiz Engine. Generate exactly 10 multiple-choice questions for the topic.
+QUIZ_SYSTEM = """You are LearnOrbit Quiz Engine. Generate exactly {count} high-quality assessment questions for the topic.
 
 OUTPUT FORMAT — strict JSON only, no markdown, no preamble:
 {{
   "questions": [
     {{
       "id": 1,
+      "type": "mcq|msq|short_answer|long_answer",
       "question": "question text with LaTeX where needed ($formula$)",
       "options": {{"A": "...", "B": "...", "C": "...", "D": "..."}},
-      "correct": "A",
+      "correct": "A or an array such as [\\"A\\", \\"C\\"] for objective items; null for written items",
+      "reference_answer": "concise expected answer for written items; null for objective items",
+      "rubric": ["criterion 1", "criterion 2", "criterion 3"],
       "explanation": "Why this is correct and why others are wrong",
+      "bloom_level": "remember|understand|apply|analyze|evaluate|create",
       "difficulty": "easy|medium|hard",
-      "misconception_check": "common wrong belief this tests"
+      "misconception_check": "common wrong belief this tests",
+      "examiner_intent": "definition-check|misconception-trap|algebraic-hygiene|transfer|time-pressure"
     }}
   ]
 }}
 
-Mix difficulties: 3 easy, 4 medium, 3 hard. Make distractors realistic.
+Use a balanced mix of objective (MCQ/MSQ) and written questions (short answer/long answer); use only MCQ/MSQ when a topic cannot reasonably support written assessment.
+For MSQ, the correct value must be an array of at least two option keys. For written questions, set options to {{}}, correct to null, provide a concise reference_answer and exactly three assessable rubric criteria.
+Mix difficulties and make distractors realistic.
+Tag each item with the hidden examiner intent in examiner_intent. Never reveal the tag in the question text.
+Assign each question exactly one Bloom level from remember, understand, apply,
+analyze, evaluate, or create. Explain why the correct answer is right and why
+each distractor is wrong.
 Topic: {topic}
 Key areas covered in session: {key_areas}
 """
 
 MISCONCEPTION_SYSTEM = """You are LearnOrbit Misconception Detector.
-Given a user's answer/explanation and the correct concept, identify if there's a misconception.
+Given the learner's message and the tutor's accurate explanation, identify a clear misconception only if the learner asserted a false belief. A question, uncertainty, incomplete answer, or request for clarification alone is not a misconception. Do not infer beliefs the learner did not state. If uncertain, return has_misconception=false and confidence 0.
 
 OUTPUT FORMAT — strict JSON only:
 {{
@@ -284,32 +301,214 @@ def build_tutor_system(topic: str, difficulty: str = "beginner", style: str = "b
     return TUTOR_SYSTEM.format(topic=topic, difficulty=difficulty, style=style)
 
 
-def generate_quiz(provider, model, api_key, topic, key_areas=""):
-    system = QUIZ_SYSTEM.format(topic=topic, key_areas=key_areas or topic)
-    messages = [{"role": "user", "content": f"Generate 10 MCQ questions for: {topic}"}]
-    raw = call_ai(provider, model, api_key, messages, system=system, max_tokens=3000)
-    # Strip markdown fences if present
-    raw = re.sub(r"```(?:json)?|```", "", raw).strip()
+def generate_quiz(provider, model, api_key, topic, key_areas="", mode="quiz"):
+    question_count = 20 if mode == "exam" else 10
+    questions = []
+    for batch_start in range(0, question_count, 5):
+        batch_count = min(5, question_count - batch_start)
+        system = QUIZ_SYSTEM.format(
+            count=batch_count,
+            topic=topic,
+            key_areas=key_areas or topic,
+        )
+        messages = [{
+            "role": "user",
+            "content": (
+                f"Generate exactly {batch_count} distinct questions for {topic}. "
+                f"Use IDs {batch_start + 1} through {batch_start + batch_count}."
+            ),
+        }]
+        raw = call_ai(provider, model, api_key, messages, system=system, max_tokens=6000)
+        if _is_provider_error(raw):
+            return {"error": raw[:700]}
+        parsed = _parse_json_payload(raw)
+        batch = parsed.get("questions") if isinstance(parsed, dict) else None
+        if not _valid_quiz_batch(batch, batch_count):
+            repair_source = json.dumps(parsed, ensure_ascii=False) if isinstance(parsed, dict) else raw
+            repair_messages = [{
+                "role": "user",
+                "content": (
+                    "Repair this assessment into valid strict JSON. Preserve the useful "
+                    "question ideas, fix missing/invalid answer formats, and return the "
+                    "requested number of complete questions in a JSON object with a "
+                    "questions array only.\n\n" + repair_source[:12000]
+                ),
+            }]
+            repaired = call_ai(
+                provider, model, api_key, repair_messages,
+                system="Repair malformed assessment JSON. Output valid JSON only.",
+                max_tokens=6000,
+            )
+            if _is_provider_error(repaired):
+                return {"error": repaired[:700]}
+            parsed = _parse_json_payload(repaired)
+            batch = parsed.get("questions") if isinstance(parsed, dict) else None
+        if not _valid_quiz_batch(batch, batch_count):
+            return {
+                "error": (
+                    f"The AI provider returned no usable questions for assessment "
+                    f"batch {batch_start // 5 + 1}. Check the selected model/API key "
+                    "and try again."
+                )
+            }
+        for offset, question in enumerate(batch[:batch_count]):
+            if isinstance(question, dict):
+                question["id"] = batch_start + offset + 1
+                questions.append(question)
+        if len(batch) < batch_count:
+            return {"error": f"The AI provider returned only {len(batch)} of {batch_count} questions in a batch. Please retry."}
+    return {"questions": questions}
+
+
+def _valid_quiz_batch(batch, expected_count):
+    if not isinstance(batch, list) or len(batch) < expected_count:
+        return False
+    for question in batch[:expected_count]:
+        if not isinstance(question, dict) or not isinstance(question.get("question"), str) or not question["question"].strip():
+            return False
+        options = question.get("options")
+        answer_type = str(question.get("type", "")).strip().lower()
+        correct = question.get("correct")
+        if not answer_type:
+            answer_type = "msq" if isinstance(correct, list) else (
+                "mcq" if isinstance(options, dict) and options else "short_answer"
+            )
+        if answer_type not in {"mcq", "msq", "short_answer", "long_answer"}:
+            return False
+        if answer_type in {"mcq", "msq"}:
+            if not isinstance(options, dict) or len(options) < 2:
+                return False
+            if answer_type == "mcq":
+                if not isinstance(correct, str) or correct not in options:
+                    return False
+            elif answer_type == "msq":
+                if (not isinstance(correct, list) or len(correct) < 2
+                        or any(not isinstance(answer, str) for answer in correct)
+                        or not set(correct).issubset(options)):
+                    return False
+        else:
+            if (not isinstance(question.get("reference_answer"), str)
+                    or not question["reference_answer"].strip()
+                    or not isinstance(question.get("rubric"), list)
+                    or len(question["rubric"]) != 3
+                    or any(not isinstance(item, str) or not item.strip() for item in question["rubric"])):
+                return False
+    return True
+
+
+def _is_provider_error(raw):
+    text = str(raw or "").strip()
+    return not text or text.startswith((
+        "Invalid API key.",
+        "API key was rejected",
+        "Rate limit hit.",
+        "API error (",
+        "Unexpected error:",
+        "[LearnOrbit] Unknown AI provider:",
+    ))
+
+
+def evaluate_written_answers(provider, model, api_key, topic, questions, answers):
+    """Score written responses against question-specific criteria on a 0–2 rubric."""
+    grading_questions = []
+    for question in questions:
+        qid = str(question["id"])
+        answer = str(answers.get(qid, "")).strip()
+        if question.get("type") not in {"short_answer", "long_answer"} or not answer:
+            continue
+        grading_questions.append({
+            "id": qid,
+            "question": question["question"],
+            "reference_answer": question.get("reference_answer", ""),
+            "rubric": question.get("rubric", []),
+            "student_answer": answer[:5000],
+        })
+    if not grading_questions:
+        return {}
+    messages = [{
+        "role": "user",
+        "content": json.dumps({"topic": topic, "questions": grading_questions}),
+    }]
+    raw = call_ai(
+        provider, model, api_key, messages,
+        system=(
+            "Grade written student answers fairly and conservatively. Accept equivalent "
+            "wording and correct reasoning. For each rubric criterion assign 0 (missing/"
+            "incorrect), 1 (partly correct), or 2 (fully correct). Do not reward verbosity. "
+            "Provide concise evidence-based feedback, never infer facts absent from the answer. "
+            'Return strict JSON only: {"evaluations":[{"id":"...","criteria":[0,1,2],'
+            '"feedback":"..."}]}.'
+        ),
+        max_tokens=3000,
+        temperature=0,
+    )
+    if _is_provider_error(raw):
+        raise RuntimeError(raw[:700])
+    payload = _parse_json_payload(raw)
+    evaluations = payload.get("evaluations") if isinstance(payload, dict) else None
+    if not isinstance(evaluations, list):
+        raise RuntimeError("The AI provider returned an invalid written-answer evaluation. Please retry submission.")
+    by_id = {}
+    expected_ids = {question["id"] for question in grading_questions}
+    for item in evaluations:
+        if not isinstance(item, dict) or str(item.get("id")) not in expected_ids:
+            continue
+        criteria = item.get("criteria")
+        if not isinstance(criteria, list) or len(criteria) != 3:
+            continue
+        scores = []
+        for value in criteria:
+            if isinstance(value, bool) or value not in (0, 1, 2):
+                break
+            scores.append(value)
+        if len(scores) == 3:
+            by_id[str(item["id"])] = {
+                "criteria": scores,
+                "feedback": str(item.get("feedback", ""))[:800],
+            }
+    if expected_ids - by_id.keys():
+        raise RuntimeError("The AI provider did not grade every written answer. Please retry submission.")
+    return by_id
+
+
+def _parse_json_payload(raw):
+    """Decode JSON from common model wrappers without assuming one exact fence."""
+    cleaned = re.sub(r"```(?:json)?|```", "", str(raw or ""), flags=re.IGNORECASE).strip()
     try:
-        return json.loads(raw)
+        payload = json.loads(cleaned)
+        return payload if isinstance(payload, dict) else None
     except json.JSONDecodeError:
-        # Attempt to extract JSON object
-        match = re.search(r'\{.*\}', raw, re.DOTALL)
-        if match:
-            return json.loads(match.group())
-        return {"questions": [], "error": "Failed to parse quiz JSON"}
+        pass
+    decoder = json.JSONDecoder()
+    for position, char in enumerate(cleaned):
+        if char != "{":
+            continue
+        try:
+            payload, _ = decoder.raw_decode(cleaned[position:])
+        except json.JSONDecodeError:
+            continue
+        if isinstance(payload, dict):
+            return payload
+    return None
 
 
 def detect_misconception(provider, model, api_key, topic, user_text, correct_concept):
     system = MISCONCEPTION_SYSTEM
-    msg = f"Topic: {topic}\nUser said: {user_text}\nCorrect concept: {correct_concept}"
+    msg = (
+        f"Topic: {topic}\nLearner message: {user_text[:4000]}\n"
+        f"Tutor explanation: {correct_concept[:5000]}"
+    )
     messages = [{"role": "user", "content": msg}]
     raw = call_ai(provider, model, api_key, messages, system=system, max_tokens=512)
-    raw = re.sub(r"```(?:json)?|```", "", raw).strip()
-    try:
-        return json.loads(raw)
-    except Exception:
-        return {"has_misconception": False}
+    if _is_provider_error(raw):
+        raise RuntimeError(f"Misconception analysis failed: {raw[:500]}")
+    result = _parse_json_payload(raw)
+    if (not isinstance(result, dict)
+            or not isinstance(result.get("has_misconception"), bool)
+            or not isinstance(result.get("confidence"), (int, float))):
+        raise ValueError("Misconception analysis returned invalid JSON.")
+    result["confidence"] = max(0, min(1, float(result["confidence"])))
+    return result
 
 
 def generate_notes(provider, model, api_key, topic, session_summary):

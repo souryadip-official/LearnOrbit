@@ -1,11 +1,12 @@
 {% extends "base.html" %}
 {% block title %}{{ session.topic }}{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/learning-modes.css') }}" data-pjax-head />{% endblock %}
 {% block topbar_title %}<i data-lucide="brain" aria-hidden="true"></i> {{ session.topic[:40] }}{% endblock %}
 {% block loader_text %}Summoning your AI Professor…{% endblock %}
 
 {% block topbar_actions %}
 <span class="difficulty-badge" id="difficulty-badge">{{ session.difficulty_level }}</span>
-{% if session.status == 'active' %}
+{% if session.status in ('active', 'reviewing') %}
 <button class="btn-sm-danger" id="end-session-btn"><i data-lucide="flag" aria-hidden="true"></i><span>End session</span></button>
 {% else %}
 <span class="session-readonly-badge"><i data-lucide="lock-keyhole" aria-hidden="true"></i><span>Completed · Read only</span></span>
@@ -16,10 +17,59 @@
 <div class="chat-page">
   <div class="byob-toolbar">
     <div><strong>BYOB · Bring Your Own Book</strong><small>Upload topic notes as a text PDF to ground your tutor's answers.</small></div>
-    {% if session.status == 'active' %}<label class="btn-secondary byob-upload"><i data-lucide="paperclip"></i><span id="byob-label">Attach PDF</span><input id="byob-file" type="file" accept="application/pdf,.pdf" hidden></label>{% endif %}
+    {% if session.status in ('active', 'reviewing') %}<label class="btn-secondary byob-upload"><i data-lucide="paperclip"></i><span id="byob-label">Attach PDF</span><input id="byob-file" type="file" accept="application/pdf,.pdf" hidden></label>{% endif %}
     <button class="btn-sm hidden" id="open-pdf"><i data-lucide="panel-right-open"></i><span>Open preview</span></button>
   </div>
   <section class="document-library hidden" id="document-library" aria-label="Documents for this session"><strong><i data-lucide="files"></i> Session documents</strong><div id="document-list"></div></section>
+  <section class="feature-card tutor-learning-modes">
+    <details class="learning-modes-shell">
+      <summary><span class="learning-modes-title"><i data-lucide="messages-square"></i><span><strong>Advanced learning modes</strong><small>Practice explaining, challenging, and refining ideas</small></span></span><i class="mode-chevron" data-lucide="chevron-down" aria-hidden="true"></i></summary>
+      <p class="mode-guide">Choose a mode to open its guided workspace. Both remain available after you complete this tutor session and keep their activity separate from the tutor transcript.</p>
+      {% if current_user.plan == 'free' %}
+      <div class="feature-card mode-upgrade-note"><p>Two-agent debate and twin-student teach-back are included with Scholar and Academy.</p><a class="btn-primary" href="{{ url_for('features.pricing') }}">Explore learning plans</a></div>
+      {% else %}
+      <div class="learning-mode-grid">
+        <form id="debate-form" class="learning-mode-form debate-mode-form">
+          <details class="learning-mode-card">
+            <summary><span class="mode-card-icon debate-icon"><i data-lucide="swords"></i></span><span><strong>Two-agent debate</strong><small>Watch two perspectives challenge each other, one round at a time.</small></span><i class="mode-chevron" data-lucide="chevron-down" aria-hidden="true"></i></summary>
+            <div class="mode-card-content">
+              <label for="debate-claim">Choose a claim or question</label>
+              <textarea class="form-input" id="debate-claim" maxlength="800" required placeholder="Example: Should a larger sample always produce a more accurate result?"></textarea>
+              <div class="debate-stage" id="debate-stage" aria-live="polite"><span class="debate-orbit"><i data-lucide="sparkles"></i></span><span id="debate-stage-label">The agents are preparing their opening arguments…</span></div>
+              <div id="debate-output" class="debate-transcript" role="log" aria-live="polite" aria-relevant="additions text"></div>
+              <div class="mode-actions">
+                <button class="btn-primary" id="debate-start" type="submit"><i data-lucide="play"></i><span>Start the debate</span></button>
+                <button class="btn-secondary hidden" id="debate-continue" type="button"><i data-lucide="rotate-cw"></i><span>Continue debate</span></button>
+                <button class="btn-ghost hidden" id="debate-stop" type="button"><i data-lucide="circle-stop"></i><span>Finish here</span></button>
+              </div>
+            </div>
+          </details>
+        </form>
+        <form id="teach-back-form" class="learning-mode-form teach-back-form">
+          <details class="learning-mode-card">
+            <summary><span class="mode-card-icon teach-icon"><i data-lucide="messages-square"></i></span><span><strong>Twin-student teach-back</strong><small>Teach the idea; your twin asks follow-ups until it clicks.</small></span><i class="mode-chevron" data-lucide="chevron-down" aria-hidden="true"></i></summary>
+            <div class="mode-card-content">
+              <p class="mode-step-hint"><i data-lucide="list-checks"></i> Start with a short prompt, explain it in your own words, then respond to targeted follow-up questions.</p>
+              <div id="teach-back-prompt" class="teach-back-prompt mode-output markdown-body hidden"></div>
+              <div id="teach-back-feed" class="teach-back-transcript" role="log" aria-live="polite" aria-relevant="additions text"></div>
+              <div class="teach-back-composer">
+                <label for="teach-back-answer" class="sr-only">Explain the concept to your twin student</label>
+                <textarea class="form-input" id="teach-back-answer" maxlength="2500" minlength="20" disabled placeholder="Get a prompt to begin your teach-back…"></textarea>
+                <button class="btn-primary" id="teach-back-send" type="submit" disabled><i data-lucide="send"></i><span>Send explanation</span></button>
+              </div>
+              <div class="mode-actions teach-back-actions">
+                <button class="btn-secondary" id="teach-back-start" type="button"><i data-lucide="sparkles"></i><span>Get a teach-back prompt</span></button>
+                <button class="btn-secondary hidden" id="teach-back-restart" type="button"><i data-lucide="refresh-cw"></i><span>Try another concept</span></button>
+                <span id="teach-back-round" class="mode-round-count" aria-live="polite"></span>
+              </div>
+            </div>
+          </details>
+        </form>
+      </div>
+      <p class="small-muted mode-privacy-note">Responses use your selected AI provider. These exercises are separate from the saved tutor transcript.</p>
+      {% endif %}
+    </details>
+  </section>
   <div class="chat-workspace" id="chat-workspace">
   <aside class="pdf-pane hidden" id="pdf-pane"><div class="pdf-pane-head"><strong id="pdf-title">Study notes</strong><button class="btn-sm" id="pdf-narrow" aria-label="Narrow preview"><i data-lucide="minus"></i></button><button class="btn-sm" id="pdf-widen" aria-label="Widen preview"><i data-lucide="plus"></i></button><button class="btn-sm" id="close-pdf" aria-label="Close notes"><i data-lucide="x"></i><span>Close</span></button></div><iframe id="pdf-frame" title="Uploaded study notes"></iframe></aside>
   <div class="chat-column">
@@ -67,7 +117,7 @@
     {% endfor %}
 
     <!-- Typing indicator -->
-    {% if session.status == 'active' %}<div class="msg msg-assistant hidden" id="typing-indicator">
+    {% if session.status in ('active', 'reviewing') %}<div class="msg msg-assistant hidden" id="typing-indicator">
       <div class="msg-avatar"><i data-lucide="bot" aria-hidden="true"></i><span>Tutor</span></div>
       <div class="msg-body">
         <div class="typing-dots">
@@ -78,7 +128,7 @@
   </div>
 
   <!-- Chat input -->
-  {% if session.status == 'active' %}<div class="chat-input-bar">
+  {% if session.status in ('active', 'reviewing') %}<div class="chat-input-bar">
     <div class="chat-compose-tools">{% if temperature_supported %}<details class="temperature-control"><summary class="btn-secondary"><i data-lucide="sliders-horizontal"></i><span>Creativity</span><b id="temperature-value">0.7</b></summary><label for="temperature-slider">Response creativity <span>Focused ↔ imaginative</span><input id="temperature-slider" type="range" min="0" max="2" step="0.1" value="0.7"></label></details>{% else %}<span class="temperature-unavailable" title="This model does not accept a temperature setting."><i data-lucide="sliders-horizontal"></i> Creativity is not supported by this model</span>{% endif %}</div>
     <div class="chat-input-wrap">
       <textarea
@@ -105,7 +155,7 @@
   </div>
 
 <!-- End session confirm modal -->
-{% if session.status == 'active' %}<div class="modal-overlay hidden" id="end-modal">
+{% if session.status in ('active', 'reviewing') %}<div class="modal-overlay hidden" id="end-modal">
   <div class="modal-card animate__animated animate__zoomIn">
     <div class="modal-icon"><i data-lucide="flag" aria-hidden="true"></i></div>
     <h3>End this session?</h3>
@@ -127,6 +177,230 @@ let chatTemperature=Number(localStorage.getItem(MODEL_TEMP_KEY)||0.7);
 if(temperatureSlider){temperatureSlider.value=chatTemperature;document.getElementById('temperature-value').textContent=chatTemperature.toFixed(1);temperatureSlider.addEventListener('input',()=>{chatTemperature=Number(temperatureSlider.value);document.getElementById('temperature-value').textContent=chatTemperature.toFixed(1);localStorage.setItem(MODEL_TEMP_KEY,String(chatTemperature))})}
 // Flask-WTF exposes its request token in the base template meta tag.
 const CSRF = document.querySelector('meta[name="csrf-token"]')?.content || '';
+const sessionModeUrl = suffix => `/tutor/${SESSION_ID}/tools/${suffix}`;
+const modeRequest = async (url, body) => {
+  let response;
+  try {
+    response = await fetch(url, {
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-CSRFToken':CSRF},
+      body:JSON.stringify(body)
+    });
+  } catch (error) {
+    throw new Error('Could not reach LearnOrbit. Check your connection and try again.');
+  }
+  let data;
+  try {
+    data = await response.json();
+  } catch (error) {
+    throw new Error(`LearnOrbit returned an unreadable response (${response.status}). Refresh and try again.`);
+  }
+  if (!response.ok) {
+    throw new Error(data.error || `Learning mode request failed (${response.status}).`);
+  }
+  return data;
+};
+const setModeMarkdown=(node,content)=>{
+  node.innerHTML=renderMarkdownMath(escapeHtml(String(content||'')));
+  typesetMath(node);
+};
+const wait = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
+const debateForm = document.getElementById('debate-form');
+if (debateForm) {
+  const debateOutput = document.getElementById('debate-output');
+  const debateClaim = document.getElementById('debate-claim');
+  const debateStage = document.getElementById('debate-stage');
+  const debateStageLabel = document.getElementById('debate-stage-label');
+  const debateStart = document.getElementById('debate-start');
+  const debateContinue = document.getElementById('debate-continue');
+  const debateStop = document.getElementById('debate-stop');
+  let debateHistory = [];
+  let debateRound = 0;
+  let activeClaim = '';
+  let debateBusy = false;
+
+  function addDebateTurn(turn, round) {
+    const article = document.createElement('article');
+    article.className = `debate-turn debate-turn-${turn.agent}`;
+    article.style.setProperty('--turn-delay', `${Math.min(round * 80, 640)}ms`);
+    const heading = document.createElement('div');
+    heading.className = 'debate-turn-heading';
+    const icon = document.createElement('i');
+    icon.dataset.lucide = turn.agent === 'advocate' ? 'shield-plus' : 'scan-search';
+    icon.setAttribute('aria-hidden', 'true');
+    const label = document.createElement('strong');
+    label.textContent = turn.agent === 'advocate' ? 'Agent A · Advocate' : 'Agent B · Skeptic';
+    const roundLabel = document.createElement('span');
+    roundLabel.textContent = `Round ${round}`;
+    heading.append(icon, label, roundLabel);
+    const body = document.createElement('div');
+    body.className = 'debate-turn-body markdown-body';
+    setModeMarkdown(body, turn.content);
+    article.append(heading, body);
+    debateOutput.append(article);
+    window.refreshIcons?.();
+    article.scrollIntoView({behavior:'smooth', block:'nearest'});
+  }
+
+  async function runDebateRound() {
+    if (debateBusy) return;
+    debateBusy = true;
+    debateContinue.classList.add('hidden');
+    debateStop.classList.add('hidden');
+    debateStage.classList.add('is-thinking');
+    debateStage.classList.remove('hidden');
+    debateStart.disabled = true;
+    debateContinue.disabled = true;
+    try {
+      const result = await modeRequest(sessionModeUrl('debate'), {
+        claim:activeClaim,
+        round:debateRound + 1,
+        history:debateHistory.slice(-16),
+      });
+      for (const turn of result.turns) {
+        debateStageLabel.textContent = turn.agent === 'advocate'
+          ? 'Agent A is making a case…'
+          : 'Agent B is weighing the counterpoint…';
+        await wait(650);
+        debateRound = result.round;
+        debateHistory.push(turn);
+        addDebateTurn(turn, result.round);
+      }
+      debateStage.classList.remove('is-thinking');
+      debateStageLabel.textContent = 'Both agents have had their say. Continue for another round or finish here.';
+      debateContinue.classList.remove('hidden');
+      debateStop.classList.remove('hidden');
+    } catch (error) {
+      debateStage.classList.remove('is-thinking');
+      debateStageLabel.textContent = error.message;
+      debateContinue.classList.toggle('hidden', debateHistory.length === 0);
+      debateStop.classList.toggle('hidden', debateHistory.length === 0);
+    } finally {
+      debateBusy = false;
+      debateStart.disabled = false;
+      debateContinue.disabled = false;
+    }
+  }
+
+  debateForm.addEventListener('submit', event => {
+    event.preventDefault();
+    activeClaim = debateClaim.value.trim();
+    if (!activeClaim) return;
+    debateHistory = [];
+    debateRound = 0;
+    debateOutput.replaceChildren();
+    debateStart.querySelector('span').textContent = 'Restart debate';
+    runDebateRound();
+  });
+  debateContinue.addEventListener('click', runDebateRound);
+  debateStop.addEventListener('click', () => {
+    debateStage.classList.remove('is-thinking');
+    debateStageLabel.textContent = 'Debate paused. Your conversation remains here while you study.';
+    debateContinue.classList.add('hidden');
+    debateStop.classList.add('hidden');
+  });
+}
+
+let teachBackPrompt = '';
+let teachBackHistory = [];
+let teachBackIteration = 0;
+const teachBackForm = document.getElementById('teach-back-form');
+if (teachBackForm) {
+  const startButton = document.getElementById('teach-back-start');
+  const restartButton = document.getElementById('teach-back-restart');
+  const answerInput = document.getElementById('teach-back-answer');
+  const sendButton = document.getElementById('teach-back-send');
+  const promptOutput = document.getElementById('teach-back-prompt');
+  const feed = document.getElementById('teach-back-feed');
+  const roundLabel = document.getElementById('teach-back-round');
+
+  function addTeachBackMessage(role, content) {
+    const article = document.createElement('article');
+    article.className = `teach-back-message teach-back-message-${role}`;
+    const heading = document.createElement('strong');
+    heading.textContent = role === 'student' ? 'You' : 'Your twin student';
+    const body = document.createElement('div');
+    body.className = 'markdown-body';
+    setModeMarkdown(body, content);
+    article.append(heading, body);
+    feed.append(article);
+    article.scrollIntoView({behavior:'smooth', block:'nearest'});
+  }
+
+  async function startTeachBack() {
+    startButton.disabled = true;
+    promptOutput.classList.remove('hidden');
+    promptOutput.textContent = 'Finding a focused concept to teach…';
+    try {
+      const result = await modeRequest(sessionModeUrl('teach-back'), {action:'prompt'});
+      teachBackPrompt = result.reply;
+      teachBackHistory = [];
+      teachBackIteration = 0;
+      feed.replaceChildren();
+      setModeMarkdown(promptOutput, `### Your teaching challenge\n\n${teachBackPrompt}`);
+      answerInput.disabled = false;
+      sendButton.disabled = false;
+      answerInput.placeholder = 'Explain the idea as if helping a curious classmate…';
+      answerInput.focus();
+      sendButton.querySelector('span').textContent = 'Send explanation';
+      roundLabel.textContent = 'Your twin will ask follow-up questions.';
+      restartButton.classList.add('hidden');
+    } catch (error) {
+      promptOutput.textContent = error.message;
+    } finally {
+      startButton.disabled = false;
+    }
+  }
+
+  startButton.addEventListener('click', startTeachBack);
+  restartButton.addEventListener('click', startTeachBack);
+  teachBackForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    const answer = answerInput.value.trim();
+    if (answer.length < 20 || sendButton.disabled) return;
+    sendButton.disabled = true;
+    answerInput.disabled = true;
+    roundLabel.textContent = 'Your twin is checking the explanation…';
+    try {
+      const result = await modeRequest(sessionModeUrl('teach-back'), {
+        action:'feedback',
+        prompt:teachBackPrompt,
+        answer,
+        iteration:teachBackIteration + 1,
+        history:teachBackHistory.slice(-16),
+      });
+      teachBackIteration = result.iteration;
+      addTeachBackMessage('student', answer);
+      const reply = result.clear
+        ? `${result.feedback}\n\n**You both got it.** Your twin can now explain the concept back to you.`
+        : `${result.feedback}\n\n**Follow-up ${teachBackIteration}:** ${result.question}`;
+      addTeachBackMessage('twin', reply);
+      teachBackHistory.push(
+        {role:'student', content:answer},
+        {role:'twin', content:`${result.feedback}\n${result.question}`},
+      );
+      answerInput.value = '';
+      answerInput.disabled = result.clear;
+      sendButton.disabled = result.clear;
+      if (result.clear) {
+        roundLabel.textContent = `Concept clear after ${teachBackIteration} explanations.`;
+        sendButton.querySelector('span').textContent = 'Concept mastered';
+        restartButton.classList.remove('hidden');
+      } else {
+        roundLabel.textContent = `Explanation ${teachBackIteration} · respond to the follow-up to keep teaching.`;
+        answerInput.placeholder = 'Answer your twin’s follow-up in your own words…';
+        sendButton.querySelector('span').textContent = 'Answer follow-up';
+        answerInput.disabled = false;
+        sendButton.disabled = false;
+        answerInput.focus();
+      }
+    } catch (error) {
+      roundLabel.textContent = error.message;
+      answerInput.disabled = false;
+      sendButton.disabled = false;
+    }
+  });
+}
 const docInput = document.getElementById('byob-file');
 const openPdf = document.getElementById('open-pdf');
 const pdfPane = document.getElementById('pdf-pane');
@@ -168,7 +442,7 @@ function scrollToBottom() {
 scrollToBottom();
 
 // Auto-resize textarea
-{% if session.status == 'active' %}
+{% if session.status in ('active', 'reviewing') %}
 const textarea = document.getElementById('chat-input');
 textarea.addEventListener('input', function() {
   this.style.height = 'auto';
@@ -183,15 +457,17 @@ textarea.addEventListener('keydown', e => {
 
 document.getElementById('send-btn').addEventListener('click', sendMessage);
 
-async function sendMessage() {
-  const text = textarea.value.trim();
+async function sendMessage(prefill = null) {
+  const text = (prefill ?? textarea.value).trim();
   if (!text) return;
 
   // Add user bubble immediately
   addMessage('user', text);
-  textarea.value = '';
-  textarea.style.height = 'auto';
-  document.getElementById('char-count').textContent = '0/2000';
+  if (prefill === null) {
+    textarea.value = '';
+    textarea.style.height = 'auto';
+    document.getElementById('char-count').textContent = '0/2000';
+  }
 
   // Show typing indicator
   document.getElementById('typing-indicator').classList.remove('hidden');
@@ -211,7 +487,7 @@ async function sendMessage() {
 
     if (json.error) { showToast(json.error, 'error'); return; }
 
-    addMessage('assistant', json.reply);
+    await addMessage('assistant', json.reply);
 
     // Update difficulty badge
     if (json.difficulty) {
@@ -235,7 +511,7 @@ async function sendMessage() {
   }
 }
 
-function addMessage(role, content) {
+async function addMessage(role, content) {
   const msgs = document.getElementById('chat-messages');
   const div = document.createElement('div');
   div.className = `msg msg-${role} animate__animated animate__fadeIn`;
@@ -244,7 +520,7 @@ function addMessage(role, content) {
     div.innerHTML = `
       <div class="msg-avatar"><i data-lucide="bot" aria-hidden="true"></i><span>Tutor</span></div>
       <div class="msg-body">
-        <div class="msg-content markdown-body">${renderContent(content)}</div>
+        <div class="msg-content markdown-body"></div>
         <div class="msg-time">${now}</div>
       </div>`;
   } else {
@@ -259,6 +535,8 @@ function addMessage(role, content) {
   const indicator = document.getElementById('typing-indicator');
   msgs.insertBefore(div, indicator);
   window.refreshIcons?.();
+  const contentNode = div.querySelector('.msg-content');
+  contentNode.innerHTML = role === 'assistant' ? renderContent(content) : escapeHtml(content);
   typesetMath(div);
   scrollToBottom();
 }
@@ -314,6 +592,13 @@ document.getElementById('confirm-end').addEventListener('click', async () => {
     }
   } catch { showToast('Error ending session', 'error'); }
 });
+{% endif %}
+{% if reteach_prompt %}
+const reviewKey = `learnorbit-review-${SESSION_ID}`;
+if (!sessionStorage.getItem(reviewKey)) {
+  sessionStorage.setItem(reviewKey, 'started');
+  sendMessage({{ reteach_prompt|tojson }});
+}
 {% endif %}
 </script>
 {% endblock %}

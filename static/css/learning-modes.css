@@ -1,0 +1,446 @@
+.tutor-learning-modes {
+  padding: 0;
+  overflow: hidden;
+}
+
+.learning-modes-shell > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px 20px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.learning-modes-shell > summary::-webkit-details-marker,
+.learning-mode-card > summary::-webkit-details-marker {
+  display: none;
+}
+
+.learning-modes-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.learning-modes-title > svg {
+  color: var(--brand);
+  flex: 0 0 auto;
+}
+
+.learning-modes-title > span,
+.learning-mode-card > summary > span:nth-child(2) {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.learning-modes-title small,
+.learning-mode-card > summary small {
+  color: var(--text-2);
+  font-size: .78rem;
+  font-weight: 500;
+}
+
+.mode-chevron {
+  width: 19px;
+  height: 19px;
+  color: var(--text-2);
+  flex: 0 0 auto;
+  transition: transform .22s ease;
+}
+
+.learning-modes-shell[open] > summary .mode-chevron,
+.learning-mode-card[open] > summary .mode-chevron {
+  transform: rotate(180deg);
+}
+
+.learning-modes-shell > .mode-guide,
+.learning-modes-shell > .learning-mode-grid,
+.learning-modes-shell > .mode-privacy-note,
+.learning-modes-shell > .mode-upgrade-note {
+  margin-inline: 20px;
+}
+
+.learning-modes-shell > .mode-guide {
+  margin-top: 0;
+  margin-bottom: 14px;
+  color: var(--text-2);
+}
+
+.learning-mode-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+
+.learning-mode-form {
+  min-width: 0;
+  margin: 0;
+}
+
+.learning-mode-card {
+  min-width: 0;
+  border: 1.5px solid var(--border);
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: 2px 3px 0 color-mix(in srgb, var(--border) 65%, transparent);
+  overflow: hidden;
+}
+
+.learning-mode-card > summary {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) 20px;
+  align-items: center;
+  gap: 12px;
+  min-height: 78px;
+  padding: 14px 16px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.mode-card-icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  color: var(--brand);
+  background: var(--bg-3);
+}
+
+.mode-card-icon svg {
+  width: 21px;
+  height: 21px;
+}
+
+.debate-icon {
+  color: #a14660;
+  background: color-mix(in srgb, #d95873 12%, var(--surface));
+}
+
+.teach-icon {
+  color: #426aa9;
+  background: color-mix(in srgb, #4585d6 12%, var(--surface));
+}
+
+.mode-card-content {
+  display: grid;
+  gap: 12px;
+  padding: 0 16px 16px;
+  animation: mode-reveal .24s ease both;
+}
+
+.mode-card-content textarea {
+  width: 100%;
+  min-height: 88px;
+  resize: vertical;
+}
+
+.mode-card-content > label:not(.sr-only) {
+  font-size: .82rem;
+  font-weight: 750;
+}
+
+.mode-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.mode-actions > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+}
+
+.mode-actions svg,
+.teach-back-composer button svg {
+  width: 17px;
+  height: 17px;
+}
+
+.mode-step-hint {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 0;
+  color: var(--text-2);
+  font-size: .8rem;
+  line-height: 1.5;
+}
+
+.mode-step-hint svg {
+  flex: 0 0 auto;
+  width: 16px;
+  color: var(--brand);
+}
+
+.mode-output,
+.debate-transcript,
+.teach-back-transcript {
+  min-width: 0;
+}
+
+.debate-stage {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  background: var(--bg-2);
+  color: var(--text-2);
+  font-size: .8rem;
+}
+
+.debate-orbit {
+  position: relative;
+  display: grid;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--accent-light);
+  color: var(--brand);
+}
+
+.debate-orbit svg {
+  width: 15px;
+}
+
+.debate-stage.is-thinking .debate-orbit {
+  animation: debate-orbit .8s ease-in-out infinite alternate;
+}
+
+.debate-stage.is-thinking .debate-orbit::before,
+.debate-stage.is-thinking .debate-orbit::after {
+  position: absolute;
+  top: 9px;
+  width: 8px;
+  height: 8px;
+  content: "";
+  border-radius: 50%;
+  background: #d95873;
+  animation: debate-clash .9s ease-in-out infinite alternate;
+}
+
+.debate-stage.is-thinking .debate-orbit::before {
+  left: -8px;
+}
+
+.debate-stage.is-thinking .debate-orbit::after {
+  right: -8px;
+  background: #4585d6;
+  animation-delay: .2s;
+}
+
+.debate-transcript,
+.teach-back-transcript {
+  display: grid;
+  gap: 11px;
+  max-height: 430px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.debate-turn {
+  min-width: 0;
+  padding: 12px 13px;
+  border: 1px solid color-mix(in srgb, #d95873 35%, var(--border));
+  border-radius: 14px 14px 14px 5px;
+  background: color-mix(in srgb, #d95873 7%, var(--surface));
+  animation: debate-turn-in .38s cubic-bezier(.2,.8,.2,1) both;
+  animation-delay: var(--turn-delay, 0ms);
+}
+
+.debate-turn-skeptic {
+  margin-left: clamp(0px, 5%, 28px);
+  border-color: color-mix(in srgb, #4585d6 38%, var(--border));
+  border-radius: 14px 14px 5px 14px;
+  background: color-mix(in srgb, #4585d6 8%, var(--surface));
+}
+
+.debate-turn-heading {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 7px;
+  font-size: .8rem;
+}
+
+.debate-turn-heading svg {
+  width: 16px;
+  color: #b34f68;
+}
+
+.debate-turn-skeptic .debate-turn-heading svg {
+  color: #477bb9;
+}
+
+.debate-turn-heading > span {
+  margin-left: auto;
+  color: var(--text-2);
+  font-size: .7rem;
+}
+
+.debate-turn-body,
+.teach-back-message .markdown-body {
+  font-size: .86rem;
+  line-height: 1.58;
+  overflow-wrap: anywhere;
+}
+
+.debate-turn-body > :last-child,
+.teach-back-message .markdown-body > :last-child {
+  margin-bottom: 0;
+}
+
+.teach-back-prompt {
+  padding: 11px 13px;
+  border: 1px solid color-mix(in srgb, var(--brand) 32%, var(--border));
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--brand) 7%, var(--surface));
+}
+
+.teach-back-prompt h3 {
+  margin: 0 0 5px;
+  font-size: .92rem;
+}
+
+.teach-back-transcript:empty {
+  display: none;
+}
+
+.teach-back-message {
+  max-width: 94%;
+  padding: 11px 13px;
+  border: 1px solid var(--border);
+  border-radius: 15px 15px 15px 5px;
+  background: var(--bg-2);
+  animation: debate-turn-in .32s ease both;
+}
+
+.teach-back-message-student {
+  justify-self: end;
+  border-radius: 15px 15px 5px 15px;
+  background: color-mix(in srgb, var(--brand) 11%, var(--surface));
+}
+
+.teach-back-message > strong {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--brand);
+  font-size: .76rem;
+}
+
+.teach-back-composer {
+  display: grid;
+  gap: 9px;
+}
+
+.teach-back-composer textarea {
+  min-height: 96px;
+}
+
+.teach-back-composer button {
+  display: inline-flex;
+  justify-self: start;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+}
+
+.mode-round-count {
+  color: var(--text-2);
+  font-size: .76rem;
+}
+
+.mode-privacy-note {
+  padding-block: 12px 15px;
+}
+
+@keyframes mode-reveal {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes debate-turn-in {
+  from { opacity: 0; transform: translateY(9px) scale(.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes debate-orbit {
+  from { transform: scale(.9) rotate(-10deg); }
+  to { transform: scale(1.08) rotate(10deg); }
+}
+
+@keyframes debate-clash {
+  from { transform: translateX(-3px); }
+  to { transform: translateX(4px); }
+}
+
+@media (max-width: 900px) {
+  .learning-mode-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .learning-modes-shell > summary {
+    padding: 14px;
+  }
+
+  .learning-modes-shell > .mode-guide,
+  .learning-modes-shell > .learning-mode-grid,
+  .learning-modes-shell > .mode-privacy-note,
+  .learning-modes-shell > .mode-upgrade-note {
+    margin-inline: 12px;
+  }
+
+  .learning-mode-card > summary {
+    grid-template-columns: 38px minmax(0, 1fr) 18px;
+    gap: 9px;
+    padding: 12px;
+  }
+
+  .mode-card-icon {
+    width: 38px;
+    height: 38px;
+  }
+
+  .mode-card-content {
+    padding-inline: 12px;
+  }
+
+  .mode-actions > button,
+  .teach-back-composer button {
+    flex: 1 1 auto;
+  }
+
+  .debate-transcript,
+  .teach-back-transcript {
+    max-height: 360px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mode-card-content,
+  .debate-turn,
+  .teach-back-message,
+  .debate-stage.is-thinking .debate-orbit,
+  .debate-stage.is-thinking .debate-orbit::before,
+  .debate-stage.is-thinking .debate-orbit::after {
+    animation: none;
+  }
+}

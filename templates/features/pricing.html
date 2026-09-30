@@ -1,3 +1,84 @@
-{% extends "base.html" %}{% block title %}Plans & Billing{% endblock %}{% block topbar_title %}<i data-lucide="badge-dollar-sign"></i> Plans & Billing{% endblock %}
-{% block content %}<section class="feature-page"><h1>Choose your learning plan</h1><p>Checkout is a demonstration flow only. No real payment is collected.</p>{% if subscription %}<div class="feature-card"><h2>{{ active_plan_name }} plan · {{ subscription.status|title }}</h2><p>Current period ends {{ subscription.current_period_end.strftime('%B %d, %Y') }}{% if subscription.cancel_at_period_end %} · Cancellation scheduled{% endif %}</p>{% if not subscription.cancel_at_period_end %}<button class="btn-danger" id="cancel-plan">Cancel at period end</button>{% endif %}</div>{% endif %}<div class="feature-form-grid">{% for key,plan in plans.items() %}<article class="feature-card plan-card"><h2>{{ plan[1] }}</h2><p class="plan-price"><strong>${{ '%.2f'|format(plan[0]) }}</strong> / 30 days</p><ul><li>More learning sessions and quizzes</li><li>Notes in your private learning workspace</li><li>BYOB split screen</li><li>Practice Code workspace</li></ul><a class="btn-primary" href="{{ url_for('features.checkout_page',plan=key) }}">Choose {{ plan[1] }}<i data-lucide="arrow-right"></i></a></article>{% endfor %}</div></section>{% endblock %}
-{% block scripts %}<script>document.getElementById('cancel-plan')?.addEventListener('click',async()=>{const r=await fetch('/features/subscription/cancel',{method:'POST',headers:{'X-CSRFToken':document.querySelector('meta[name="csrf-token"]')?.content||''}});const d=await r.json();showToast(d.message||d.error,r.ok?'success':'error');if(r.ok)setTimeout(()=>location.reload(),1000)});</script>{% endblock %}
+{% extends "base.html" %}
+{% block title %}Plans & Billing{% endblock %}
+{% block topbar_title %}<i data-lucide="badge-dollar-sign"></i> Plans & Billing{% endblock %}
+{% block content %}
+<section class="feature-page billing-page">
+  <header class="billing-intro">
+    <span class="billing-eyebrow">Plans that unlock more ways to learn</span>
+    <h1>Choose the support that fits your learning</h1>
+    <p>Compare what each plan actually unlocks. Checkout is a demo and no real payment is collected.</p>
+  </header>
+  {% if subscription %}
+  <div class="feature-card billing-current">
+    <i data-lucide="badge-check"></i>
+    <div><strong>Your current plan: {{ active_plan_name }}</strong><p>Plan status: {{ subscription.status|title }} · Current period ends {{ subscription.current_period_end.strftime('%B %d, %Y') }}{% if subscription.cancel_at_period_end %} · Cancellation scheduled{% endif %}</p></div>
+    {% if not subscription.cancel_at_period_end %}<button class="btn-danger" id="cancel-plan">Cancel at period end</button>{% endif %}
+  </div>
+  {% else %}
+  <div class="billing-current"><i data-lucide="circle-check"></i><span>Explorer is your current default plan. No action is needed to stay on Free.</span></div>
+  {% endif %}
+  <div class="billing-grid">
+    <article class="feature-card plan-card {% if current_user.plan == 'free' %}plan-current{% endif %}">
+      <span class="plan-kicker">Start here</span><h2>Explorer</h2>
+      <p class="plan-price"><strong>$0</strong><span>forever</span></p>
+      <p>Core learning tools to build a steady study habit.</p>
+      <ul>
+        <li><i data-lucide="check"></i>3 tutor sessions per day</li>
+        <li><i data-lucide="check"></i>1 starter quiz per session, with MCQ, MSQ, and written questions</li>
+        <li><i data-lucide="check"></i>Examiner-intent blueprint after every submitted assessment</li>
+        <li><i data-lucide="check"></i>10-day recall test for each completed session</li>
+        <li><i data-lucide="check"></i>All brain games and the study calendar</li>
+        <li><i data-lucide="check"></i>Session notes saved to your account</li>
+        <li><i data-lucide="check"></i>Study rhythm chart and topic mastery</li>
+        <li class="plan-excluded"><i data-lucide="minus"></i>Practice Code and PDF preview</li>
+        <li class="plan-excluded"><i data-lucide="minus"></i>Advanced confidence and recall analytics</li>
+      </ul>
+      <span class="plan-current-label">{% if current_user.plan == 'free' %}Your current plan · no selection needed{% else %}Included as the free starting tier{% endif %}</span>
+    </article>
+    {% for key,plan in plans.items() %}
+    <article class="feature-card plan-card {% if key == 'pro' %}plan-popular{% endif %} {% if current_user.plan == key %}plan-current{% endif %}">
+      {% if key == 'pro' %}<span class="plan-kicker">For focused independent study</span>{% else %}<span class="plan-kicker">For evidence-led learning</span>{% endif %}
+      <h2>{{ plan[1] }}</h2>
+      <p class="plan-price"><strong>${{ '%.2f'|format(plan[0]) }}</strong><span>/ 30 days</span></p>
+      {% if key == 'pro' %}
+      <p>Everything in Explorer, with room to study without daily limits.</p>
+      <ul>
+        <li><i data-lucide="check"></i>Everything in Explorer</li>
+        <li><i data-lucide="check"></i>Unlimited tutor sessions and quizzes</li>
+        <li><i data-lucide="check"></i>Split-screen study and PDF preview</li>
+        <li><i data-lucide="check"></i>Practice Code workspace</li>
+        <li><i data-lucide="check"></i>Scholar Study Rooms and shared text chat</li>
+        <li><i data-lucide="check"></i>20-question, 30-minute exams with objective-only negative marking</li>
+        <li><i data-lucide="check"></i>Unlimited practice retries plus per-session 10-day recall checks</li>
+        <li><i data-lucide="check"></i>Partial-credit written answers graded against a three-part rubric</li>
+        <li><i data-lucide="check"></i>Two-agent debate and twin-student teach-back</li>
+        <li><i data-lucide="check"></i>Saved notes across your sessions</li>
+        <li class="plan-excluded"><i data-lucide="minus"></i>Advanced confidence and recall analytics</li>
+      </ul>
+      {% else %}
+      <p>Everything in Scholar, plus advanced evidence from your learning activity.</p>
+      <ul>
+        <li><i data-lucide="check"></i>Everything in Scholar</li>
+        <li><i data-lucide="check"></i>Confidence calibration from quiz self-ratings</li>
+        <li><i data-lucide="check"></i>Recall accuracy with sample-size evidence</li>
+        <li><i data-lucide="check"></i>Transparent metric definitions on your dashboard</li>
+        <li><i data-lucide="check"></i>Global brain-game leaderboards</li>
+        <li class="plan-excluded"><i data-lucide="minus"></i>Team seats, shared dashboards, or admin tools are not currently included</li>
+      </ul>
+      {% endif %}
+      {% if current_user.plan == key %}
+      <span class="plan-current-label">Your current plan</span>
+      {% else %}
+      <a class="btn-primary plan-select" href="{{ url_for('features.checkout_page',plan=key) }}">Choose {{ plan[1] }}<i data-lucide="arrow-right"></i></a>
+      {% endif %}
+    </article>
+    {% endfor %}
+  </div>
+  <p class="billing-footnote"><i data-lucide="shield-check"></i> Demonstration billing only. Plan access is enforced in the app; no card is charged.</p>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+document.getElementById('cancel-plan')?.addEventListener('click',async()=>{const r=await fetch('/features/subscription/cancel',{method:'POST',headers:{'X-CSRFToken':document.querySelector('meta[name="csrf-token"]')?.content||''}});const d=await r.json();showToast(d.message||d.error,r.ok?'success':'error');if(r.ok)setTimeout(()=>location.reload(),1000)});
+</script>
+{% endblock %}

@@ -14,6 +14,7 @@
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body class="landing-body">
+  {% if request.args.get('logged_out') == '1' %}<div id="landing-toast" role="status">See you next time! Keep learning.</div><script>history.replaceState(null,'',location.pathname+location.hash);</script>{% endif %}
 
   <!-- Animated starfield background -->
   <canvas id="starfield" class="starfield-canvas"></canvas>
@@ -28,6 +29,7 @@
       <div class="nav-links">
         <a href="#features" class="nav-link">Features</a>
         <a href="#how-it-works" class="nav-link">How it Works</a>
+        <a href="#faqs" class="nav-link">FAQs</a>
         <a href="#pricing" class="nav-link">Pricing</a>
         <a href="#games" class="nav-link">Brain Games</a>
       </div>
@@ -43,6 +45,8 @@
   <!-- Mobile nav drawer -->
   <div class="mobile-nav" id="mobile-nav">
     <a href="#features">Features</a>
+    <a href="#how-it-works">Learning cycle</a>
+    <a href="#faqs">FAQs</a>
     <a href="#pricing">Pricing</a>
     <a href="{{ url_for('auth.login') }}">Log In</a>
     <a href="{{ url_for('auth.register') }}" class="btn-primary-landing">Start Free</a>
@@ -151,11 +155,35 @@
     </div>
   </section>
 
+  <section class="tour-section">
+    <div class="section-container">
+      <div class="section-header">
+        <h2 class="section-title">A guided tour of your learning loop</h2>
+        <p class="section-sub">Every tool is connected to the same goal: help you understand, retrieve, and remember.</p>
+      </div>
+      <div class="tour-grid">
+        <article class="tour-card"><span class="tour-number">01</span><i data-lucide="messages-square"></i><h3>Learn in conversation</h3><p>Choose a topic and ask questions in your own words. The tutor adapts its explanations to your level, uses examples, and helps surface misunderstandings.</p></article>
+        <article class="tour-card"><span class="tour-number">02</span><i data-lucide="scan-search"></i><h3>Find what needs work</h3><p>Session quizzes check understanding across difficulty levels. Review explanations for each answer and revisit weak concepts with the tutor.</p></article>
+        <article class="tour-card"><span class="tour-number">03</span><i data-lucide="chart-no-axes-combined"></i><h3>See evidence of progress</h3><p>Review topic mastery, attendance, quiz performance, and—on Academy—confidence calibration and recall evidence from your quiz answers.</p></article>
+      </div>
+    </div>
+  </section>
+
   <!-- How it works -->
   <section class="how-section" id="how-it-works">
     <div class="section-container">
       <div class="section-header">
-        <h2 class="section-title">From zero to mastery in one session</h2>
+        <h2 class="section-title">Learning is a cycle, not a one-time answer</h2>
+        <p class="section-sub">LearnOrbit turns each study session into a repeatable loop of explanation, practice, feedback, and reflection.</p>
+      </div>
+      <div class="learning-cycle" role="list" aria-label="LearnOrbit learning cycle">
+        <article role="listitem"><span class="cycle-icon"><i data-lucide="book-open-check"></i></span><strong>Learn</strong><p>Build a foundation with a tutor that adapts to your questions.</p></article>
+        <span class="cycle-arrow" aria-hidden="true">→</span>
+        <article role="listitem"><span class="cycle-icon"><i data-lucide="brain"></i></span><strong>Retrieve</strong><p>Recall ideas without looking at your notes through a quiz.</p></article>
+        <span class="cycle-arrow" aria-hidden="true">→</span>
+        <article role="listitem"><span class="cycle-icon"><i data-lucide="messages-square"></i></span><strong>Repair</strong><p>Use answer explanations and focused tutor review to clear weak concepts.</p></article>
+        <span class="cycle-arrow" aria-hidden="true">→</span>
+        <article role="listitem"><span class="cycle-icon"><i data-lucide="rotate-cw"></i></span><strong>Revisit</strong><p>Return to your sessions, notes, and mastery record as you keep learning.</p></article>
       </div>
       <div class="steps-flow">
         <div class="step-item">
@@ -216,6 +244,19 @@
     </div>
   </section>
 
+  <section class="faq-section" id="faqs">
+    <div class="section-container">
+      <div class="section-header"><h2 class="section-title">Frequently asked questions</h2><p class="section-sub">A few useful details before your first session.</p></div>
+      <div class="faq-list">
+        <details><summary>What do I need to start learning?</summary><p>Create an account, select a supported AI provider, and add your own provider API key in Settings. LearnOrbit sends tutor requests through its backend to that provider.</p></details>
+        <details><summary>Can I learn any subject?</summary><p>Start a session with a topic of your choice. The tutor can explain concepts, work through examples, and answer follow-up questions. Always verify high-stakes information with a trusted source.</p></details>
+        <details><summary>How does LearnOrbit measure progress?</summary><p>Session history, quiz results, and topic mastery are based on activity saved to your account. Academy adds confidence and recall summaries with the calculation evidence shown alongside them.</p></details>
+        <details><summary>Are subscriptions and payments live?</summary><p>No. The billing screen is a demonstration checkout and does not collect or process real payments. A plan change only controls features within this app.</p></details>
+        <details><summary>Are my notes and conversations public?</summary><p>Your learning sessions and notes are tied to your account. Do not enter sensitive personal information into a chat; requests are also sent to the AI provider configured for your account.</p></details>
+      </div>
+    </div>
+  </section>
+
   <!-- Pricing -->
   <section class="pricing-section" id="pricing">
     <div class="section-container">
@@ -230,11 +271,11 @@
           <ul class="plan-features">
             <li><i data-lucide="circle-check" aria-hidden="true"></i><span>3 tutor sessions/day</span></li>
             <li><i data-lucide="circle-check" aria-hidden="true"></i><span>Unlimited Q&amp;A within sessions</span></li>
-            <li><i data-lucide="circle-check" aria-hidden="true"></i><span>Quiz engine</span></li>
+            <li><i data-lucide="circle-check" aria-hidden="true"></i><span>One quiz attempt per session</span></li>
             <li><i data-lucide="circle-check" aria-hidden="true"></i><span>All 8 brain games</span></li>
             <li><i data-lucide="circle-check" aria-hidden="true"></i><span>Mastery tracking</span></li>
-            <li><i data-lucide="circle-x" aria-hidden="true"></i><span>PDF notes export</span></li>
-            <li><i data-lucide="circle-x" aria-hidden="true"></i><span>Split screen mode</span></li>
+            <li><i data-lucide="circle-x" aria-hidden="true"></i><span>PDF preview and split screen</span></li>
+            <li><i data-lucide="circle-x" aria-hidden="true"></i><span>Practice Code workspace</span></li>
           </ul>
           <a href="{{ url_for('auth.register') }}" class="btn-plan">Get Started Free</a>
         </div>
@@ -243,13 +284,14 @@
           <div class="plan-name">Scholar</div>
           <div class="plan-price"><span class="price-num">$9.99</span><span class="price-period">/mo</span></div>
           <ul class="plan-features">
-            <li><i data-lucide="circle-check" aria-hidden="true"></i><span>Unlimited sessions</span></li>
+            <li><i data-lucide="circle-check" aria-hidden="true"></i><span>Everything in Explorer</span></li>
+            <li><i data-lucide="circle-check" aria-hidden="true"></i><span>Unlimited tutor sessions</span></li>
             <li><i data-lucide="circle-check" aria-hidden="true"></i><span>Unlimited quizzes</span></li>
-            <li><i data-lucide="circle-check" aria-hidden="true"></i><span>Private notes in your learning workspace</span></li>
             <li><i data-lucide="circle-check" aria-hidden="true"></i><span>Split screen mode</span></li>
-            <li><i data-lucide="circle-check" aria-hidden="true"></i><span>All games</span></li>
-            <li><i data-lucide="circle-check" aria-hidden="true"></i><span>Advanced mastery analytics</span></li>
-            <li><i data-lucide="circle-check" aria-hidden="true"></i><span>Priority AI responses</span></li>
+            <li><i data-lucide="circle-check" aria-hidden="true"></i><span>PDF preview and Practice Code</span></li>
+            <li><i data-lucide="circle-check" aria-hidden="true"></i><span>Study Rooms, timed exams, spaced review, debate and teach-back</span></li>
+            <li><i data-lucide="circle-check" aria-hidden="true"></i><span>Unlimited quiz attempts</span></li>
+            <li><i data-lucide="circle-x" aria-hidden="true"></i><span>Advanced confidence and recall analytics</span></li>
           </ul>
           <a href="{{ url_for('auth.register') }}" class="btn-plan btn-plan-featured">Start Scholar</a>
         </div>
@@ -258,12 +300,11 @@
           <div class="plan-price"><span class="price-num">$24.99</span><span class="price-period">/mo</span></div>
           <ul class="plan-features">
             <li><i data-lucide="circle-check" aria-hidden="true"></i><span>Everything in Scholar</span></li>
-            <li><i data-lucide="circle-check" aria-hidden="true"></i><span>Up to 10 team members</span></li>
-            <li><i data-lucide="circle-check" aria-hidden="true"></i><span>Shared mastery dashboards</span></li>
-            <li><i data-lucide="circle-check" aria-hidden="true"></i><span>Curriculum builder (coming soon)</span></li>
-            <li><i data-lucide="circle-check" aria-hidden="true"></i><span>Dedicated support</span></li>
-            <li><i data-lucide="circle-check" aria-hidden="true"></i><span>Custom branding on PDFs</span></li>
-            <li><i data-lucide="circle-check" aria-hidden="true"></i><span>API access</span></li>
+            <li><i data-lucide="circle-check" aria-hidden="true"></i><span>Everything in Scholar</span></li>
+            <li><i data-lucide="circle-check" aria-hidden="true"></i><span>Confidence calibration from quiz self-ratings</span></li>
+            <li><i data-lucide="circle-check" aria-hidden="true"></i><span>Recall accuracy with question-count evidence</span></li>
+            <li><i data-lucide="circle-check" aria-hidden="true"></i><span>Calculation definitions alongside dashboard metrics</span></li>
+            <li><i data-lucide="circle-check" aria-hidden="true"></i><span>Global brain-game leaderboard</span></li>
           </ul>
           <a href="{{ url_for('auth.register') }}" class="btn-plan">Get Academy</a>
         </div>
@@ -291,7 +332,7 @@
       </div>
       <p class="footer-tagline">Adaptive AI Learning Intelligence — because understanding beats memorising.</p>
       <div class="footer-links"><div><strong>Explore</strong><a href="#features">Learning tools</a><a href="#how-it-works">How it works</a><a href="#pricing">Plans</a></div><div><strong>Your account</strong><a href="{{ url_for('auth.login') }}">Log in</a><a href="{{ url_for('auth.register') }}">Create account</a></div><div><strong>Learning promise</strong><span>Mastery over message volume</span><span>Bring your own learning material</span></div></div>
-      <p class="footer-credit">Designed and built by <strong>Souryadip Mallick</strong> · <a href="https://www.linkedin.com/in/souryadip-mallick-03b303294/" target="_blank" rel="noopener noreferrer"><i data-lucide="linkedin" aria-hidden="true"></i><span>Connect on LinkedIn</span></a> · <a href="https://github.com/souryadip-official/" target="_blank" rel="noopener noreferrer"><i data-lucide="coffee" aria-hidden="true"></i><span>Buy me a coffee</span></a></p>
+      <div class="footer-credit"><span class="footer-built">Designed and built by <strong>Souryadip Mallick</strong></span><div class="footer-credit-links"><a href="https://www.linkedin.com/in/souryadip-mallick-03b303294/" target="_blank" rel="noopener noreferrer"><i data-lucide="linkedin" aria-hidden="true"></i><span>Connect on LinkedIn</span></a><a href="https://github.com/souryadip-official/" target="_blank" rel="noopener noreferrer"><i data-lucide="coffee" aria-hidden="true"></i><span>Buy me a coffee</span></a></div></div>
       <p class="footer-copy">© 2026 LearnOrbit · AI APIs: OpenAI, Google Gemini, Anthropic, xAI and Hugging Face · Code runner: Judge0 · Icons: Lucide · Math: MathJax · Charts: LearnOrbit Canvas plotter. Subscription screens are demonstrative until a billing provider is connected.</p>
     </div>
   </footer>
@@ -301,6 +342,7 @@
   <script src="{{ url_for('static', filename='js/main.js') }}"></script>
   <script src="{{ url_for('static', filename='js/landing.js') }}"></script>
   <script>
+    try { const accent=localStorage.getItem('learnorbit-accent'); if(accent) document.documentElement.dataset.accent=accent; } catch(e) {}
     window.refreshIcons = () => window.lucide?.createIcons();
     window.setLucideIcon = (node, name) => {
       if (!node) return;

@@ -205,8 +205,7 @@ def resend_otp():
 @login_required
 def logout():
     logout_user()
-    flash("See you next time! Keep learning.", "info")
-    return redirect(url_for("index"))
+    return redirect(url_for("index", logged_out="1"))
 
 
 @auth_bp.route("/settings", methods=["GET", "POST"])

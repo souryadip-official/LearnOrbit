@@ -197,6 +197,27 @@ class QuizAttempt(db.Model):
         self.questions_json = json.dumps(value)
 
 
+class QuizGeneration(db.Model):
+    __tablename__ = "quiz_generations"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    session_id = db.Column(db.Integer, db.ForeignKey("learning_sessions.id"), nullable=False, index=True)
+    generation_key = db.Column(db.String(64), nullable=False, unique=True)
+    mode = db.Column(db.String(16), nullable=False, default="quiz")
+    questions_json = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    submitted_at = db.Column(db.DateTime)
+
+    @property
+    def questions(self):
+        return json.loads(self.questions_json or "[]")
+
+    @questions.setter
+    def questions(self, value):
+        self.questions_json = json.dumps(value)
+
+
 # ---------------------------------------------------------------------------
 # Topic Mastery
 # ---------------------------------------------------------------------------
@@ -385,3 +406,86 @@ class EmailOTP(db.Model):
     code_hash = db.Column(db.String(256), nullable=False)
     expires_at = db.Column(db.DateTime, nullable=False)
     attempts = db.Column(db.Integer, default=0)
+
+
+class TopicReviewSchedule(db.Model):
+    """A transparent, user-driven reminder interval for a studied topic."""
+
+    __tablename__ = "topic_review_schedules"
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "topic_slug", name="uq_topic_review_user_topic"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    topic = db.Column(db.String(256), nullable=False)
+    topic_slug = db.Column(db.String(256), nullable=False)
+    repetitions = db.Column(db.Integer, nullable=False, default=0)
+    interval_days = db.Column(db.Integer, nullable=False, default=1)
+    next_review_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    last_reviewed_at = db.Column(db.DateTime)
+
+
+class SessionRecallSchedule(db.Model):
+    """Fixed-interval retrieval checks with measured, per-session recall history."""
+
+    __tablename__ = "session_recall_schedules"
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "session_id", name="uq_recall_schedule_user_session"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    session_id = db.Column(db.Integer, db.ForeignKey("learning_sessions.id"), nullable=False, index=True)
+    cycle_number = db.Column(db.Integer, nullable=False, default=1)
+    interval_days = db.Column(db.Integer, nullable=False, default=10)
+    baseline_score = db.Column(db.Float, nullable=False, default=0)
+    last_score = db.Column(db.Float, nullable=False, default=0)
+    next_test_at = db.Column(db.DateTime, nullable=False, index=True)
+    last_test_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    stability_days = db.Column(db.Float)
+    history_json = db.Column(db.Text, nullable=False, default="[]")
+    session = db.relationship("LearningSession")
+
+    @property
+    def history(self):
+        return json.loads(self.history_json or "[]")
+
+    @history.setter
+    def history(self, value):
+        self.history_json = json.dumps(value)
+
+
+class OrbitWallet(db.Model):
+    __tablename__ = "orbit_wallets"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, unique=True)
+    balance = db.Column(db.Integer, nullable=False, default=0)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class OrbitTokenTransaction(db.Model):
+    __tablename__ = "orbit_token_transactions"
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "event_key", name="uq_orbit_token_event"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    amount = db.Column(db.Integer, nullable=False)
+    event_key = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.String(160), nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+
+class OrbitReward(db.Model):
+    __tablename__ = "orbit_rewards"
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "reward_key", name="uq_orbit_reward_owner"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    reward_key = db.Column(db.String(40), nullable=False)
+    purchased_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
