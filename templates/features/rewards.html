@@ -1,88 +1,41 @@
-{% extends "base.html" %} {% block title %}Orbit Rewards{% endblock %} {% block
-topbar_title %}<i data-lucide="coins"></i> Orbit Rewards{% endblock %} {% block
-head %}<link
-  rel="stylesheet"
-  href="{{ url_for('static', filename='css/feature-polish.css') }}"
-  data-pjax-head
-/>{% endblock %} {% block content %}
+{% extends "base.html" %}
+{% block title %}Orbit Rewards{% endblock %}
+{% block topbar_title %}<i data-lucide="coins"></i> Orbit Rewards{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/feature-polish.css') }}" data-pjax-head>{% endblock %}
+{% block content %}
 <section class="feature-page rewards-page">
-  <header class="rewards-heading">
-    <span class="rewards-eyebrow">Your learning wallet</span>
-    <h1>Orbit Rewards</h1>
-    <p>
-      Check in on a new day to earn 3 tokens. Redeem tokens for cosmetic badges
-      in your collection.
-    </p>
-    <div class="wallet-balance">
-      <i data-lucide="coins"></i
-      ><strong id="token-balance">{{ balance }}</strong
-      ><span>Orbit Tokens</span>
-    </div>
+  <header class="rewards-heading"><span class="rewards-eyebrow">Your learning wallet</span><h1>Orbit Rewards</h1><p>Check in on a new day to earn 3 tokens. Redeem tokens for cosmetic badges in your collection.</p>
+    <div class="wallet-balance"><i data-lucide="coins"></i><strong id="token-balance">{{ balance }}</strong><span>Orbit Tokens</span></div>
   </header>
   <div id="reward-feedback" role="status" aria-live="polite"></div>
   <section class="reward-catalog">
     {% for key,reward in rewards.items() %}
     <article class="feature-card reward-card">
-      <span class="reward-card-icon" aria-hidden="true"
-        ><i data-lucide="{{ reward.icon }}"></i
-      ></span>
-      <h2>{{ reward.name }}</h2>
-      <p>Cosmetic profile badge</p>
-      {% if key in owned %}<span class="reward-owned"
-        ><i data-lucide="badge-check"></i> Owned</span
-      >
-      {% else %}<button
-        class="btn-primary redeem-reward"
-        data-reward-key="{{ key }}"
-      >
-        <span>Redeem</span><strong>{{ reward.cost }} tokens</strong></button
-      >{% endif %}
+      <span class="reward-card-icon" aria-hidden="true"><i data-lucide="{{ reward.icon }}"></i></span><h2>{{ reward.name }}</h2><p>Cosmetic profile badge</p>
+      {% if key in owned %}<span class="reward-owned"><i data-lucide="badge-check"></i> Owned</span>
+      {% else %}<button class="btn-primary redeem-reward" data-reward-key="{{ key }}"><span>Redeem</span><strong>{{ reward.cost }} tokens</strong></button>{% endif %}
     </article>
     {% endfor %}
   </section>
-  <section class="feature-card reward-history">
-    <h2>Recent wallet activity</h2>
-    {% for item in transactions %}
-    <div class="token-row">
-      <span>{{ item.description }}</span
-      ><strong class="{% if item.amount < 0 %}spent{% else %}earned{% endif %}"
-        >{% if item.amount > 0 %}+{% endif %}{{ item.amount }}</strong
-      >
-    </div>
-    {% else %}
-    <p class="small-muted">
-      Your daily check-ins and redemptions will appear here.
-    </p>
-    {% endfor %}
+  <section class="feature-card reward-history"><h2>Recent wallet activity</h2>
+    {% for item in transactions %}<div class="token-row"><span>{{ item.description }}</span><strong class="{% if item.amount < 0 %}spent{% else %}earned{% endif %}">{% if item.amount > 0 %}+{% endif %}{{ item.amount }}</strong></div>
+    {% else %}<p class="small-muted">Your daily check-ins and redemptions will appear here.</p>{% endfor %}
   </section>
 </section>
-{% endblock %} {% block scripts %}
+{% endblock %}
+{% block scripts %}
 <script>
-  const rewardCsrf =
-    document.querySelector('meta[name="csrf-token"]')?.content || "";
-  document.querySelectorAll(".redeem-reward").forEach((button) =>
-    button.addEventListener("click", async () => {
-      button.disabled = true;
-      try {
-        const response = await fetch('{{ url_for("rewards.redeem") }}', {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": rewardCsrf,
-          },
-          body: JSON.stringify({ reward_key: button.dataset.rewardKey }),
-        });
-        const data = await response.json();
-        if (!response.ok)
-          throw new Error(data.error || "Could not redeem reward.");
-        document.getElementById("token-balance").textContent = data.balance;
-        showToast(`${data.reward} added to your collection.`, "success");
-        location.reload();
-      } catch (error) {
-        document.getElementById("reward-feedback").textContent = error.message;
-        button.disabled = false;
-      }
-    }),
-  );
+const rewardCsrf=document.querySelector('meta[name="csrf-token"]')?.content||'';
+document.querySelectorAll('.redeem-reward').forEach(button=>button.addEventListener('click',async()=>{
+  button.disabled=true;
+  try{
+    const response=await fetch('{{ url_for("rewards.redeem") }}',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':rewardCsrf},body:JSON.stringify({reward_key:button.dataset.rewardKey})});
+    const data=await response.json();
+    if(!response.ok)throw new Error(data.error||'Could not redeem reward.');
+    document.getElementById('token-balance').textContent=data.balance;
+    showToast(`${data.reward} added to your collection.`,'success');
+    location.reload();
+  }catch(error){document.getElementById('reward-feedback').textContent=error.message;button.disabled=false}
+}));
 </script>
 {% endblock %}

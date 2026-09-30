@@ -1,93 +1,20 @@
-{% extends "admin/base.html" %} {% block title %}Issue triage{% endblock %} {%
-block content %}
-<section class="admin-page-heading">
-  <div>
-    <span class="admin-kicker">Manual triage</span>
-    <h1>Learner issue reports</h1>
-    <p>
-      Each status and update is added to the reporter’s tracker immediately.
-    </p>
-  </div>
-  <span class="admin-live-badge"
-    ><i data-lucide="inbox"></i>{{ reports|length }} recent reports</span
-  >
-</section>
+{% extends "admin/base.html" %}
+{% block title %}Issue triage{% endblock %}
+{% block content %}
+<section class="admin-page-heading"><div><span class="admin-kicker">Manual triage</span><h1>Learner issue reports</h1><p>Each status and update is added to the reporter’s tracker immediately.</p></div><span class="admin-live-badge"><i data-lucide="inbox"></i>{{ reports|length }} recent reports</span></section>
 <div class="admin-issue-list">
   {% for report in reports %}
   <article class="admin-card admin-issue-card">
-    <div class="admin-issue-heading">
-      <div>
-        <span class="admin-kicker"
-          >{{ report.category|replace('_',' ')|title }} · #{{ report.id }}</span
-        >
-        <h2>{{ report.title }}</h2>
-        <p>
-          From {{ users_by_id.get(report.user_id).username if
-          users_by_id.get(report.user_id) else 'Deleted learner' }} · {{
-          report.created_at.strftime('%b %d, %Y · %H:%M UTC') }}{% if
-          report.page %} · <code>{{ report.page }}</code>{% endif %}
-        </p>
-      </div>
-      <span class="issue-status status-{{ report.status|replace('_','-') }}"
-        >{{ report.status|replace('_',' ')|title }}</span
-      >
-    </div>
+    <div class="admin-issue-heading"><div><span class="admin-kicker">{{ report.category|replace('_',' ')|title }} · #{{ report.id }}</span><h2>{{ report.title }}</h2><p>From {{ users_by_id.get(report.user_id).username if users_by_id.get(report.user_id) else 'Deleted learner' }} · {{ report.created_at.strftime('%b %d, %Y · %H:%M UTC') }}{% if report.page %} · <code>{{ report.page }}</code>{% endif %}</p></div><span class="issue-status status-{{ report.status|replace('_','-') }}">{{ report.status|replace('_',' ')|title }}</span></div>
     <p class="admin-issue-description">{{ report.description }}</p>
-    <form
-      class="admin-issue-update"
-      method="post"
-      action="{{ url_for('admin.update_issue',issue_id=report.id) }}"
-    >
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-      <label
-        >Update status<select class="admin-input" name="status">
-          {% for key,label in statuses.items() %}
-          <option
-            value="{{ key }}"
-            {%
-            if
-            key=""
-            ="report.status"
-            %}selected{%
-            endif
-            %}
-          >
-            {{ label }}
-          </option>
-          {% endfor %}
-        </select></label
-      >
-      <label
-        >Tracker note
-        <input
-          class="admin-input"
-          name="message"
-          maxlength="500"
-          placeholder="Short update visible to the learner"
-      /></label>
-      <button class="admin-button primary" type="submit">
-        <i data-lucide="send"></i>Post update
-      </button>
+    <form class="admin-issue-update" method="post" action="{{ url_for('admin.update_issue',issue_id=report.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label>Update status<select class="admin-input" name="status">{% for key,label in statuses.items() %}<option value="{{ key }}" {% if key == report.status %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+      <label>Tracker note <input class="admin-input" name="message" maxlength="500" placeholder="Short update visible to the learner"></label>
+      <button class="admin-button primary" type="submit"><i data-lucide="send"></i>Post update</button>
     </form>
-    <details class="admin-history">
-      <summary>View status history ({{ history[report.id]|length }})</summary>
-      <ol>
-        {% for update in history[report.id] %}
-        <li>
-          <strong>{{ update.status|replace('_',' ')|title }}</strong
-          ><time>{{ update.created_at.strftime('%b %d · %H:%M UTC') }}</time>
-          <p>{{ update.message }}</p>
-        </li>
-        {% endfor %}
-      </ol>
-    </details>
+    <details class="admin-history"><summary>View status history ({{ history[report.id]|length }})</summary><ol>{% for update in history[report.id] %}<li><strong>{{ update.status|replace('_',' ')|title }}</strong><time>{{ update.created_at.strftime('%b %d · %H:%M UTC') }}</time><p>{{ update.message }}</p></li>{% endfor %}</ol></details>
   </article>
-  {% else %}
-  <div class="admin-card admin-empty">
-    <i data-lucide="circle-check"></i>
-    <h2>Inbox is clear</h2>
-    <p>New learner issue reports will appear here for manual review.</p>
-  </div>
-  {% endfor %}
+  {% else %}<div class="admin-card admin-empty"><i data-lucide="circle-check"></i><h2>Inbox is clear</h2><p>New learner issue reports will appear here for manual review.</p></div>{% endfor %}
 </div>
 {% endblock %}

@@ -1,25 +1,5 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>{{ title }} · LearnOrbit</title>
-    <link
-      rel="stylesheet"
-      href="{{ url_for('static', filename='css/main.css') }}"
-    />
-  </head>
-  <body class="maintenance-page">
-    <main class="maintenance-card">
-      <span class="maintenance-icon">↻</span>
-      <p class="feedback-eyebrow">Security check</p>
-      <h1>{{ title }}</h1>
-      <p>{{ message }}</p>
-      <button class="btn-primary" type="button" onclick="location.reload()">
-        Refresh this page</button
-      ><a class="btn-secondary" href="{{ url_for('index') }}"
-        >Return to LearnOrbit</a
-      >
-    </main>
-  </body>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{{ title }} · LearnOrbit</title><link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}"></head>
+<body class="maintenance-page"><main class="maintenance-card"><span class="maintenance-icon">↻</span><p class="feedback-eyebrow">Security check</p><h1>{{ title }}</h1><p>{{ message }}</p><button class="btn-primary" type="button" onclick="location.reload()">Refresh this page</button><a class="btn-secondary" href="{{ url_for('index') }}">Return to LearnOrbit</a></main></body>
 </html>

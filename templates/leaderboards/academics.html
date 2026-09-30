@@ -1,223 +1,82 @@
-{% extends "base.html" %} {% block title %}Academic Leaderboard{% endblock %} {%
-block topbar_title %}<i data-lucide="graduation-cap" aria-hidden="true"></i>
-Academic Leaderboard{% endblock %} {% block content %}
+{% extends "base.html" %}
+{% block title %}Academic Leaderboard{% endblock %}
+{% block topbar_title %}<i data-lucide="graduation-cap" aria-hidden="true"></i> Academic Leaderboard{% endblock %}
+{% block content %}
 <section class="feature-page academic-leaderboard-page">
   <header class="academic-leaderboard-intro">
     <span class="feedback-eyebrow">Learn together, grow together</span>
     <h1>Academic leaderboard</h1>
-    <p>
-      Compare learning outcomes across the community using saved quiz and
-      topic-mastery records. Learners are anonymized; no usernames or individual
-      topic histories are shown.
-    </p>
+    <p>Compare learning outcomes across the community using saved quiz and topic-mastery records. Learners are anonymized; no usernames or individual topic histories are shown.</p>
   </header>
 
   {% if stats.student_count < 5 %}
-  <div class="academic-sample-note">
-    <i data-lucide="info"></i
-    ><span
-      >This is an early snapshot from {{ stats.student_count }} learner{% if
-      stats.student_count != 1 %}s{% endif %}. Treat comparisons as provisional
-      until the community sample grows.</span
-    >
-  </div>
+  <div class="academic-sample-note"><i data-lucide="info"></i><span>This is an early snapshot from {{ stats.student_count }} learner{% if stats.student_count != 1 %}s{% endif %}. Treat comparisons as provisional until the community sample grows.</span></div>
   {% endif %}
 
   <div class="academic-stat-grid">
-    <article class="feature-card academic-stat-card">
-      <i data-lucide="users-round"></i><strong>{{ stats.student_count }}</strong
-      ><span>Learners with quiz results</span>
-    </article>
-    <article class="feature-card academic-stat-card">
-      <i data-lucide="clipboard-check"></i><strong>{{ stats.attempts }}</strong
-      ><span>Saved quiz and exam attempts</span>
-    </article>
-    <article class="feature-card academic-stat-card">
-      <i data-lucide="chart-no-axes-column-increasing"></i
-      ><strong
-        >{% if stats.average is not none %}{{ stats.average }}%{% else %}—{%
-        endif %}</strong
-      ><span>Mean learner average</span>
-    </article>
-    <article class="feature-card academic-stat-card">
-      <i data-lucide="medal"></i
-      ><strong
-        >{% if stats.median is not none %}{{ stats.median }}%{% else %}—{% endif
-        %}</strong
-      ><span>Median learner average</span>
-    </article>
-    <article class="feature-card academic-stat-card">
-      <i data-lucide="target"></i
-      ><strong
-        >{% if stats.strong_share is not none %}{{ stats.strong_share }}%{% else
-        %}—{% endif %}</strong
-      ><span>Learners averaging 80%+</span>
-    </article>
-    <article class="feature-card academic-stat-card academic-your-rank">
-      <i data-lucide="user-round-check"></i
-      ><strong
-        >{% if stats.current_rank %}#{{ stats.current_rank }}{% else %}—{% endif
-        %}</strong
-      ><span
-        >{% if stats.current_score is not none %}Your average: {{
-        stats.current_score }}%{% else %}Your rank appears after a saved quiz{%
-        endif %}</span
-      >
-    </article>
+    <article class="feature-card academic-stat-card"><i data-lucide="users-round"></i><strong>{{ stats.student_count }}</strong><span>Learners with quiz results</span></article>
+    <article class="feature-card academic-stat-card"><i data-lucide="clipboard-check"></i><strong>{{ stats.attempts }}</strong><span>Saved quiz and exam attempts</span></article>
+    <article class="feature-card academic-stat-card"><i data-lucide="chart-no-axes-column-increasing"></i><strong>{% if stats.average is not none %}{{ stats.average }}%{% else %}—{% endif %}</strong><span>Mean learner average</span></article>
+    <article class="feature-card academic-stat-card"><i data-lucide="medal"></i><strong>{% if stats.median is not none %}{{ stats.median }}%{% else %}—{% endif %}</strong><span>Median learner average</span></article>
+    <article class="feature-card academic-stat-card"><i data-lucide="target"></i><strong>{% if stats.strong_share is not none %}{{ stats.strong_share }}%{% else %}—{% endif %}</strong><span>Learners averaging 80%+</span></article>
+    <article class="feature-card academic-stat-card academic-your-rank"><i data-lucide="user-round-check"></i><strong>{% if stats.current_rank %}#{{ stats.current_rank }}{% else %}—{% endif %}</strong><span>{% if stats.current_score is not none %}Your average: {{ stats.current_score }}%{% else %}Your rank appears after a saved quiz{% endif %}</span></article>
   </div>
 
   <div class="academic-charts-grid">
     <section class="feature-card academic-chart-card">
-      <div class="academic-chart-heading">
-        <h2>Average-score distribution</h2>
-        <p>Learners are grouped by their mean score across saved attempts.</p>
-      </div>
+      <div class="academic-chart-heading"><h2>Average-score distribution</h2><p>Learners are grouped by their mean score across saved attempts.</p></div>
       {% for band in bands %}
       <div class="academic-bar-row">
-        <div>
-          <span>{{ band.label }}</span
-          ><strong
-            >{{ band.count }}
-            <small>learner{% if band.count != 1 %}s{% endif %}</small></strong
-          >
-        </div>
-        <div
-          class="academic-bar-track"
-          role="img"
-          aria-label="{{ band.label }}: {{ band.count }} learners, {{ band.width }} percent"
-        >
-          <span
-            style="--bar-width:{{ band.width }}%;--bar-color:{{ band.color }}"
-          ></span>
-        </div>
+        <div><span>{{ band.label }}</span><strong>{{ band.count }} <small>learner{% if band.count != 1 %}s{% endif %}</small></strong></div>
+        <div class="academic-bar-track" role="img" aria-label="{{ band.label }}: {{ band.count }} learners, {{ band.width }} percent"><span style="--bar-width:{{ band.width }}%;--bar-color:{{ band.color }}"></span></div>
       </div>
       {% else %}
-      <p class="small-muted">
-        Distribution appears after the first saved quiz.
-      </p>
+      <p class="small-muted">Distribution appears after the first saved quiz.</p>
       {% endfor %}
-      <p class="academic-evidence">
-        Bands: below 50%, 50–69.9%, 70–84.9%, and 85–100%. Each learner
-        contributes once, regardless of attempt count.
-      </p>
+      <p class="academic-evidence">Bands: below 50%, 50–69.9%, 70–84.9%, and 85–100%. Each learner contributes once, regardless of attempt count.</p>
     </section>
 
     <section class="feature-card academic-chart-card">
-      <div class="academic-chart-heading">
-        <h2>Top learner averages</h2>
-        <p>Ranked by mean score across each learner’s saved quiz attempts.</p>
-      </div>
+      <div class="academic-chart-heading"><h2>Top learner averages</h2><p>Ranked by mean score across each learner’s saved quiz attempts.</p></div>
       {% for learner in rankings %}
       <div class="academic-ranking-row">
-        <span class="academic-ranking-position">{{ loop.index }}</span
-        ><strong>{{ learner.label }}</strong>
-        <span
-          >{{ learner.average }}%
-          <small
-            >· {{ learner.attempts }} attempt{% if learner.attempts != 1 %}s{%
-            endif %}</small
-          ></span
-        >
-        <div
-          class="academic-bar-track"
-          role="img"
-          aria-label="{{ learner.label }} average score: {{ learner.average }} percent"
-        >
-          <span
-            style="--bar-width:{{ learner.width }}%;--bar-color:{{ ['#ef476f','#f78c6b','#ffd166','#06d6a0','#118ab2','#7b2cbf','#4895ef','#2a9d8f','#f4a261','#4361ee'][loop.index0] }}"
-          ></span>
-        </div>
+        <span class="academic-ranking-position">{{ loop.index }}</span><strong>{{ learner.label }}</strong>
+        <span>{{ learner.average }}% <small>· {{ learner.attempts }} attempt{% if learner.attempts != 1 %}s{% endif %}</small></span>
+        <div class="academic-bar-track" role="img" aria-label="{{ learner.label }} average score: {{ learner.average }} percent"><span style="--bar-width:{{ learner.width }}%;--bar-color:{{ ['#ef476f','#f78c6b','#ffd166','#06d6a0','#118ab2','#7b2cbf','#4895ef','#2a9d8f','#f4a261','#4361ee'][loop.index0] }}"></span></div>
       </div>
       {% else %}
-      <div class="leaderboard-empty">
-        <i data-lucide="chart-no-axes-column-increasing"></i>
-        <p>No academic scores yet.</p>
-        <span>Take a quiz to add the first anonymous result.</span>
-      </div>
+      <div class="leaderboard-empty"><i data-lucide="chart-no-axes-column-increasing"></i><p>No academic scores yet.</p><span>Take a quiz to add the first anonymous result.</span></div>
       {% endfor %}
-      <p class="academic-evidence">
-        Pseudonyms are assigned by rank for this view; this page does not reveal
-        account names.
-      </p>
+      <p class="academic-evidence">Pseudonyms are assigned by rank for this view; this page does not reveal account names.</p>
     </section>
 
     <section class="feature-card academic-chart-card academic-trend-card">
-      <div class="academic-chart-heading">
-        <h2>Weekly quiz performance</h2>
-        <p>
-          Mean of active learners’ weekly attempt averages, over the last eight
-          weeks.
-        </p>
-      </div>
+      <div class="academic-chart-heading"><h2>Weekly quiz performance</h2><p>Mean of active learners’ weekly attempt averages, over the last eight weeks.</p></div>
       <div class="academic-weekly-bars">
-        {% for week in weekly_trend %} {% set height = week.average if
-        week.average is not none else 0 %}
+        {% for week in weekly_trend %}
+        {% set height = week.average if week.average is not none else 0 %}
         <div class="academic-week-column">
-          <strong
-            >{% if week.average is not none %}{{ week.average }}%{% else %}—{%
-            endif %}</strong
-          >
-          <div
-            class="academic-week-track"
-            role="img"
-            aria-label="{{ week.label }}: {% if week.average is not none %}{{ week.average }} percent average across {{ week.learners }} learners{% else %}no attempts{% endif %}"
-          >
-            <span
-              style="--bar-height:{{ height }}%;--bar-color:{{ ['#4361ee','#06d6a0','#f4a261','#ef476f','#118ab2','#8338ec','#2a9d8f','#f78c6b'][loop.index0] }}"
-            ></span>
-          </div>
-          <span>{{ week.label }}</span
-          ><small>{{ week.learners }} learners</small>
+          <strong>{% if week.average is not none %}{{ week.average }}%{% else %}—{% endif %}</strong>
+          <div class="academic-week-track" role="img" aria-label="{{ week.label }}: {% if week.average is not none %}{{ week.average }} percent average across {{ week.learners }} learners{% else %}no attempts{% endif %}"><span style="--bar-height:{{ height }}%;--bar-color:{{ ['#4361ee','#06d6a0','#f4a261','#ef476f','#118ab2','#8338ec','#2a9d8f','#f78c6b'][loop.index0] }}"></span></div>
+          <span>{{ week.label }}</span><small>{{ week.learners }} learners</small>
         </div>
         {% endfor %}
       </div>
     </section>
 
     <section class="feature-card academic-chart-card academic-trend-card">
-      <div class="academic-chart-heading">
-        <h2>Topics learners are mastering</h2>
-        <p>
-          Community topic mastery average and number of learners with a saved
-          topic record.
-        </p>
-      </div>
+      <div class="academic-chart-heading"><h2>Topics learners are mastering</h2><p>Community topic mastery average and number of learners with a saved topic record.</p></div>
       {% for topic in topics %}
       <div class="academic-topic-row">
-        <div>
-          <strong>{{ topic.topic }}</strong
-          ><span
-            >{{ topic.average }}% mastery · {{ topic.learners }} learner{% if
-            topic.learners != 1 %}s{% endif %}</span
-          >
-        </div>
-        <div
-          class="academic-bar-track"
-          role="img"
-          aria-label="{{ topic.topic }} average mastery: {{ topic.average }} percent"
-        >
-          <span
-            style="--bar-width:{{ topic.average }}%;--bar-color:{{ ['#118ab2','#ef476f','#06d6a0','#8338ec','#f4a261','#4361ee','#2a9d8f','#f78c6b'][loop.index0] }}"
-          ></span>
-        </div>
+        <div><strong>{{ topic.topic }}</strong><span>{{ topic.average }}% mastery · {{ topic.learners }} learner{% if topic.learners != 1 %}s{% endif %}</span></div>
+        <div class="academic-bar-track" role="img" aria-label="{{ topic.topic }} average mastery: {{ topic.average }} percent"><span style="--bar-width:{{ topic.average }}%;--bar-color:{{ ['#118ab2','#ef476f','#06d6a0','#8338ec','#f4a261','#4361ee','#2a9d8f','#f78c6b'][loop.index0] }}"></span></div>
       </div>
       {% else %}
-      <p class="small-muted">
-        Topic averages appear as learners build mastery records.
-      </p>
+      <p class="small-muted">Topic averages appear as learners build mastery records.</p>
       {% endfor %}
     </section>
   </div>
 
-  <section class="academic-methodology">
-    <i data-lucide="book-open-check"></i>
-    <p>
-      <strong>How to read these statistics:</strong> scores come from persisted
-      LearnOrbit quiz and exam attempts. We first average attempts per learner,
-      then average learners for the cohort mean and median so frequent quiz
-      takers do not dominate. Topic mastery uses saved per-user topic records.
-      These are descriptive app activity metrics, not a controlled study or a
-      promise of learning gains.
-    </p>
-  </section>
+  <section class="academic-methodology"><i data-lucide="book-open-check"></i><p><strong>How to read these statistics:</strong> scores come from persisted LearnOrbit quiz and exam attempts. We first average attempts per learner, then average learners for the cohort mean and median so frequent quiz takers do not dominate. Topic mastery uses saved per-user topic records. These are descriptive app activity metrics, not a controlled study or a promise of learning gains.</p></section>
 </section>
 {% endblock %}

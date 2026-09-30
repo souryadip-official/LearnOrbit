@@ -1,39 +1,22 @@
-{% extends "base.html" %} {% block title %}Know LearnOrbit{% endblock %} {%
-block topbar_title %}<i data-lucide="circle-help" aria-hidden="true"></i> Know
-LearnOrbit{% endblock %} {% block content %}
+{% extends "base.html" %}
+{% block title %}Know LearnOrbit{% endblock %}
+{% block topbar_title %}<i data-lucide="circle-help" aria-hidden="true"></i> Know LearnOrbit{% endblock %}
+{% block content %}
 <section class="feature-page guide-page">
   <header class="guide-hero">
     <span class="feedback-eyebrow">A quick map of your learning space</span>
     <h1>Know LearnOrbit</h1>
-    <p>
-      What each section is for, what its numbers mean, and where to go next.
-    </p>
+    <p>What each section is for, what its numbers mean, and where to go next.</p>
   </header>
   <div class="guide-grid">
     {% for icon,title,description in sections %}
     <article class="feature-card guide-card">
-      <span class="guide-icon"
-        ><i data-lucide="{{ icon }}" aria-hidden="true"></i
-      ></span>
-      <div>
-        <h2>{{ title }}</h2>
-        <p>{{ description }}</p>
-      </div>
+      <span class="guide-icon"><i data-lucide="{{ icon }}" aria-hidden="true"></i></span>
+      <div><h2>{{ title }}</h2><p>{{ description }}</p></div>
     </article>
     {% endfor %}
   </div>
-  <aside class="guide-note">
-    <i data-lucide="shield-check"></i>
-    <p>
-      <strong>Your information:</strong> Do not include passwords, OTPs, or
-      sensitive personal information in tutor chats, room messages, feedback
-      comments, or issue reports.
-    </p>
-  </aside>
-  <a
-    class="btn-secondary guide-policy-link"
-    href="{{ url_for('features.learner_policies') }}"
-    ><i data-lucide="scroll-text"></i>Read current learner policies</a
-  >
+  <aside class="guide-note"><i data-lucide="shield-check"></i><p><strong>Your information:</strong> Do not include passwords, OTPs, or sensitive personal information in tutor chats, room messages, feedback comments, or issue reports.</p></aside>
+  <a class="btn-secondary guide-policy-link" href="{{ url_for('features.learner_policies') }}"><i data-lucide="scroll-text"></i>Read current learner policies</a>
 </section>
 {% endblock %}

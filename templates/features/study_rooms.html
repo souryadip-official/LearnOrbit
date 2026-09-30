@@ -1,211 +1,117 @@
-{% extends "base.html" %} {% block title %}Study Rooms{% endblock %} {% block
-topbar_title %}<i data-lucide="users-round"></i> Study Rooms{% endblock %} {%
-block head %}
-<link
-  rel="stylesheet"
-  data-pjax-head
-  href="{{ url_for('static', filename='css/study_rooms.css') }}"
-/>
-{% endblock %} {% block content %}
+{% extends "base.html" %}
+{% block title %}Study Rooms{% endblock %}
+{% block topbar_title %}<i data-lucide="users-round"></i> Study Rooms{% endblock %}
+{% block head %}
+<link rel="stylesheet" data-pjax-head href="{{ url_for('static', filename='css/study_rooms.css') }}">
+{% endblock %}
+{% block content %}
 <section class="feature-page study-rooms-page">
   <header class="rooms-intro">
-    <span class="rooms-eyebrow"
-      ><i data-lucide="sparkles"></i> A small space to learn together</span
-    >
+    <span class="rooms-eyebrow"><i data-lucide="sparkles"></i> A small space to learn together</span>
     <div class="rooms-intro-copy">
       <h1>Study Rooms</h1>
-      <p>
-        Bring your learning circle together. Start a room for your next study
-        session or join one with an invite code.
-      </p>
+      <p>Bring your learning circle together. Start a room for your next study session or join one with an invite code.</p>
     </div>
-    <p class="rooms-scope">
-      <i data-lucide="message-circle"></i> Text chat refreshes automatically
-      while this page is open <span aria-hidden="true">·</span> no audio or
-      video
-    </p>
+    <p class="rooms-scope"><i data-lucide="message-circle"></i> Text chat refreshes automatically while this page is open <span aria-hidden="true">·</span> no audio or video</p>
   </header>
 
   <div class="rooms-controls">
     <form class="feature-card rooms-form" id="create-room-form">
       <div class="rooms-form-heading">
         <span class="rooms-form-icon"><i data-lucide="plus"></i></span>
-        <div>
-          <h2>Create a room</h2>
-          <p>Make a space for your next study session.</p>
-        </div>
+        <div><h2>Create a room</h2><p>Make a space for your next study session.</p></div>
       </div>
       <div class="rooms-field">
         <label for="room-name">Room name</label>
-        <input
-          class="form-input"
-          id="room-name"
-          name="name"
-          maxlength="80"
-          required
-          placeholder="e.g. Biology study group"
-        />
+        <input class="form-input" id="room-name" name="name" maxlength="80" required placeholder="e.g. Biology study group">
       </div>
-      <button class="btn-primary" type="submit">
-        <i data-lucide="plus"></i><span>Create room</span>
-      </button>
+      <button class="btn-primary" type="submit"><i data-lucide="plus"></i><span>Create room</span></button>
     </form>
     <form class="feature-card rooms-form" id="join-room-form">
       <div class="rooms-form-heading">
         <span class="rooms-form-icon"><i data-lucide="door-open"></i></span>
-        <div>
-          <h2>Join a room</h2>
-          <p>Enter the invite code shared by a room member.</p>
-        </div>
+        <div><h2>Join a room</h2><p>Enter the invite code shared by a room member.</p></div>
       </div>
       <div class="rooms-field">
         <label for="invite-code">Invite code</label>
-        <input
-          class="form-input"
-          id="invite-code"
-          name="invite_code"
-          maxlength="64"
-          required
-          autocomplete="off"
-          placeholder="Paste an invite code"
-        />
+        <input class="form-input" id="invite-code" name="invite_code" maxlength="64" required autocomplete="off" placeholder="Paste an invite code">
       </div>
-      <button class="btn-primary" type="submit">
-        <i data-lucide="arrow-right"></i><span>Join room</span>
-      </button>
+      <button class="btn-primary" type="submit"><i data-lucide="arrow-right"></i><span>Join room</span></button>
     </form>
   </div>
-  <p
-    id="rooms-feedback"
-    class="rooms-feedback"
-    role="status"
-    aria-live="polite"
-  ></p>
+  <p id="rooms-feedback" class="rooms-feedback" role="status" aria-live="polite"></p>
 
   <div class="rooms-layout">
     <aside class="feature-card rooms-sidebar" aria-label="Your study rooms">
       <div class="rooms-list-heading">
-        <div>
-          <span class="rooms-section-kicker">Your study circle</span>
-          <h2>Your rooms</h2>
-        </div>
-        <span class="rooms-count" aria-label="{{ rooms|length }} rooms"
-          >{{ rooms|length }}</span
-        >
+        <div><span class="rooms-section-kicker">Your study circle</span><h2>Your rooms</h2></div>
+        <span class="rooms-count" aria-label="{{ rooms|length }} rooms">{{ rooms|length }}</span>
       </div>
       {% if rooms %}
       <div class="rooms-list">
         {% for room in rooms %}
-        <button
-          type="button"
-          class="room-choice"
-          data-room-id="{{ room.id }}"
-          data-room-name="{{ room.name }}"
-          aria-label="{{ room.name }}, {{ member_counts.get(room.id, 1) }} member{% if member_counts.get(room.id, 1) != 1 %}s{% endif %}"
-        >
-          <span class="room-choice-icon"
-            ><i data-lucide="users-round"></i
-          ></span>
-          <span class="room-choice-copy"
-            ><strong>{{ room.name }}</strong
-            ><small
-              >{{ member_counts.get(room.id, 1) }} member{% if
-              member_counts.get(room.id, 1) != 1 %}s{% endif %}</small
-            ></span
-          >
+        <button type="button" class="room-choice" data-room-id="{{ room.id }}" data-room-name="{{ room.name }}" aria-label="{{ room.name }}, {{ member_counts.get(room.id, 1) }} member{% if member_counts.get(room.id, 1) != 1 %}s{% endif %}">
+          <span class="room-choice-icon"><i data-lucide="users-round"></i></span>
+          <span class="room-choice-copy"><strong>{{ room.name }}</strong><small>{{ member_counts.get(room.id, 1) }} member{% if member_counts.get(room.id, 1) != 1 %}s{% endif %}</small></span>
           <i data-lucide="chevron-right" class="room-choice-arrow"></i>
         </button>
         {% endfor %}
       </div>
       {% else %}
       <div class="rooms-empty">
-        <span class="rooms-empty-icon"
-          ><i data-lucide="messages-square"></i
-        ></span>
+        <span class="rooms-empty-icon"><i data-lucide="messages-square"></i></span>
         <h3>Your room list is empty</h3>
-        <p>
-          Create a room or join one with a code to see your study circle here.
-        </p>
+        <p>Create a room or join one with a code to see your study circle here.</p>
       </div>
       {% endif %}
     </aside>
 
     <section class="feature-card room-chat" aria-label="Room conversation">
       <div class="chat-placeholder" id="chat-placeholder">
-        <span class="chat-placeholder-icon"
-          ><i data-lucide="message-square-text"></i
-        ></span>
+        <span class="chat-placeholder-icon"><i data-lucide="message-square-text"></i></span>
         <span class="chat-placeholder-kicker">Your conversation</span>
         <h2>Choose a room to begin</h2>
-        <p>
-          Select a room from your list to see the conversation. Messages are
-          visible only to its members.
-        </p>
+        <p>Select a room from your list to see the conversation. Messages are visible only to its members.</p>
       </div>
       <div class="chat-active" id="chat-active" hidden>
         <header class="chat-header">
-          <div class="chat-title">
-            <span class="chat-kicker"
-              ><i data-lucide="users-round"></i> Study room</span
-            >
-            <h2 id="active-room-name"></h2>
-          </div>
-          <span class="chat-polling"
-            ><span aria-hidden="true"></span> Polling</span
-          >
+          <div class="chat-title"><span class="chat-kicker"><i data-lucide="users-round"></i> Study room</span><h2 id="active-room-name"></h2></div>
+          <span class="chat-polling"><span aria-hidden="true"></span> Polling</span>
         </header>
         <div class="invite-share" id="invite-share" hidden>
           <span><i data-lucide="key-round"></i> Room invite</span>
           <code id="active-invite-code"></code>
-          <button type="button" class="btn-secondary" id="copy-invite">
-            Copy code
-          </button>
+          <button type="button" class="btn-secondary" id="copy-invite">Copy code</button>
         </div>
-        <div
-          class="message-list"
-          id="message-list"
-          role="log"
-          aria-live="polite"
-          aria-relevant="additions text"
-        >
-          <p class="message-empty" id="message-empty">
-            No messages yet. Start with what you’re studying.
-          </p>
+        <div class="message-list" id="message-list" role="log" aria-live="polite" aria-relevant="additions text">
+          <p class="message-empty" id="message-empty">No messages yet. Start with what you’re studying.</p>
         </div>
         <form class="message-form" id="message-form">
           <label class="sr-only" for="message-text">Your message</label>
-          <textarea
-            class="form-input"
-            id="message-text"
-            maxlength="1000"
-            rows="2"
-            required
-            placeholder="Share a question or a study win…"
-          ></textarea>
-          <button class="btn-primary" type="submit" aria-label="Send message">
-            <i data-lucide="send"></i><span>Send</span>
-          </button>
+          <textarea class="form-input" id="message-text" maxlength="1000" rows="2" required placeholder="Share a question or a study win…"></textarea>
+          <button class="btn-primary" type="submit" aria-label="Send message"><i data-lucide="send"></i><span>Send</span></button>
           <small>Up to 1,000 characters</small>
         </form>
       </div>
     </section>
   </div>
 </section>
-{% endblock %} {% block scripts %}
+{% endblock %}
+{% block scripts %}
 <script>
-  window.studyRoomsConfig = {
-    csrfToken: {{ csrf_token()|tojson }},
-    currentUsername: {{ current_user.username|tojson }},
-    createUrl: {{ url_for('study_rooms.create_room')|tojson }},
-    joinUrl: {{ url_for('study_rooms.join_room')|tojson }},
-    messagesUrlTemplate: {{ url_for('study_rooms.read_messages', room_id=0)|tojson }},
-    sendUrlTemplate: {{ url_for('study_rooms.send_message', room_id=0)|tojson }},
-    rooms: [
-      {% for room in rooms %}
-      {id: {{ room.id }}, name: {{ room.name|tojson }}, inviteCode: {{ room.invite_code|tojson }}, isOwner: {{ (room.owner_id == current_user.id)|tojson }}}{% if not loop.last %},{% endif %}
-      {% endfor %}
-    ]
-  };
+window.studyRoomsConfig = {
+  csrfToken: {{ csrf_token()|tojson }},
+  currentUsername: {{ current_user.username|tojson }},
+  createUrl: {{ url_for('study_rooms.create_room')|tojson }},
+  joinUrl: {{ url_for('study_rooms.join_room')|tojson }},
+  messagesUrlTemplate: {{ url_for('study_rooms.read_messages', room_id=0)|tojson }},
+  sendUrlTemplate: {{ url_for('study_rooms.send_message', room_id=0)|tojson }},
+  rooms: [
+    {% for room in rooms %}
+    {id: {{ room.id }}, name: {{ room.name|tojson }}, inviteCode: {{ room.invite_code|tojson }}, isOwner: {{ (room.owner_id == current_user.id)|tojson }}}{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ]
+};
 </script>
 <script src="{{ url_for('static', filename='js/rooms.js') }}" defer></script>
 {% endblock %}

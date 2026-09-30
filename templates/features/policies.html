@@ -1,27 +1,11 @@
-{% extends "base.html" %} {% block title %}Learner policies{% endblock %} {%
-block topbar_title %}<i data-lucide="scroll-text"></i> Learner Policies{%
-endblock %} {% block content %}
+{% extends "base.html" %}
+{% block title %}Learner policies{% endblock %}
+{% block topbar_title %}<i data-lucide="scroll-text"></i> Learner Policies{% endblock %}
+{% block content %}
 <section class="feature-page learner-policies-page">
-  <header class="guide-hero">
-    <span class="feedback-eyebrow">Current platform guidance</span>
-    <h1>Learner policies</h1>
-    <p>
-      These notes are maintained by the LearnOrbit team to help keep the
-      learning space useful and respectful.
-    </p>
-  </header>
+  <header class="guide-hero"><span class="feedback-eyebrow">Current platform guidance</span><h1>Learner policies</h1><p>These notes are maintained by the LearnOrbit team to help keep the learning space useful and respectful.</p></header>
   <div class="guide-grid">
-    {% for title,body in policies %}
-    <article class="feature-card policy-card">
-      <i
-        data-lucide="{% if loop.first %}shield-check{% else %}users-round{% endif %}"
-      ></i>
-      <div>
-        <h2>{{ title }}</h2>
-        <p class="policy-body">{{ body }}</p>
-      </div>
-    </article>
-    {% endfor %}
+    {% for title,body in policies %}<article class="feature-card policy-card"><i data-lucide="{% if loop.first %}shield-check{% else %}users-round{% endif %}"></i><div><h2>{{ title }}</h2><p class="policy-body">{{ body }}</p></div></article>{% endfor %}
   </div>
 </section>
 {% endblock %}

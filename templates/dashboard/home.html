@@ -1,175 +1,92 @@
-{% extends "base.html" %} {% block title %}Dashboard{% endblock %} {% block
-topbar_title %}<i data-lucide="house" aria-hidden="true"></i> Dashboard{%
-endblock %} {% block loader_text %}Loading your learning universe…{% endblock %}
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block topbar_title %}<i data-lucide="house" aria-hidden="true"></i> Dashboard{% endblock %}
+{% block loader_text %}Loading your learning universe…{% endblock %}
+
 {% block content %}
 <div class="dashboard-page">
+
   <!-- Welcome banner -->
   <div class="welcome-banner animate__animated animate__fadeIn">
     <div class="welcome-text">
       <h1 id="welcome-title">Hey, {{ current_user.username }}!</h1>
-      <p id="welcome-line">
-        {% if stats.streak > 0 %}You're on a
-        <strong>{{ stats.streak }}-day streak</strong>. Keep it up!{% else
-        %}Ready when you are. Your curiosity called; it left three tabs open.{%
-        endif %}
-      </p>
+      <p id="welcome-line">{% if stats.streak > 0 %}You're on a <strong>{{ stats.streak }}-day streak</strong>. Keep it up!{% else %}Ready when you are. Your curiosity called; it left three tabs open.{% endif %}</p>
     </div>
     <a href="{{ url_for('tutor.new_session') }}" class="btn-start-session">
-      <i data-lucide="circle-play" aria-hidden="true"></i
-      ><span>Start Learning</span>
+      <i data-lucide="circle-play" aria-hidden="true"></i><span>Start Learning</span>
     </a>
   </div>
 
   <!-- Stats row -->
   <div class="stats-row">
     <div class="stat-card animate__animated animate__fadeInUp">
-      <div class="stat-icon">
-        <i data-lucide="book-open" aria-hidden="true"></i>
-      </div>
+      <div class="stat-icon"><i data-lucide="book-open" aria-hidden="true"></i></div>
       <div class="stat-value">{{ stats.total_sessions }}</div>
       <div class="stat-name">Total Sessions</div>
     </div>
-    <div
-      class="stat-card animate__animated animate__fadeInUp"
-      style="animation-delay: 0.1s"
-    >
-      <div class="stat-icon">
-        <i data-lucide="circle-check" aria-hidden="true"></i>
-      </div>
+    <div class="stat-card animate__animated animate__fadeInUp" style="animation-delay:.1s">
+      <div class="stat-icon"><i data-lucide="circle-check" aria-hidden="true"></i></div>
       <div class="stat-value">{{ stats.completed_sessions }}</div>
       <div class="stat-name">Completed</div>
     </div>
-    <div
-      class="stat-card animate__animated animate__fadeInUp"
-      style="animation-delay: 0.2s"
-    >
-      <div class="stat-icon">
-        <i data-lucide="target" aria-hidden="true"></i>
-      </div>
+    <div class="stat-card animate__animated animate__fadeInUp" style="animation-delay:.2s">
+      <div class="stat-icon"><i data-lucide="target" aria-hidden="true"></i></div>
       <div class="stat-value">{{ stats.topics_studied }}</div>
       <div class="stat-name">Topics Studied</div>
     </div>
-    <div
-      class="stat-card animate__animated animate__fadeInUp"
-      style="animation-delay: 0.3s"
-    >
+    <div class="stat-card animate__animated animate__fadeInUp" style="animation-delay:.3s">
       <div class="stat-icon"><i data-lucide="star" aria-hidden="true"></i></div>
       <div class="stat-value">{{ stats.avg_mastery }}%</div>
       <div class="stat-name">Avg Mastery</div>
     </div>
-    <div
-      class="stat-card animate__animated animate__fadeInUp"
-      style="animation-delay: 0.4s"
-    >
-      <div class="stat-icon">
-        <i data-lucide="flame" aria-hidden="true"></i>
-      </div>
+    <div class="stat-card animate__animated animate__fadeInUp" style="animation-delay:.4s">
+      <div class="stat-icon"><i data-lucide="flame" aria-hidden="true"></i></div>
       <div class="stat-value">{{ stats.streak }}</div>
-      <div
-        class="stat-name"
-        title="Consecutive calendar days with at least one signed-in visit. A missed day resets the streak."
-      >
-        Day Streak
-      </div>
+      <div class="stat-name" title="Consecutive calendar days with at least one signed-in visit. A missed day resets the streak.">Day Streak</div>
     </div>
   </div>
 
   <div class="dashboard-grid">
+
     <!-- Recent sessions -->
     <div class="dash-card">
-      <div class="dash-card-title">
-        <i data-lucide="history" aria-hidden="true"></i> Recent Sessions
-      </div>
+      <div class="dash-card-title"><i data-lucide="history" aria-hidden="true"></i> Recent Sessions</div>
       {% if recent_sessions %}
       <div class="session-list">
         {% for s in recent_sessions %}
         <div class="session-row">
           <div class="session-info">
             <span class="session-topic">{{ s.topic }}</span>
-            <span class="session-meta"
-              >{{ s.started_at.strftime('%d %b') }} · {{ s.difficulty_level
-              }}</span
-            >
+            <span class="session-meta">{{ s.started_at.strftime('%d %b') }} · {{ s.difficulty_level }}</span>
           </div>
           <div class="session-right">
-            <span class="session-status status-{{ s.status }}"
-              >{{ s.status }}</span
-            >
-            <a
-              href="{{ url_for('tutor.chat', session_id=s.id) }}"
-              class="session-link"
-              title="{% if s.status == 'completed' %}Review conversation{% else %}Continue session{% endif %}"
-              ><i
-                data-lucide="{% if s.status == 'completed' %}message-square-text{% else %}play{% endif %}"
-                aria-hidden="true"
-              ></i
-              ><span
-                >{% if s.status == 'completed' %}Review{% else %}Continue{%
-                endif %}</span
-              ></a
-            >
-            {% if s.status == 'completed' %} {% if current_user.plan == 'free'
-            and s.quiz_score is not none %}
-            <a
-              href="{{ url_for('features.pricing') }}"
-              class="session-link"
-              title="Unlimited quiz attempts are included with Scholar"
-              ><i data-lucide="lock-keyhole" aria-hidden="true"></i
-              ><span>More quizzes · Scholar</span></a
-            >
+            <span class="session-status status-{{ s.status }}">{{ s.status }}</span>
+            <a href="{{ url_for('tutor.chat', session_id=s.id) }}" class="session-link" title="{% if s.status == 'completed' %}Review conversation{% else %}Continue session{% endif %}"><i data-lucide="{% if s.status == 'completed' %}message-square-text{% else %}play{% endif %}" aria-hidden="true"></i><span>{% if s.status == 'completed' %}Review{% else %}Continue{% endif %}</span></a>
+            {% if s.status == 'completed' %}
+            {% if current_user.plan == 'free' and s.quiz_score is not none %}
+            <a href="{{ url_for('features.pricing') }}" class="session-link" title="Unlimited quiz attempts are included with Scholar"><i data-lucide="lock-keyhole" aria-hidden="true"></i><span>More quizzes · Scholar</span></a>
             {% else %}
-            <a
-              href="{{ url_for('quiz.quiz_page', session_id=s.id) }}"
-              class="session-link"
-              title="Take or retry quiz"
-              ><i data-lucide="clipboard-check" aria-hidden="true"></i
-              ><span
-                >{% if s.quiz_score is not none %}Retry quiz{% else %}Take
-                quiz{% endif %}</span
-              ></a
-            >
+            <a href="{{ url_for('quiz.quiz_page', session_id=s.id) }}" class="session-link" title="Take or retry quiz"><i data-lucide="clipboard-check" aria-hidden="true"></i><span>{% if s.quiz_score is not none %}Retry quiz{% else %}Take quiz{% endif %}</span></a>
             {% endif %}
-            <a
-              href="{{ url_for('notes.view_notes', session_id=s.id) }}"
-              class="session-link"
-              title="View notes"
-              ><i data-lucide="notebook-text" aria-hidden="true"></i
-              ><span>Notes</span></a
-            >
+            <a href="{{ url_for('notes.view_notes', session_id=s.id) }}" class="session-link" title="View notes"><i data-lucide="notebook-text" aria-hidden="true"></i><span>Notes</span></a>
             {% endif %}
           </div>
-          <button
-            class="session-delete"
-            type="button"
-            data-session-id="{{ s.id }}"
-            aria-label="Delete {{ s.topic }} session"
-            title="Delete session"
-          >
-            <i data-lucide="trash-2" aria-hidden="true"></i
-            ><span>Delete session</span>
-          </button>
+          <button class="session-delete" type="button" data-session-id="{{ s.id }}" aria-label="Delete {{ s.topic }} session" title="Delete session"><i data-lucide="trash-2" aria-hidden="true"></i><span>Delete session</span></button>
         </div>
         {% endfor %}
       </div>
       {% else %}
       <div class="empty-state">
-        <div class="empty-icon">
-          <i data-lucide="sprout" aria-hidden="true"></i
-          ><span>Start with one curious question</span>
-        </div>
+        <div class="empty-icon"><i data-lucide="sprout" aria-hidden="true"></i><span>Start with one curious question</span></div>
         <p>No sessions yet! Start your first one.</p>
-        <a href="{{ url_for('tutor.new_session') }}" class="btn-secondary"
-          >Begin Learning →</a
-        >
+        <a href="{{ url_for('tutor.new_session') }}" class="btn-secondary">Begin Learning →</a>
       </div>
       {% endif %}
     </div>
 
     <!-- Mastery radar -->
     <div class="dash-card">
-      <div class="dash-card-title">
-        <i data-lucide="trophy" aria-hidden="true"></i> Topic Mastery
-      </div>
+      <div class="dash-card-title"><i data-lucide="trophy" aria-hidden="true"></i> Topic Mastery</div>
       {% if mastery_records %}
       <div class="mastery-list">
         {% for m in mastery_records %}
@@ -184,13 +101,7 @@ endblock %} {% block loader_text %}Loading your learning universe…{% endblock 
       </div>
       {% else %}
       <div class="empty-state">
-        <div class="empty-icon">
-          <i
-            data-lucide="chart-no-axes-column-increasing"
-            aria-hidden="true"
-          ></i
-          ><span>Your progress will grow here</span>
-        </div>
+        <div class="empty-icon"><i data-lucide="chart-no-axes-column-increasing" aria-hidden="true"></i><span>Your progress will grow here</span></div>
         <p>Complete sessions to build your mastery profile.</p>
       </div>
       {% endif %}
@@ -198,622 +109,280 @@ endblock %} {% block loader_text %}Loading your learning universe…{% endblock 
 
     <!-- Quick actions -->
     <div class="dash-card quick-actions">
-      <div class="dash-card-title">
-        <i data-lucide="zap" aria-hidden="true"></i> Quick Actions
-      </div>
+      <div class="dash-card-title"><i data-lucide="zap" aria-hidden="true"></i> Quick Actions</div>
       <div class="action-grid">
-        <a
-          href="{{ url_for('tutor.new_session') }}"
-          class="action-btn"
-          style="--ac: #6366f1"
-        >
+        <a href="{{ url_for('tutor.new_session') }}" class="action-btn" style="--ac:#6366f1">
           <i data-lucide="brain" aria-hidden="true"></i><span>New Session</span>
         </a>
-        <a
-          href="{{ url_for('games.index') }}"
-          class="action-btn"
-          style="--ac: #10b981"
-        >
-          <i data-lucide="gamepad-2" aria-hidden="true"></i
-          ><span>Brain Break</span>
+        <a href="{{ url_for('games.index') }}" class="action-btn" style="--ac:#10b981">
+          <i data-lucide="gamepad-2" aria-hidden="true"></i><span>Brain Break</span>
         </a>
-        <a
-          href="{{ url_for('auth.settings') }}"
-          class="action-btn"
-          style="--ac: #f59e0b"
-        >
-          <i data-lucide="settings-2" aria-hidden="true"></i
-          ><span>Settings</span>
+        <a href="{{ url_for('auth.settings') }}" class="action-btn" style="--ac:#f59e0b">
+          <i data-lucide="settings-2" aria-hidden="true"></i><span>Settings</span>
         </a>
-        <a
-          href="#"
-          class="action-btn split-screen-toggle"
-          style="--ac: #8b5cf6"
-          id="split-screen-btn"
-        >
-          <i data-lucide="panels-top-left" aria-hidden="true"></i
-          ><span>Split Screen</span>
+        <a href="#" class="action-btn split-screen-toggle" style="--ac:#8b5cf6" id="split-screen-btn">
+          <i data-lucide="panels-top-left" aria-hidden="true"></i><span>Split Screen</span>
         </a>
       </div>
     </div>
 
     <!-- Fun fact / tip -->
     <div class="dash-card tip-card">
-      <div class="dash-card-title">
-        <i data-lucide="lightbulb" aria-hidden="true"></i> Learning Tip
-      </div>
+      <div class="dash-card-title"><i data-lucide="lightbulb" aria-hidden="true"></i> Learning Tip</div>
       <div class="tip-content" id="tip-content">Loading your daily wisdom…</div>
-    </div>
+  </div>
 
-    <section class="dash-card learning-insights">
-      <div class="insight-heading">
-        <div>
-          <div class="dash-card-title">
-            <i data-lucide="calendar-check"></i> Learning attendance
-          </div>
-          <p>
-            You showed up {{ stats.attendance_month }} days this month and {{
-            stats.attendance_year }} days this year.
-          </p>
-        </div>
-        <a class="session-link" href="{{ url_for('features.calendar') }}"
-          >Open calendar <i data-lucide="arrow-up-right"></i
-        ></a>
-      </div>
-      <div class="attendance-dots" aria-label="Attendance this month">
-        {% for day in range(1,stats.month_days+1) %}<span
-          class="{% if day in stats.attendance_days %}attended{% endif %}"
-          title="{{ day }} attendance mark"
-          >{% if day in stats.attendance_days %}✓{% else %}·{% endif %}</span
-        >{% endfor %}
-      </div>
-    </section>
+  <section class="dash-card learning-insights"><div class="insight-heading"><div><div class="dash-card-title"><i data-lucide="calendar-check"></i> Learning attendance</div><p>You showed up {{ stats.attendance_month }} days this month and {{ stats.attendance_year }} days this year.</p></div><a class="session-link" href="{{ url_for('features.calendar') }}">Open calendar <i data-lucide="arrow-up-right"></i></a></div><div class="attendance-dots" aria-label="Attendance this month">{% for day in range(1,stats.month_days+1) %}<span class="{% if day in stats.attendance_days %}attended{% endif %}" title="{{ day }} attendance mark">{% if day in stats.attendance_days %}✓{% else %}·{% endif %}</span>{% endfor %}</div></section>
 
-    <section class="dash-card learning-analytics">
-      <div class="insight-heading">
-        <div>
-          <div class="dash-card-title">
-            <i data-lucide="chart-no-axes-combined"></i> Your study rhythm
-          </div>
-          <p>
-            Sessions and quiz scores across the last 14 days, based on your
-            activity.
-          </p>
-        </div>
-        <div class="analytics-summary">
-          <span><strong>{{ analytics.quiz_count }}</strong> quizzes</span
-          ><span
-            ><strong
-              >{{ analytics.average_quiz if analytics.average_quiz is not none
-              else '—' }}{% if analytics.average_quiz is not none %}%{% endif
-              %}</strong
-            >
-            average score</span
-          >
-        </div>
-      </div>
-      <div class="analytics-chart-wrap">
-        <canvas
-          id="learning-chart"
-          aria-label="Daily sessions and quiz score chart"
-        ></canvas>
-      </div>
-      <p class="small-muted">
-        A quiet day is simply a day with no recorded session. Scores include
-        completed quiz attempts only.
-      </p>
-    </section>
+  <section class="dash-card learning-analytics"><div class="insight-heading"><div><div class="dash-card-title"><i data-lucide="chart-no-axes-combined"></i> Your study rhythm</div><p>Sessions and quiz scores across the last 14 days, based on your activity.</p></div><div class="analytics-summary"><span><strong>{{ analytics.quiz_count }}</strong> quizzes</span><span><strong>{{ analytics.average_quiz if analytics.average_quiz is not none else '—' }}{% if analytics.average_quiz is not none %}%{% endif %}</strong> average score</span></div></div><div class="analytics-chart-wrap"><canvas id="learning-chart" aria-label="Daily sessions and quiz score chart"></canvas></div><p class="small-muted">A quiet day is simply a day with no recorded session. Scores include completed quiz attempts only.</p></section>
 
-    <section class="dash-card weekly-screen-time">
-      <div class="dash-card-title">
-        <i data-lucide="chart-column"></i> Weekly recorded learning time
-      </div>
-      <p class="small-muted">
-        Session duration is an estimate from session start/end; game time is
-        capped at the app's 15-minute hourly limit.
-      </p>
-      <div
-        class="weekly-bars"
-        role="img"
-        aria-label="Recorded study and game minutes by day"
-      >
-        {% for day in analytics.weekly_activity %}
-        <div
-          class="weekly-bar-day"
-          title="{{ day.label }}: {{ day.study }} study minutes, {{ day.games }} game minutes"
-        >
-          <div class="weekly-bar-track">
-            <span
-              class="weekly-bar-study"
-              style="height:{{ (day.study / analytics.weekly_peak * 100) if analytics.weekly_peak else 0 }}%"
-            ></span
-            ><span
-              class="weekly-bar-games"
-              style="height:{{ (day.games / analytics.weekly_peak * 100) if analytics.weekly_peak else 0 }}%"
-            ></span>
-          </div>
-          <strong>{{ day.total }}m</strong><small>{{ day.label }}</small>
-        </div>
-        {% endfor %}
-      </div>
-      <p class="weekly-legend">
-        <span>Study session</span><span>Brain games</span>
-      </p>
-    </section>
-
-    <section class="dash-card misconception-dashboard">
-      <div class="dash-card-title">
-        <i data-lucide="scan-search"></i> Concepts to revisit
-      </div>
-      <p class="small-muted">
-        Prioritized signals only: a concept missed on separate quizzes, an
-        incorrect answer you felt confident about, or a clearly detected tutor
-        misconception. One-off uncertain mistakes stay off this list.
-      </p>
-      {% for concept in analytics.weak_concepts %}
-      <article class="weak-concept-row">
-        <div class="weak-concept-copy">
-          <span class="weak-concept-topic">{{ concept.topic }}</span>
-          <strong>{{ concept.label }}</strong>
-          <small class="weak-concept-reason"
-            ><i data-lucide="target"></i>{{ concept.reason }}</small
-          >
-          {% if concept.correction %}<small class="misconception-correction"
-            >{{ concept.correction }}</small
-          >{% endif %}
-        </div>
-        <a
-          class="btn-secondary"
-          href="{% if concept.source == 'tutor' %}{{ url_for('tutor.chat', session_id=concept.session_id) }}{% else %}{{ url_for('quiz.quiz_page', session_id=concept.session_id) }}{% endif %}"
-          ><i
-            data-lucide="{% if concept.source == 'tutor' %}messages-square{% else %}clipboard-check{% endif %}"
-          ></i
-          ><span
-            >{% if concept.source == 'tutor' %}Review session{% else %}Practice
-            again{% endif %}</span
-          ></a
-        >
-      </article>
-      {% else %}
-      <div class="review-empty-state">
-        <i data-lucide="circle-check-big"></i>
-        <div>
-          <strong>Your revisit list is clear</strong
-          ><span
-            >Repeated or high-confidence errors will appear here when they need
-            attention.</span
-          >
-        </div>
+  <section class="dash-card weekly-screen-time">
+    <div class="dash-card-title"><i data-lucide="chart-column"></i> Weekly recorded learning time</div>
+    <p class="small-muted">Session duration is an estimate from session start/end; game time is capped at the app's 15-minute hourly limit.</p>
+    <div class="weekly-bars" role="img" aria-label="Recorded study and game minutes by day">
+      {% for day in analytics.weekly_activity %}
+      <div class="weekly-bar-day" title="{{ day.label }}: {{ day.study }} study minutes, {{ day.games }} game minutes">
+        <div class="weekly-bar-track"><span class="weekly-bar-study" style="height:{{ (day.study / analytics.weekly_peak * 100) if analytics.weekly_peak else 0 }}%"></span><span class="weekly-bar-games" style="height:{{ (day.games / analytics.weekly_peak * 100) if analytics.weekly_peak else 0 }}%"></span></div>
+        <strong>{{ day.total }}m</strong><small>{{ day.label }}</small>
       </div>
       {% endfor %}
-    </section>
-
-    <section class="dash-card spaced-review-card">
-      <div class="insight-heading">
-        <div>
-          <div class="dash-card-title">
-            <i data-lucide="repeat-2"></i> Focused spaced review
-          </div>
-          <p>
-            Only recent topics below 80% stay in this queue. A strong retest
-            clears the reminder; a borderline score spaces the next check
-            further apart.
-          </p>
-        </div>
-        <span class="review-queue-count"
-          >{{ scheduled_reviews|length }} queued</span
-        >
-      </div>
-      <div id="spaced-review-list">
-        {% for review in scheduled_reviews %} {% set context =
-        review_context[review.id] %}
-        <article class="spaced-review-row">
-          <div class="spaced-review-copy">
-            <span
-              class="spaced-review-status {% if review.next_review_at <= now_utc %}is-due{% endif %}"
-              >{% if review.next_review_at <= now_utc %}Ready to revisit{% else
-              %}Up next{% endif %}</span
-            >
-            <strong>{{ review.topic }}</strong>
-            <small
-              >Latest score {{ context.score }}% · {% if review.next_review_at
-              <= now_utc %}due now{% else %}scheduled {{
-              review.next_review_at.strftime('%b %d') }}{% endif %}</small
-            >
-          </div>
-          <a
-            class="btn-secondary"
-            href="{{ url_for('quiz.quiz_page', session_id=context.session_id) }}"
-            ><i data-lucide="play"></i
-            ><span
-              >{% if review.next_review_at <= now_utc %}Review topic{% else
-              %}Open quiz{% endif %}</span
-            ></a
-          >
-        </article>
-        {% else %}
-        <div class="review-empty-state">
-          <i data-lucide="calendar-check-2"></i>
-          <div>
-            <strong>No urgent review topics</strong
-            ><span
-              >Topics enter this list after a low-scoring quiz; strong retests
-              remove them.</span
-            >
-          </div>
-        </div>
-        {% endfor %}
-      </div>
-    </section>
-
-    <section class="dash-card retention-dashboard">
-      <div class="insight-heading">
-        <div>
-          <div class="dash-card-title">
-            <i data-lucide="activity"></i> 10-day session recall checks
-          </div>
-          <p>
-            Each completed session gets a short retrieval test every 10 days.
-            Finish the due test to measure recall and reset that session’s
-            timer.
-          </p>
-        </div>
-        <span class="retention-cycle-badge">Every 10 days</span>
-      </div>
-      <div class="recall-session-list">
-        {% for recall in recall_sessions %}
-        <article
-          class="recall-session-row"
-          data-recall-due-at="{{ recall.next_test_at.strftime('%Y-%m-%dT%H:%M:%SZ') }}"
-          data-recall-id="{{ recall.session_id }}-{{ recall.cycle_number }}"
-        >
-          <div class="recall-session-main">
-            <strong>{{ recall.topic }}</strong>
-            <span
-              >Cycle {{ recall.cycle_number }} · {% if recall.baseline_estimated
-              %}estimated baseline; no initial quiz yet{% else %}Last test {{
-              recall.last_score|round|int }}%{% endif %}</span
-            >
-            {% if recall.stability_days %}<small
-              >Estimated stability: {{ recall.stability_days|round|int }}
-              days</small
-            >{% else %}<small
-              >More delayed-check data is needed for a personal retention
-              curve.</small
-            >{% endif %}
-          </div>
-          <div class="recall-session-action">
-            <span
-              class="recall-countdown {% if recall.due %}is-due{% endif %}"
-              aria-live="polite"
-              >{% if recall.due %}Recall test due now{% else %}Loading
-              countdown…{% endif %}</span
-            >
-            <a
-              class="btn-secondary"
-              href="{{ url_for('quiz.quiz_page', session_id=recall.session_id) }}"
-              >Take recall test</a
-            >
-          </div>
-        </article>
-        {% else %}
-        <p class="small-muted">
-          Complete a learning session to start its 10-day recall cycle.
-        </p>
-        {% endfor %}
-      </div>
-      <div class="retention-chart-area">
-        <h3>Your measured recall curve</h3>
-        {% if recall_chart.datasets %}
-        <div class="retention-chart-wrap">
-          <canvas
-            id="retention-chart"
-            aria-label="Estimated recall retention curves over 30 days"
-          ></canvas>
-        </div>
-        <p class="small-muted">
-          Curves are individual exponential approximations fitted to your
-          delayed quiz results, not clinical memory measurements or guaranteed
-          predictions. A near-perfect delayed score only gives a lower-bound
-          estimate.
-        </p>
-        {% else %}
-        <div class="retention-empty">
-          <i data-lucide="chart-no-axes-combined"></i
-          ><span>Your personal curves appear after a due 10-day test.</span>
-        </div>
-        {% endif %}
-        <p class="retention-evidence">
-          Why spaced tests? A major review rated practice testing and
-          distributed practice as high-utility learning techniques. The 10-day
-          interval follows your requested cadence; it is a practical schedule,
-          not a claim that 10 days is optimal for every learner.
-          <a
-            href="https://www.psychologicalscience.org/publications/journals/pspi/learning-techniques.html"
-            target="_blank"
-            rel="noopener noreferrer"
-            >Dunlosky et al., 2013 review</a
-          >.
-        </p>
-      </div>
-    </section>
-
-    {% if analytics_unlocked %}
-    <section class="dash-card behavior-insights">
-      <div class="dash-card-title">
-        <i data-lucide="brain-circuit"></i> Confidence &amp; recall insights
-        <span class="academy-exclusive">Academy</span>
-      </div>
-      <p class="small-muted">
-        Evidence from your last 14 days of quiz retrieval practice{% if
-        analytics.confidence_answers %} ({{ analytics.confidence_answers }}
-        confidence ratings; {{ analytics.retrieval_questions }} answered
-        questions){% else %}.{% endif %}
-      </p>
-      <div class="behavior-metrics">
-        <article>
-          <strong
-            >{{ analytics.confidence if analytics.confidence is not none else
-            '—' }}{% if analytics.confidence is not none %}%{% endif %}</strong
-          ><span>Average confidence</span
-          ><small
-            >Self-ratings: 1 (guess) to 5 (very sure), converted to a
-            percentage.</small
-          >
-        </article>
-        <article>
-          <strong
-            >{{ analytics.calibration if analytics.calibration is not none else
-            '—' }}{% if analytics.calibration is not none %}%{% endif %}</strong
-          ><span>Confidence calibration</span
-          ><small
-            >100% minus average gap between confidence and correctness (0% or
-            100%).</small
-          >
-        </article>
-        <article>
-          <strong
-            >{{ analytics.recall if analytics.recall is not none else '—' }}{%
-            if analytics.recall is not none %}%{% endif %}</strong
-          ><span>Quiz recall accuracy</span
-          ><small
-            >Correct answers divided by all questions answered in this
-            period.</small
-          >
-        </article>
-      </div>
-      {% if analytics.recall is none %}
-      <p class="small-muted">
-        Take a quiz and rate your confidence to build your first evidence-based
-        insights.
-      </p>
-      {% endif %}
-    </section>
-    {% else %}
-    <section class="dash-card behavior-insights behavior-locked">
-      <div class="dash-card-title">
-        <i data-lucide="brain-circuit"></i> Confidence &amp; recall insights
-        <span class="academy-exclusive">Academy</span>
-      </div>
-      <p>
-        See evidence-based confidence calibration and quiz recall trends as an
-        Academy member.
-      </p>
-      <a class="btn-secondary" href="{{ url_for('features.pricing') }}"
-        >Explore Academy analytics <i data-lucide="arrow-right"></i
-      ></a>
-    </section>
-    {% endif %}
-
-    <section class="dash-card learning-map-card">
-      <div class="insight-heading">
-        <div>
-          <div class="dash-card-title">
-            <i data-lucide="orbit"></i> Your learning universe
-          </div>
-          <p>
-            See which topics connect, which ideas contain others, and where new
-            knowledge is growing.
-          </p>
-        </div>
-        <button class="btn-secondary" id="build-topic-map">
-          <i data-lucide="network"></i>Explore connections
-        </button>
-      </div>
-      <div class="learning-map-preview" id="learning-map-preview">
-        <div class="learning-map-bubbles">
-          {% for topic in mastery_records[:6] %}<span>{{ topic.topic }}</span>{%
-          else %}
-          <p class="small-muted">
-            Complete a learning session to grow your map.
-          </p>
-          {% endfor %}
-        </div>
-      </div>
-    </section>
-  </div>
-</div>
-
-<div
-  class="topic-map-modal hidden"
-  id="topic-map-modal"
-  role="dialog"
-  aria-modal="true"
-  aria-labelledby="topic-map-title"
->
-  <section class="topic-map-dialog">
-    <button
-      class="topic-map-close"
-      id="close-topic-map"
-      aria-label="Close topic map"
-    >
-      <i data-lucide="x"></i>
-    </button>
-    <h2 id="topic-map-title">Your learning universe</h2>
-    <p id="topic-map-caption">Ideas connected across your learning history.</p>
-    <div id="topic-map-large" class="learning-map-graph"></div>
+    </div>
+    <p class="weekly-legend"><span>Study session</span><span>Brain games</span></p>
   </section>
+
+  <section class="dash-card misconception-dashboard">
+    <div class="dash-card-title"><i data-lucide="scan-search"></i> Concepts to revisit</div>
+    <p class="small-muted">Prioritized signals only: a concept missed on separate quizzes, an incorrect answer you felt confident about, or a clearly detected tutor misconception. One-off uncertain mistakes stay off this list.</p>
+    {% for concept in analytics.weak_concepts %}
+    <article class="weak-concept-row">
+      <div class="weak-concept-copy">
+        <span class="weak-concept-topic">{{ concept.topic }}</span>
+        <strong>{{ concept.label }}</strong>
+        <small class="weak-concept-reason"><i data-lucide="target"></i>{{ concept.reason }}</small>
+        {% if concept.correction %}<small class="misconception-correction">{{ concept.correction }}</small>{% endif %}
+      </div>
+      <a class="btn-secondary" href="{% if concept.source == 'tutor' %}{{ url_for('tutor.chat', session_id=concept.session_id) }}{% else %}{{ url_for('quiz.quiz_page', session_id=concept.session_id) }}{% endif %}"><i data-lucide="{% if concept.source == 'tutor' %}messages-square{% else %}clipboard-check{% endif %}"></i><span>{% if concept.source == 'tutor' %}Review session{% else %}Practice again{% endif %}</span></a>
+    </article>
+    {% else %}
+    <div class="review-empty-state"><i data-lucide="circle-check-big"></i><div><strong>Your revisit list is clear</strong><span>Repeated or high-confidence errors will appear here when they need attention.</span></div></div>
+    {% endfor %}
+  </section>
+
+  <section class="dash-card spaced-review-card">
+    <div class="insight-heading">
+      <div><div class="dash-card-title"><i data-lucide="repeat-2"></i> Focused spaced review</div><p>Only recent topics below 80% stay in this queue. A strong retest clears the reminder; a borderline score spaces the next check further apart.</p></div>
+      <span class="review-queue-count">{{ scheduled_reviews|length }} queued</span>
+    </div>
+    <div id="spaced-review-list">
+      {% for review in scheduled_reviews %}
+      {% set context = review_context[review.id] %}
+      <article class="spaced-review-row">
+        <div class="spaced-review-copy">
+          <span class="spaced-review-status {% if review.next_review_at <= now_utc %}is-due{% endif %}">{% if review.next_review_at <= now_utc %}Ready to revisit{% else %}Up next{% endif %}</span>
+          <strong>{{ review.topic }}</strong>
+          <small>Latest score {{ context.score }}% · {% if review.next_review_at <= now_utc %}due now{% else %}scheduled {{ review.next_review_at.strftime('%b %d') }}{% endif %}</small>
+        </div>
+        <a class="btn-secondary" href="{{ url_for('quiz.quiz_page', session_id=context.session_id) }}"><i data-lucide="play"></i><span>{% if review.next_review_at <= now_utc %}Review topic{% else %}Open quiz{% endif %}</span></a>
+      </article>
+      {% else %}
+      <div class="review-empty-state"><i data-lucide="calendar-check-2"></i><div><strong>No urgent review topics</strong><span>Topics enter this list after a low-scoring quiz; strong retests remove them.</span></div></div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="dash-card retention-dashboard">
+    <div class="insight-heading">
+      <div>
+        <div class="dash-card-title"><i data-lucide="activity"></i> 10-day session recall checks</div>
+        <p>Each completed session gets a short retrieval test every 10 days. Finish the due test to measure recall and reset that session’s timer.</p>
+      </div>
+      <span class="retention-cycle-badge">Every 10 days</span>
+    </div>
+    <div class="recall-session-list">
+      {% for recall in recall_sessions %}
+      <article class="recall-session-row" data-recall-due-at="{{ recall.next_test_at.strftime('%Y-%m-%dT%H:%M:%SZ') }}" data-recall-id="{{ recall.session_id }}-{{ recall.cycle_number }}">
+        <div class="recall-session-main">
+          <strong>{{ recall.topic }}</strong>
+          <span>Cycle {{ recall.cycle_number }} · {% if recall.baseline_estimated %}estimated baseline; no initial quiz yet{% else %}Last test {{ recall.last_score|round|int }}%{% endif %}</span>
+          {% if recall.stability_days %}<small>Estimated stability: {{ recall.stability_days|round|int }} days</small>{% else %}<small>More delayed-check data is needed for a personal retention curve.</small>{% endif %}
+        </div>
+        <div class="recall-session-action">
+          <span class="recall-countdown {% if recall.due %}is-due{% endif %}" aria-live="polite">{% if recall.due %}Recall test due now{% else %}Loading countdown…{% endif %}</span>
+          <a class="btn-secondary" href="{{ url_for('quiz.quiz_page', session_id=recall.session_id) }}">Take recall test</a>
+        </div>
+      </article>
+      {% else %}
+      <p class="small-muted">Complete a learning session to start its 10-day recall cycle.</p>
+      {% endfor %}
+    </div>
+    <div class="retention-chart-area">
+      <h3>Your measured recall curve</h3>
+      {% if recall_chart.datasets %}
+      <div class="retention-chart-wrap"><canvas id="retention-chart" aria-label="Estimated recall retention curves over 30 days"></canvas></div>
+      <p class="small-muted">Curves are individual exponential approximations fitted to your delayed quiz results, not clinical memory measurements or guaranteed predictions. A near-perfect delayed score only gives a lower-bound estimate.</p>
+      {% else %}
+      <div class="retention-empty"><i data-lucide="chart-no-axes-combined"></i><span>Your personal curves appear after a due 10-day test.</span></div>
+      {% endif %}
+      <p class="retention-evidence">Why spaced tests? A major review rated practice testing and distributed practice as high-utility learning techniques. The 10-day interval follows your requested cadence; it is a practical schedule, not a claim that 10 days is optimal for every learner. <a href="https://www.psychologicalscience.org/publications/journals/pspi/learning-techniques.html" target="_blank" rel="noopener noreferrer">Dunlosky et al., 2013 review</a>.</p>
+    </div>
+  </section>
+
+  {% if analytics_unlocked %}
+  <section class="dash-card behavior-insights">
+    <div class="dash-card-title"><i data-lucide="brain-circuit"></i> Confidence &amp; recall insights <span class="academy-exclusive">Academy</span></div>
+    <p class="small-muted">Evidence from your last 14 days of quiz retrieval practice{% if analytics.confidence_answers %} ({{ analytics.confidence_answers }} confidence ratings; {{ analytics.retrieval_questions }} answered questions){% else %}.{% endif %}</p>
+    <div class="behavior-metrics">
+      <article><strong>{{ analytics.confidence if analytics.confidence is not none else '—' }}{% if analytics.confidence is not none %}%{% endif %}</strong><span>Average confidence</span><small>Self-ratings: 1 (guess) to 5 (very sure), converted to a percentage.</small></article>
+      <article><strong>{{ analytics.calibration if analytics.calibration is not none else '—' }}{% if analytics.calibration is not none %}%{% endif %}</strong><span>Confidence calibration</span><small>100% minus average gap between confidence and correctness (0% or 100%).</small></article>
+      <article><strong>{{ analytics.recall if analytics.recall is not none else '—' }}{% if analytics.recall is not none %}%{% endif %}</strong><span>Quiz recall accuracy</span><small>Correct answers divided by all questions answered in this period.</small></article>
+    </div>
+    {% if analytics.recall is none %}<p class="small-muted">Take a quiz and rate your confidence to build your first evidence-based insights.</p>{% endif %}
+  </section>
+  {% else %}
+  <section class="dash-card behavior-insights behavior-locked">
+    <div class="dash-card-title"><i data-lucide="brain-circuit"></i> Confidence &amp; recall insights <span class="academy-exclusive">Academy</span></div>
+    <p>See evidence-based confidence calibration and quiz recall trends as an Academy member.</p>
+    <a class="btn-secondary" href="{{ url_for('features.pricing') }}">Explore Academy analytics <i data-lucide="arrow-right"></i></a>
+  </section>
+  {% endif %}
+
+  <section class="dash-card learning-map-card"><div class="insight-heading"><div><div class="dash-card-title"><i data-lucide="orbit"></i> Your learning universe</div><p>See which topics connect, which ideas contain others, and where new knowledge is growing.</p></div><button class="btn-secondary" id="build-topic-map"><i data-lucide="network"></i>Explore connections</button></div><div class="learning-map-preview" id="learning-map-preview"><div class="learning-map-bubbles">{% for topic in mastery_records[:6] %}<span>{{ topic.topic }}</span>{% else %}<p class="small-muted">Complete a learning session to grow your map.</p>{% endfor %}</div></div></section>
+
 </div>
+</div>
+
+<div class="topic-map-modal hidden" id="topic-map-modal" role="dialog" aria-modal="true" aria-labelledby="topic-map-title"><section class="topic-map-dialog"><button class="topic-map-close" id="close-topic-map" aria-label="Close topic map"><i data-lucide="x"></i></button><h2 id="topic-map-title">Your learning universe</h2><p id="topic-map-caption">Ideas connected across your learning history.</p><div id="topic-map-large" class="learning-map-graph"></div></section></div>
 
 <!-- Split screen overlay -->
 <div class="split-screen-modal hidden" id="split-screen-modal">
   <div class="split-screen-container">
     <div class="split-panel split-left">
       <div class="split-toolbar">
-        <span
-          ><i data-lucide="file-text" aria-hidden="true"></i> File Viewer</span
-        >
-        <input
-          type="file"
-          id="file-input"
-          accept=".pdf,.txt,.md"
-          class="hidden"
-        />
-        <button
-          class="btn-sm"
-          onclick="document.getElementById('file-input').click()"
-        >
-          Open File
-        </button>
-        <button class="btn-sm-danger" id="close-split">
-          <i data-lucide="x" aria-hidden="true"></i><span>Close</span>
-        </button>
+        <span><i data-lucide="file-text" aria-hidden="true"></i> File Viewer</span>
+        <input type="file" id="file-input" accept=".pdf,.txt,.md" class="hidden" />
+        <button class="btn-sm" onclick="document.getElementById('file-input').click()">Open File</button>
+        <button class="btn-sm-danger" id="close-split"><i data-lucide="x" aria-hidden="true"></i><span>Close</span></button>
       </div>
       <div class="file-viewer" id="file-viewer">
         <div class="file-placeholder">
           <i data-lucide="folder-open" aria-hidden="true"></i>
           <p>Open a file to read it here while chatting with your tutor</p>
-          <button
-            onclick="document.getElementById('file-input').click()"
-            class="btn-secondary"
-          >
-            Open File
-          </button>
+          <button onclick="document.getElementById('file-input').click()" class="btn-secondary">Open File</button>
         </div>
       </div>
     </div>
     <div class="split-divider"></div>
     <div class="split-panel split-right">
-      <div class="split-toolbar">
-        <span
-          ><i data-lucide="brain" aria-hidden="true"></i> Quick Tutor Chat</span
-        >
-      </div>
-      <iframe
-        id="split-tutor-frame"
-        src="{{ url_for('tutor.new_session') }}"
-        class="split-iframe"
-      ></iframe>
+      <div class="split-toolbar"><span><i data-lucide="brain" aria-hidden="true"></i> Quick Tutor Chat</span></div>
+      <iframe id="split-tutor-frame" src="{{ url_for('tutor.new_session') }}" class="split-iframe"></iframe>
     </div>
   </div>
 </div>
-{% endblock %} {% block scripts %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.9/dist/chart.umd.min.js"></script>
-<script>
-  const csrfToken =
-    document.querySelector('meta[name="csrf-token"]')?.content || "";
-</script>
-<script>
-  // Tips rotation
-  const tips = [
-    "The Feynman Technique: Explain a concept as if teaching a child. LearnOrbit does this for you!",
-    "Pomodoro power: 25 minutes of study, 5 minutes of break. Our games are perfect for that break!",
-    "Writing a quick summary in your own words helps ideas stick.",
-    "Spaced repetition: revisit ideas over time. Your completed sessions include 10-day recall checks.",
-    "Questions beat passive reading. Keep asking your AI tutor 'why?' and 'how does this connect?'",
-    "One topic per session supports deeper learning. Resist the urge to jump around!",
-    "Sleep after studying helps seal memories. Avoid all-nighters if you want to remember what you learned.",
-  ];
-  document.getElementById('tip-content').textContent = tips[Math.floor(Math.random()*tips.length)];
-  const hour=new Date().getHours(),name={{ current_user.username|tojson }};const greeting=hour<12?'Good morning':hour<18?'Good afternoon':'Good evening';document.getElementById('welcome-title').textContent=`${greeting}, ${name}!`;const playful=["Your curiosity called. It left three tabs open.","Tiny study session? Big main-character energy.","Today's forecast: one good question and a suspiciously satisfying answer.","Welcome back. Your brain has been buffering a brilliant idea.","Pick a topic; future-you says thanks."];if({{ stats.streak }}===0)document.getElementById('welcome-line').textContent=playful[Math.floor(Math.random()*playful.length)];
-  document.querySelectorAll('.session-delete').forEach(button=>button.addEventListener('click',async()=>{if(!confirm('Delete this session and its saved data?'))return;const response=await fetch(`/tutor/${button.dataset.sessionId}/delete`,{method:'POST',headers:{'X-CSRFToken':csrfToken}});if(response.ok){button.closest('.session-row').remove();showToast('Session and its uploaded files deleted.','success')}else showToast('Could not delete this session.','error')}));
-  if(window.Chart){const data={{ analytics|tojson }};const canvas=document.getElementById('learning-chart');const chart=new Chart(canvas,{type:'bar',data:{labels:data.labels,datasets:[{label:'Study sessions',data:data.sessions,backgroundColor:'rgba(40,115,97,.72)',borderRadius:8,yAxisID:'sessions',order:2},{type:'line',label:'Quiz score (%)',data:data.quiz,borderColor:'#e39a45',backgroundColor:'#e39a45',spanGaps:true,tension:.36,pointRadius:3,yAxisID:'score',order:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{usePointStyle:true}}},scales:{x:{grid:{display:false}},sessions:{beginAtZero:true,ticks:{precision:0}},score:{position:'right',min:0,max:100,grid:{display:false}}}}});const syncChartTheme=()=>{const dark=document.documentElement.dataset.theme==='dark',text=dark?'#c5d0cb':'#64736c';chart.options.plugins.legend.labels.color=dark?'#edf1ee':'#33413b';chart.options.scales.x.ticks={color:text};chart.options.scales.sessions.ticks={precision:0,color:text};chart.options.scales.sessions.grid={color:dark?'#39433f':'#e5e8e4'};chart.options.scales.score.ticks={color:text};chart.update('none')};syncChartTheme();document.addEventListener('learnorbit:themechange',syncChartTheme)}
+{% endblock %}
 
-  const recallData={{ recall_chart|tojson }};
-  if(window.Chart&&document.getElementById('retention-chart')){
-    const retentionChart=new Chart(document.getElementById('retention-chart'),{
-      type:'line',
-      data:{labels:recallData.labels.map(day=>`${day}d`),datasets:recallData.datasets.map((dataset,index)=>({
-        label:dataset.label,
-        data:dataset.data,
-        borderColor:['#287361','#c35b48','#3275a5','#8255a8','#b57822','#338e83','#566a89','#bd5871'][index%8],
-        backgroundColor:'transparent',
-        borderWidth:2,
-        pointRadius:0,
-        tension:.28,
-      }))},
-      options:{responsive:true,maintainAspectRatio:false,interaction:{intersect:false,mode:'index'},plugins:{legend:{position:'bottom',labels:{usePointStyle:true,boxWidth:8}},tooltip:{callbacks:{label:context=>`${context.dataset.label}: ${context.parsed.y}% estimated recall`}}},scales:{x:{title:{display:true,text:'Days after the baseline test'},grid:{display:false}},y:{min:0,max:100,title:{display:true,text:'Estimated recall (%)'},ticks:{callback:value=>`${value}%`}}}}
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.9/dist/chart.umd.min.js"></script><script>const csrfToken=document.querySelector('meta[name="csrf-token"]')?.content||'';</script>
+<script>
+// Tips rotation
+const tips = [
+  "The Feynman Technique: Explain a concept as if teaching a child. LearnOrbit does this for you!",
+  "Pomodoro power: 25 minutes of study, 5 minutes of break. Our games are perfect for that break!",
+  "Writing a quick summary in your own words helps ideas stick.",
+  "Spaced repetition: revisit ideas over time. Your completed sessions include 10-day recall checks.",
+  "Questions beat passive reading. Keep asking your AI tutor 'why?' and 'how does this connect?'",
+  "One topic per session supports deeper learning. Resist the urge to jump around!",
+  "Sleep after studying helps seal memories. Avoid all-nighters if you want to remember what you learned.",
+];
+document.getElementById('tip-content').textContent = tips[Math.floor(Math.random()*tips.length)];
+const hour=new Date().getHours(),name={{ current_user.username|tojson }};const greeting=hour<12?'Good morning':hour<18?'Good afternoon':'Good evening';document.getElementById('welcome-title').textContent=`${greeting}, ${name}!`;const playful=["Your curiosity called. It left three tabs open.","Tiny study session? Big main-character energy.","Today's forecast: one good question and a suspiciously satisfying answer.","Welcome back. Your brain has been buffering a brilliant idea.","Pick a topic; future-you says thanks."];if({{ stats.streak }}===0)document.getElementById('welcome-line').textContent=playful[Math.floor(Math.random()*playful.length)];
+document.querySelectorAll('.session-delete').forEach(button=>button.addEventListener('click',async()=>{if(!confirm('Delete this session and its saved data?'))return;const response=await fetch(`/tutor/${button.dataset.sessionId}/delete`,{method:'POST',headers:{'X-CSRFToken':csrfToken}});if(response.ok){button.closest('.session-row').remove();showToast('Session and its uploaded files deleted.','success')}else showToast('Could not delete this session.','error')}));
+if(window.Chart){const data={{ analytics|tojson }};const canvas=document.getElementById('learning-chart');const chart=new Chart(canvas,{type:'bar',data:{labels:data.labels,datasets:[{label:'Study sessions',data:data.sessions,backgroundColor:'rgba(40,115,97,.72)',borderRadius:8,yAxisID:'sessions',order:2},{type:'line',label:'Quiz score (%)',data:data.quiz,borderColor:'#e39a45',backgroundColor:'#e39a45',spanGaps:true,tension:.36,pointRadius:3,yAxisID:'score',order:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{usePointStyle:true}}},scales:{x:{grid:{display:false}},sessions:{beginAtZero:true,ticks:{precision:0}},score:{position:'right',min:0,max:100,grid:{display:false}}}}});const syncChartTheme=()=>{const dark=document.documentElement.dataset.theme==='dark',text=dark?'#c5d0cb':'#64736c';chart.options.plugins.legend.labels.color=dark?'#edf1ee':'#33413b';chart.options.scales.x.ticks={color:text};chart.options.scales.sessions.ticks={precision:0,color:text};chart.options.scales.sessions.grid={color:dark?'#39433f':'#e5e8e4'};chart.options.scales.score.ticks={color:text};chart.update('none')};syncChartTheme();document.addEventListener('learnorbit:themechange',syncChartTheme)}
+
+const recallData={{ recall_chart|tojson }};
+if(window.Chart&&document.getElementById('retention-chart')){
+  const retentionChart=new Chart(document.getElementById('retention-chart'),{
+    type:'line',
+    data:{labels:recallData.labels.map(day=>`${day}d`),datasets:recallData.datasets.map((dataset,index)=>({
+      label:dataset.label,
+      data:dataset.data,
+      borderColor:['#287361','#c35b48','#3275a5','#8255a8','#b57822','#338e83','#566a89','#bd5871'][index%8],
+      backgroundColor:'transparent',
+      borderWidth:2,
+      pointRadius:0,
+      tension:.28,
+    }))},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{intersect:false,mode:'index'},plugins:{legend:{position:'bottom',labels:{usePointStyle:true,boxWidth:8}},tooltip:{callbacks:{label:context=>`${context.dataset.label}: ${context.parsed.y}% estimated recall`}}},scales:{x:{title:{display:true,text:'Days after the baseline test'},grid:{display:false}},y:{min:0,max:100,title:{display:true,text:'Estimated recall (%)'},ticks:{callback:value=>`${value}%`}}}}
+  });
+  document.addEventListener('learnorbit:themechange',()=>{const dark=document.documentElement.dataset.theme==='dark';retentionChart.options.plugins.legend.labels.color=dark?'#f7f4ea':'#202b26';retentionChart.options.scales.x.ticks={color:dark?'#c3cbc7':'#59635d'};retentionChart.options.scales.y.ticks={color:dark?'#c3cbc7':'#59635d',callback:value=>`${value}%`};retentionChart.options.scales.x.title.color=dark?'#c3cbc7':'#59635d';retentionChart.options.scales.y.title.color=dark?'#c3cbc7':'#59635d';retentionChart.update('none')});
+}
+const recallRows=[...document.querySelectorAll('.recall-session-row')];
+function refreshRecallCountdowns(){
+  const now=Date.now();
+  for(const row of recallRows){
+    const dueAt=Date.parse(row.dataset.recallDueAt);
+    const label=row.querySelector('.recall-countdown');
+    if(!Number.isFinite(dueAt)||!label)continue;
+    const remaining=dueAt-now;
+    if(remaining<=0){
+      label.textContent='Recall test due now';
+      label.classList.add('is-due');
+    }else{
+      const hours=Math.ceil(remaining/3600000);
+      const days=Math.floor(hours/24);
+      label.textContent=days?`Due in ${days} day${days===1?'':'s'} · ${hours%24}h`:`Due in ${hours} hour${hours===1?'':'s'}`;
+    }
+  }
+}
+refreshRecallCountdowns();
+const recallCountdownTimer=setInterval(refreshRecallCountdowns,60000);
+document.addEventListener('learnorbit:beforepagechange',()=>clearInterval(recallCountdownTimer),{once:true});
+
+const mapModal=document.getElementById('topic-map-modal');function buildMapSvg(topics,edges){const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg');svg.setAttribute('viewBox','0 0 900 360');svg.setAttribute('role','img');svg.setAttribute('aria-label','Map of connected learning topics');const points=topics.slice(0,16).map((topic,index)=>({topic,x:115+(index%4)*225,y:76+Math.floor(index/4)*112}));edges.forEach(edge=>{const a=points.find(p=>p.topic===edge.source),b=points.find(p=>p.topic===edge.target);if(!a||!b)return;const line=document.createElementNS(ns,'path');line.setAttribute('d',`M ${a.x} ${a.y+25} C ${(a.x+b.x)/2} ${a.y+85}, ${(a.x+b.x)/2} ${b.y-55}, ${b.x} ${b.y-25}`);line.setAttribute('class',`map-edge ${edge.kind}`);svg.append(line)});points.forEach((point,index)=>{const group=document.createElementNS(ns,'g');group.setAttribute('transform',`translate(${point.x} ${point.y})`);const oval=document.createElementNS(ns,'ellipse');oval.setAttribute('rx',Math.min(98,Math.max(60,point.topic.length*4.2)));oval.setAttribute('ry','29');oval.setAttribute('class',`map-node node-${index%5}`);group.append(oval);const label=document.createElementNS(ns,'text');label.setAttribute('text-anchor','middle');label.setAttribute('dominant-baseline','middle');label.textContent=point.topic.length>26?point.topic.slice(0,25)+'…':point.topic;group.append(label);svg.append(group)});return svg}function showTopicMap(data){const preview=document.getElementById('learning-map-preview');preview.replaceChildren();if(!data.topics.length){preview.textContent='Study a topic with your tutor first, then connections will grow here.';return}const svg=buildMapSvg(data.topics.slice(0,8),data.edges);svg.classList.add('mini-map-svg');preview.append(svg);if(data.message)document.getElementById('topic-map-caption').textContent=data.message;else document.getElementById('topic-map-caption').textContent=`${data.topics.length} topics · ${data.edges.length} AI-suggested connections`;document.getElementById('topic-map-large').replaceChildren(buildMapSvg(data.topics,data.edges));mapModal.classList.remove('hidden');window.refreshIcons?.()}document.getElementById('build-topic-map').onclick=async e=>{const button=e.currentTarget;button.disabled=true;button.dataset.label=button.textContent;button.textContent='Mapping ideas…';try{const res=await fetch('/dashboard/api/topic-map',{method:'POST',headers:{'X-CSRFToken':csrfToken}});const data=await res.json();if(!res.ok)throw Error(data.error||'Could not build the topic map.');showTopicMap(data)}catch(error){showToast(error.message,'error')}finally{button.disabled=false;button.innerHTML='<i data-lucide="network"></i>Explore connections';window.refreshIcons?.()}};document.getElementById('close-topic-map').onclick=()=>mapModal.classList.add('hidden');mapModal.addEventListener('click',e=>{if(e.target===mapModal)mapModal.classList.add('hidden')});document.addEventListener('keydown',e=>{if(e.key==='Escape')mapModal.classList.add('hidden')});
+
+// Split screen
+document.getElementById('split-screen-btn').addEventListener('click', e => {
+  e.preventDefault();
+  {% if current_user.plan == 'free' %}
+    showToast('Split screen requires Scholar or Academy plan. Upgrade to unlock.', 'warning');
+  {% else %}
+    document.getElementById('split-screen-modal').classList.toggle('hidden');
+  {% endif %}
+});
+document.getElementById('close-split').addEventListener('click', () => {
+  document.getElementById('split-screen-modal').classList.add('hidden');
+});
+
+document.querySelectorAll('.mark-reviewed').forEach(button => button.addEventListener('click', async () => {
+  button.disabled = true;
+  try {
+    const response = await fetch(`/dashboard/api/reviews/${button.dataset.reviewId}/complete`, {
+      method: 'POST', headers: {'X-CSRFToken': csrfToken}
     });
-    document.addEventListener('learnorbit:themechange',()=>{const dark=document.documentElement.dataset.theme==='dark';retentionChart.options.plugins.legend.labels.color=dark?'#f7f4ea':'#202b26';retentionChart.options.scales.x.ticks={color:dark?'#c3cbc7':'#59635d'};retentionChart.options.scales.y.ticks={color:dark?'#c3cbc7':'#59635d',callback:value=>`${value}%`};retentionChart.options.scales.x.title.color=dark?'#c3cbc7':'#59635d';retentionChart.options.scales.y.title.color=dark?'#c3cbc7':'#59635d';retentionChart.update('none')});
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Could not update the review schedule.');
+    button.closest('.spaced-review-row').remove();
+    showToast(`Review scheduled again in ${data.interval_days} day${data.interval_days === 1 ? '' : 's'}.`, 'success');
+  } catch (error) {
+    showToast(error.message, 'error');
+    button.disabled = false;
   }
-  const recallRows=[...document.querySelectorAll('.recall-session-row')];
-  function refreshRecallCountdowns(){
-    const now=Date.now();
-    for(const row of recallRows){
-      const dueAt=Date.parse(row.dataset.recallDueAt);
-      const label=row.querySelector('.recall-countdown');
-      if(!Number.isFinite(dueAt)||!label)continue;
-      const remaining=dueAt-now;
-      if(remaining<=0){
-        label.textContent='Recall test due now';
-        label.classList.add('is-due');
-      }else{
-        const hours=Math.ceil(remaining/3600000);
-        const days=Math.floor(hours/24);
-        label.textContent=days?`Due in ${days} day${days===1?'':'s'} · ${hours%24}h`:`Due in ${hours} hour${hours===1?'':'s'}`;
-      }
-    }
+}));
+
+// File viewer
+document.getElementById('file-input').addEventListener('change', function() {
+  const file = this.files[0];
+  if (!file) return;
+  const viewer = document.getElementById('file-viewer');
+  if (file.type === 'application/pdf') {
+    const url = URL.createObjectURL(file);
+    viewer.innerHTML = `<iframe src="${url}" class="file-iframe"></iframe>`;
+  } else {
+    const reader = new FileReader();
+    reader.onload = e => {
+      viewer.innerHTML = `<pre class="file-text">${e.target.result.replace(/</g,'&lt;')}</pre>`;
+    };
+    reader.readAsText(file);
   }
-  refreshRecallCountdowns();
-  const recallCountdownTimer=setInterval(refreshRecallCountdowns,60000);
-  document.addEventListener('learnorbit:beforepagechange',()=>clearInterval(recallCountdownTimer),{once:true});
-
-  const mapModal=document.getElementById('topic-map-modal');function buildMapSvg(topics,edges){const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg');svg.setAttribute('viewBox','0 0 900 360');svg.setAttribute('role','img');svg.setAttribute('aria-label','Map of connected learning topics');const points=topics.slice(0,16).map((topic,index)=>({topic,x:115+(index%4)*225,y:76+Math.floor(index/4)*112}));edges.forEach(edge=>{const a=points.find(p=>p.topic===edge.source),b=points.find(p=>p.topic===edge.target);if(!a||!b)return;const line=document.createElementNS(ns,'path');line.setAttribute('d',`M ${a.x} ${a.y+25} C ${(a.x+b.x)/2} ${a.y+85}, ${(a.x+b.x)/2} ${b.y-55}, ${b.x} ${b.y-25}`);line.setAttribute('class',`map-edge ${edge.kind}`);svg.append(line)});points.forEach((point,index)=>{const group=document.createElementNS(ns,'g');group.setAttribute('transform',`translate(${point.x} ${point.y})`);const oval=document.createElementNS(ns,'ellipse');oval.setAttribute('rx',Math.min(98,Math.max(60,point.topic.length*4.2)));oval.setAttribute('ry','29');oval.setAttribute('class',`map-node node-${index%5}`);group.append(oval);const label=document.createElementNS(ns,'text');label.setAttribute('text-anchor','middle');label.setAttribute('dominant-baseline','middle');label.textContent=point.topic.length>26?point.topic.slice(0,25)+'…':point.topic;group.append(label);svg.append(group)});return svg}function showTopicMap(data){const preview=document.getElementById('learning-map-preview');preview.replaceChildren();if(!data.topics.length){preview.textContent='Study a topic with your tutor first, then connections will grow here.';return}const svg=buildMapSvg(data.topics.slice(0,8),data.edges);svg.classList.add('mini-map-svg');preview.append(svg);if(data.message)document.getElementById('topic-map-caption').textContent=data.message;else document.getElementById('topic-map-caption').textContent=`${data.topics.length} topics · ${data.edges.length} AI-suggested connections`;document.getElementById('topic-map-large').replaceChildren(buildMapSvg(data.topics,data.edges));mapModal.classList.remove('hidden');window.refreshIcons?.()}document.getElementById('build-topic-map').onclick=async e=>{const button=e.currentTarget;button.disabled=true;button.dataset.label=button.textContent;button.textContent='Mapping ideas…';try{const res=await fetch('/dashboard/api/topic-map',{method:'POST',headers:{'X-CSRFToken':csrfToken}});const data=await res.json();if(!res.ok)throw Error(data.error||'Could not build the topic map.');showTopicMap(data)}catch(error){showToast(error.message,'error')}finally{button.disabled=false;button.innerHTML='<i data-lucide="network"></i>Explore connections';window.refreshIcons?.()}};document.getElementById('close-topic-map').onclick=()=>mapModal.classList.add('hidden');mapModal.addEventListener('click',e=>{if(e.target===mapModal)mapModal.classList.add('hidden')});document.addEventListener('keydown',e=>{if(e.key==='Escape')mapModal.classList.add('hidden')});
-
-  // Split screen
-  document.getElementById('split-screen-btn').addEventListener('click', e => {
-    e.preventDefault();
-    {% if current_user.plan == 'free' %}
-      showToast('Split screen requires Scholar or Academy plan. Upgrade to unlock.', 'warning');
-    {% else %}
-      document.getElementById('split-screen-modal').classList.toggle('hidden');
-    {% endif %}
-  });
-  document.getElementById('close-split').addEventListener('click', () => {
-    document.getElementById('split-screen-modal').classList.add('hidden');
-  });
-
-  document.querySelectorAll('.mark-reviewed').forEach(button => button.addEventListener('click', async () => {
-    button.disabled = true;
-    try {
-      const response = await fetch(`/dashboard/api/reviews/${button.dataset.reviewId}/complete`, {
-        method: 'POST', headers: {'X-CSRFToken': csrfToken}
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Could not update the review schedule.');
-      button.closest('.spaced-review-row').remove();
-      showToast(`Review scheduled again in ${data.interval_days} day${data.interval_days === 1 ? '' : 's'}.`, 'success');
-    } catch (error) {
-      showToast(error.message, 'error');
-      button.disabled = false;
-    }
-  }));
-
-  // File viewer
-  document.getElementById('file-input').addEventListener('change', function() {
-    const file = this.files[0];
-    if (!file) return;
-    const viewer = document.getElementById('file-viewer');
-    if (file.type === 'application/pdf') {
-      const url = URL.createObjectURL(file);
-      viewer.innerHTML = `<iframe src="${url}" class="file-iframe"></iframe>`;
-    } else {
-      const reader = new FileReader();
-      reader.onload = e => {
-        viewer.innerHTML = `<pre class="file-text">${e.target.result.replace(/</g,'&lt;')}</pre>`;
-      };
-      reader.readAsText(file);
-    }
-  });
+});
 </script>
 {% endblock %}
