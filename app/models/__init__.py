@@ -429,17 +429,6 @@ class AdminAuditEvent(db.Model):
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
 
 
-class AdminOTP(db.Model):
-    __tablename__ = "admin_otps"
-
-    id = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.String(128), nullable=False, unique=True, index=True)
-    code_hash = db.Column(db.String(256), nullable=False)
-    expires_at = db.Column(db.DateTime, nullable=False, index=True)
-    attempts = db.Column(db.Integer, nullable=False, default=0)
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-
-
 class AdminAuthAttempt(db.Model):
     __tablename__ = "admin_auth_attempts"
 
@@ -447,7 +436,6 @@ class AdminAuthAttempt(db.Model):
     address_hash = db.Column(db.String(64), nullable=False, unique=True, index=True)
     failures = db.Column(db.Integer, nullable=False, default=0)
     locked_until = db.Column(db.DateTime)
-    last_otp_sent_at = db.Column(db.DateTime)
 
 
 class CalendarEvent(db.Model):

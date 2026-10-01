@@ -6,7 +6,6 @@ import hashlib
 import json
 import os
 import re
-import secrets
 import stat
 
 import requests
@@ -20,7 +19,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 from app import db
 from app.models import (
-    AdminAuditEvent, AdminAuthAttempt, AdminOTP, ApplicationPolicy,
+    AdminAuditEvent, AdminAuthAttempt, ApplicationPolicy,
     ApplicationSetting, IssueReport, IssueStatusUpdate, LearningSession,
     PaymentRecord, ProductFeedback, QuizAttempt, SessionDocument, Subscription,
     User, UserProfile,
@@ -119,60 +118,6 @@ def _auth_attempt():
     return row
 
 
-def _send_mobile_code(admin, code):
-    if current_app.debug or current_app.testing:
-        current_app.logger.warning(
-            "Development-only admin OTP for %s: %s", admin["email"], code
-        )
-        return
-
-    account_sid = os.getenv("TWILIO_ACCOUNT_SID")
-    auth_token = os.getenv("TWILIO_AUTH_TOKEN")
-    from_number = os.getenv("TWILIO_FROM_NUMBER")
-    if not all((account_sid, auth_token, from_number)):
-        raise RuntimeError("Production admin OTP delivery is not configured.")
-
-    phone = str(admin.get("mobile", "")).strip()
-    if not phone.startswith("+"):
-        phone = f"{os.getenv('ADMIN_OTP_COUNTRY_CODE', '+91')}{phone}"
-    response = requests.post(
-        f"https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Messages.json",
-        auth=(account_sid, auth_token),
-        data={
-            "From": from_number,
-            "To": phone,
-            "Body": f"Your LearnOrbit staff sign-in code is {code}. It expires in 10 minutes.",
-        },
-        timeout=15,
-    )
-    response.raise_for_status()
-
-
-def _issue_otp(admin, attempt):
-    code = f"{secrets.randbelow(1_000_000):06d}"
-    AdminOTP.query.filter_by(email=admin["email"].lower()).delete(
-        synchronize_session=False
-    )
-    db.session.add(AdminOTP(
-        email=admin["email"].lower(),
-        code_hash=generate_password_hash(code),
-        expires_at=datetime.utcnow() + timedelta(minutes=10),
-        attempts=0,
-    ))
-    try:
-        _send_mobile_code(admin, code)
-    except Exception:
-        AdminOTP.query.filter_by(email=admin["email"].lower()).delete(
-            synchronize_session=False
-        )
-        db.session.commit()
-        current_app.logger.exception("Could not deliver an admin sign-in OTP.")
-        raise
-    attempt.last_otp_sent_at = datetime.utcnow()
-    db.session.commit()
-    session["admin_otp_pending"] = admin["email"].lower()
-
-
 def _session_admin():
     return _find_admin(session.get("admin_email", ""))
 
@@ -254,63 +199,20 @@ def login():
             flash("The supplied credentials could not be verified.", "error")
             return render_template("admin/login.html"), 401
 
-        if attempt.last_otp_sent_at and now - attempt.last_otp_sent_at < timedelta(seconds=45):
-            flash("A verification code was just sent. Please wait before requesting another.", "info")
-            return render_template("admin/login.html"), 429
         attempt.failures = 0
         attempt.locked_until = None
-        try:
-            _issue_otp(admin, attempt)
-        except RuntimeError:
-            current_app.logger.exception("Admin mobile OTP transport is not configured.")
-            flash("Production staff sign-in needs Twilio SMS credentials. No code was issued.", "error")
-            return render_template("admin/login.html"), 503
-        except Exception:
-            current_app.logger.exception("Admin mobile OTP delivery failed.")
-            flash("Mobile verification is unavailable. Check the staff SMS configuration and try again.", "error")
-            return render_template("admin/login.html"), 503
-        flash("A six-digit code was sent to the mobile number on the staff record.", "success")
-        return redirect(url_for("admin.verify_otp"))
+        logout_user()
+        session.clear()
+        session["admin_email"] = admin["email"].lower()
+        session["admin_last_activity"] = int(now.timestamp())
+        session.permanent = True
+        _audit("admin_login")
+        db.session.commit()
+        return redirect(url_for("admin.dashboard"))
 
     if not _load_admins():
         flash("Staff access is not provisioned on this server. Ask the system owner to configure the private allowlist.", "error")
     return render_template("admin/login.html")
-
-
-@admin_bp.route("/verify", methods=["GET", "POST"])
-def verify_otp():
-    email = session.get("admin_otp_pending")
-    admin = _find_admin(email) if email else None
-    if not admin:
-        session.pop("admin_otp_pending", None)
-        flash("Start sign-in again to request a new verification code.", "error")
-        return redirect(url_for("admin.login"))
-
-    row = AdminOTP.query.filter_by(email=email).first()
-    if request.method == "POST":
-        if not row or row.expires_at < datetime.utcnow() or row.attempts >= 5:
-            AdminOTP.query.filter_by(email=email).delete(synchronize_session=False)
-            db.session.commit()
-            session.pop("admin_otp_pending", None)
-            flash("That code expired or too many attempts were made. Sign in again.", "error")
-            return redirect(url_for("admin.login"))
-        row.attempts += 1
-        if not check_password_hash(row.code_hash, request.form.get("code", "").strip()):
-            db.session.commit()
-            flash("That verification code does not match.", "error")
-            return render_template("admin/verify.html"), 400
-
-        db.session.delete(row)
-        _audit("admin_login")
-        db.session.commit()
-        session.pop("admin_otp_pending", None)
-        logout_user()
-        session["admin_email"] = admin["email"].lower()
-        session["admin_last_activity"] = int(datetime.utcnow().timestamp())
-        session.permanent = True
-        return redirect(url_for("admin.dashboard"))
-
-    return render_template("admin/verify.html", mobile=admin.get("mobile", ""))
 
 
 @admin_bp.route("/")

@@ -95,7 +95,7 @@ Plan access is enforced in server routes for gated actions; hiding a button in t
 - **Database:** SQLite by default in development; PostgreSQL through `DATABASE_URL` for production.
 - **Frontend:** server-rendered Jinja templates, plain JavaScript, CSS, and third-party libraries loaded from CDNs. There is no npm build step.
 - **AI:** server-side provider adapters for OpenAI-compatible services, Google Gemini, Anthropic, xAI, and Hugging Face.
-- **External execution:** Judge0 CE for Practice Code; Twilio for production staff OTP; SMTP for user email verification and invoice email delivery.
+- **External execution:** Judge0 CE for Practice Code; SMTP for user email verification and invoice email delivery.
 
 ```text
 learnorbit/
@@ -179,10 +179,6 @@ Never add real database credentials, API keys, admin passwords, OTP credentials,
 | `SMTP_USER` | If SMTP authentication is needed | SMTP account username. |
 | `SMTP_PASSWORD` | If SMTP authentication is needed | SMTP account password. |
 | `ADMIN_REGISTRY_PATH` | Admin registry is mounted outside `instance/` | Absolute path to the private admin JSON file. Defaults to `instance/admins.json`. |
-| `TWILIO_ACCOUNT_SID` | Production admin OTP | Twilio account SID. |
-| `TWILIO_AUTH_TOKEN` | Production admin OTP | Twilio authentication token. |
-| `TWILIO_FROM_NUMBER` | Production admin OTP | Twilio-enabled sender number. |
-| `ADMIN_OTP_COUNTRY_CODE` | Optional | Country prefix for admin records whose mobile number is not in E.164 format; defaults to `+91`. Store phone values in E.164 form where possible. |
 | `GEMINI_API_KEY` | Admin feedback synthesis using Gemini | Platform-managed Gemini key; optional. `GOOGLE_API_KEY` is also accepted. |
 | `GEMINI_FEEDBACK_MODEL` | Optional | Feedback-synthesis model; defaults to `gemini-3.1-flash-lite`. |
 | `HF_TOKEN` | Admin feedback synthesis fallback | Platform-managed Hugging Face token; optional. `HUGGINGFACEHUB_API_TOKEN` is also accepted. |
@@ -246,7 +242,7 @@ For the optional admin feedback synthesis feature, set a platform-managed `GEMIN
 
 ## Admin provisioning and access
 
-Admin accounts are **not registered through the website**. Admin identities are allowlisted in a private JSON file; they are separate from student login and are **not provisioned as student rows in PostgreSQL**. The database stores transient OTP and audit records, but the staff allowlist itself is a separate secret file. The admin panel uses password verification followed by mobile OTP. It has a separate staff session and expires it after 30 minutes of inactivity.
+Admin accounts are **not registered through the website**. Admin identities are allowlisted in a private JSON file; they are separate from student login and are **not provisioned as student rows in PostgreSQL**. The admin panel uses password-only authentication, with failed attempts rate-limited and temporary lockout after repeated failures. Staff sessions expire after 30 minutes of inactivity.
 
 ### Required JSON shape
 
@@ -299,15 +295,13 @@ Copy the resulting hash into the private JSON record. Use a unique strong passwo
    ```
 
 3. Start the app with `FLASK_ENV=development`.
-4. Sign in through **Admin Panel**. In development/debug only, the one-time code is printed to the server terminal. Student email verification/login codes are also printed in the terminal when SMTP is not configured in local debug mode. Do not rely on terminal OTP behavior in production.
+4. Sign in through **Admin Panel** with the allowlisted email and password. Student email verification/login codes are printed in the terminal only in local debug mode when SMTP is not configured; production requires working SMTP.
 
 The `instance/` directory is gitignored. Keep it private; do not commit it or copy it to a public artifact.
 
-### Admin OTP in production
+### Provision the allowlist in production
 
-Production admin OTP requires Twilio. Configure the Twilio SID, token, sender number, and country code (if required) as host secrets. Provision `admins.json` via a protected file/secret mechanism. If any of these settings are missing or Twilio delivery fails, production admin sign-in fails closed; it does not print a usable OTP in production logs.
-
-For a host that supports secret files, upload the JSON as a secret file and set `ADMIN_REGISTRY_PATH` to the file's absolute runtime path. For example, Render mounts secret files under `/etc/secrets/`; upload `admins.json` there and set `ADMIN_REGISTRY_PATH=/etc/secrets/admins.json`. The current loader rejects POSIX files readable by group/others, so verify the mounted file has owner-only permissions (mode `0600`). If the provider does not support sufficiently restrictive permissions, do not weaken the check or enable admin login until a compatible secret-file mechanism is configured. Do not rely on a transient app filesystem for this file.
+Provision `admins.json` through a protected file/secret mechanism. For a host that supports secret files, upload the JSON as a secret file and set `ADMIN_REGISTRY_PATH` to the file's absolute runtime path. For example, Render mounts secret files under `/etc/secrets/`; upload `admins.json` there and set `ADMIN_REGISTRY_PATH=/etc/secrets/admins.json`. The current loader rejects POSIX files readable by group/others, so verify the mounted file has owner-only permissions (mode `0600`). If the provider does not support sufficiently restrictive permissions, do not weaken the check or enable admin login until a compatible secret-file mechanism is configured. Do not rely on a transient app filesystem for this file.
 
 ## Deploy to Render
 
@@ -318,9 +312,9 @@ Render can host this Flask app as one Web Service: Flask renders the frontend an
 ### Before creating the service
 
 1. Push the repository to a private GitHub repository, after confirming `.env`, local databases, `instance/`, and uploads are not tracked.
-2. Rotate any database/API/Twilio credentials that have been exposed in chat, logs, screenshots, or source control.
+2. Rotate any database/API credentials that have been exposed in chat, logs, screenshots, or source control.
 3. Create or select a managed PostgreSQL database. Copy its application connection URI from the provider dashboard; do not publish it.
-4. Prepare a fresh `SECRET_KEY` and (if using the admin console) an admin JSON secret file and Twilio credentials.
+4. Prepare a fresh `SECRET_KEY` and (if using the admin console) an admin JSON secret file.
 5. Decide how to persist user uploads. Render's free filesystem is ephemeral; the app stores some uploads/profile images locally under its runtime instance path. Production needs persistent disk or, preferably, object storage and a configured storage integration.
 
 ### Create and configure the Render Web Service
@@ -343,12 +337,11 @@ Render can host this Flask app as one Web Service: Flask renders the frontend an
    - `SECRET_KEY` = a newly generated random value
    - `DATABASE_URL` = the managed PostgreSQL URI (with required SSL mode)
    - SMTP variables for learner email verification/login OTP and invoice email, if enabled
-   - Twilio variables for production admin OTP, if admin access is enabled
    - `ADMIN_REGISTRY_PATH` = `/etc/secrets/admins.json` when using a secret file
    - Optional platform feedback synthesis keys: `GEMINI_API_KEY`/`GEMINI_FEEDBACK_MODEL`, or `HF_TOKEN`/`HF_FEEDBACK_MODEL`
 5. Under **Environment → Secret Files**, upload `admins.json` if enabling admins. Keep its contents private and ensure the configured path exactly matches the mounted file path. Confirm its permissions meet the app's owner-only file check before relying on staff login.
 6. Save settings and deploy. Inspect the build and startup logs for missing environment variables, database errors, or failed external-service configuration.
-7. Visit the HTTPS service URL. Verify the landing page, user registration email OTP, student login, a basic tutor/quiz flow with a learner-configured AI key, and admin password-plus-SMS-OTP if configured.
+7. Visit the HTTPS service URL. Verify the landing page, user registration email OTP, student login, a basic tutor/quiz flow with a learner-configured AI key, and admin password login if configured.
 8. Verify database backups and restores, log alerts, service availability, and upload persistence before inviting users.
 
 ### Free deployment caveats
@@ -369,7 +362,7 @@ Before treating a deployment as production:
 - Set `FLASK_ENV=production`; use a unique `SECRET_KEY` and PostgreSQL `DATABASE_URL`.
 - Require TLS to the database and HTTPS to browsers. Production sessions use secure cookies.
 - Configure SMTP for student account email verification/login OTP; test delivery and retry/error behavior.
-- Configure Twilio for admin OTP. Limit admin allowlist entries and phone/profile data to authorized staff.
+- Limit admin allowlist entries and staff profile data to authorized personnel. Admin authentication currently uses password-only login, so require unique strong passwords and restrict access to the admin URL at the hosting/proxy layer where possible.
 - Add durable external storage for profile images and uploaded study documents; app-local paths are not durable on ephemeral hosts.
 - Configure database backups, retention, restore drills, monitoring, error reporting, and operational alerts.
 - Review rate limits and abuse protection at the proxy/application layers, including AI-generation and external Judge0 calls.
@@ -406,7 +399,6 @@ Do not submit passwords, API keys, payment details, government identifiers, or o
 
 - AI requests: provider selected by the learner; admin feedback synthesis can use Gemini or Hugging Face.
 - Judge0 CE: Practice Code execution.
-- Twilio: production mobile OTP for the staff console.
 - SMTP provider: user email verification/login OTP and optional invoice email.
 - CDN libraries may include Chart.js, math.js, MathJax, Marked.js, Lucide, CodeMirror, Animate.css, and Google Fonts. CDN features require internet access.
 

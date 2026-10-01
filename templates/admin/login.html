@@ -11,7 +11,7 @@
   <div class="admin-card admin-login-card">
     <div class="admin-restricted-note"><i data-lucide="shield-alert"></i><p><strong>Restricted zone.</strong> This area is reserved for LearnOrbit staff. If you are not an authorized administrator, please return to the learner experience.</p></div>
     <h2>Staff sign in</h2>
-    <p class="admin-muted">Sign-in requires an allowlisted staff email, password, and a one-time code sent to the registered mobile.</p>
+    <p class="admin-muted">Sign-in requires an allowlisted staff email and password. Failed attempts are temporarily rate-limited.</p>
     <form method="post" class="admin-form">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <label>Staff email<input class="admin-input" type="email" name="email" autocomplete="username" required></label>
@@ -21,7 +21,7 @@
           <button class="admin-password-toggle" type="button" data-password-toggle aria-controls="admin-password" aria-label="Show password" aria-pressed="false"><i data-lucide="eye" aria-hidden="true"></i><span>Show</span></button>
         </span>
       </label>
-      <button class="admin-button primary" type="submit"><i data-lucide="key-round"></i>Continue to mobile verification</button>
+      <button class="admin-button primary" type="submit"><i data-lucide="key-round"></i>Sign in to admin console</button>
     </form>
     <a class="admin-back-link" href="{{ url_for('index') }}"><i data-lucide="arrow-left"></i>Return to LearnOrbit</a>
   </div>
