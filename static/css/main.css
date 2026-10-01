@@ -424,7 +424,7 @@ input, textarea, select, button { font-family: inherit; }
 @keyframes typing { 0%,80%,100%{transform:scale(.7);opacity:.4} 40%{transform:scale(1);opacity:1} }
 
 /* Chat input */
-.chat-input-bar { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 10px; box-shadow: var(--shadow); }
+.chat-input-bar { min-width: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 10px; box-shadow: var(--shadow); }
 .chat-input-wrap { display: flex; gap: 8px; align-items: flex-end; }
 .chat-textarea { flex: 1; border: none; background: transparent; resize: none; outline: none; font-size: .9rem; line-height: 1.5; max-height: 160px; color: var(--text); min-height: 36px; }
 .input-actions { display: flex; gap: 4px; }
@@ -1258,7 +1258,8 @@ input[type="date"],input[type="datetime-local"] { color-scheme:light dark; }
 .temperature-control > label { position:absolute; left:0; bottom:calc(100% + 8px); width:min(310px,80vw); display:grid; gap:8px; padding:14px; border:1px solid var(--border); border-radius:14px; background:var(--surface); box-shadow:var(--shadow-lg); color:var(--text); }
 .temperature-control > label span { color:var(--text-2); font-size:.78rem; }
 .temperature-control input { width:100%; accent-color:var(--brand); }
-.chat-compose-tools { display:flex; justify-content:flex-end; margin-bottom:8px; }
+.chat-compose-tools { display:flex; justify-content:flex-start; min-width:0; margin-bottom:8px; }
+.chat-compose-tools > * { max-width:100%; }
 .temperature-unavailable { display:inline-flex; align-items:center; gap:6px; color:var(--text-3); font-size:.75rem; }
 .document-library { display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:9px 12px; border:1px solid var(--border); border-radius:14px; background:var(--surface); }
 .document-library > strong { display:inline-flex; align-items:center; gap:7px; color:var(--brand); }
@@ -1336,10 +1337,12 @@ html[data-theme="dark"] .topic-map-modal { background:rgba(0,0,0,.75); }
 }
 @media(max-width:640px) {
  .app-footer { width:calc(100% - 24px); padding-bottom:20px; }
+ .chat-input-bar { padding:8px; }
  .chat-input-wrap { grid-template-columns:minmax(0,1fr); }
- .input-actions { justify-content:flex-end; flex-wrap:wrap; }
+ .input-actions { justify-content:space-between; flex-wrap:wrap; }
  .btn-suggest,.btn-send { min-height:42px; padding:8px 11px; }
  .btn-suggest span { display:inline; }
+ .temperature-control > label { left:0; right:auto; width:min(310px,calc(100vw - 40px)); }
  .danger-zone { grid-template-columns:1fr; }
  .danger-zone h2,.danger-zone p { grid-column:1; }
  .danger-zone .btn-danger { justify-self:start; }
