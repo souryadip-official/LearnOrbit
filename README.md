@@ -329,7 +329,7 @@ Render can host this Flask app as one Web Service: Flask renders the frontend an
 2. Configure:
    - **Runtime:** Python.
    - **Build command:** `pip install -r requirements.txt`
-   - **Start command:** `gunicorn app:app --bind 0.0.0.0:$PORT`
+   - **Start command:** `gunicorn wsgi:application --bind 0.0.0.0:$PORT`
    - **Instance type:** choose Free only for a disposable/hobby deployment; select an always-on paid instance for production needs.
 3. Generate a new production signing secret (do not reuse the development value):
 
