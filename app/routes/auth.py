@@ -2,15 +2,11 @@
 LearnOrbit Authentication Routes
 """
 
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, session, current_app
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_user, logout_user, login_required, current_user
-from app import db, csrf
+from app import db
 from app.models import User, LearningBehavior, UserProfile
-from app.models import EmailOTP
-from datetime import datetime, timedelta
-from werkzeug.security import generate_password_hash, check_password_hash
-import os, secrets, smtplib
-from email.message import EmailMessage
+from datetime import datetime
 from sqlalchemy import func, select
 
 auth_bp = Blueprint("auth", __name__)
@@ -27,32 +23,6 @@ def _next_safe_user_id():
         if referenced_id is not None:
             maximum = max(maximum, referenced_id)
     return maximum + 1
-
-
-def _send_otp(user, purpose):
-    host = os.getenv("SMTP_HOST")
-    if not host and not current_app.debug:
-        raise RuntimeError("SMTP is required for email verification outside development.")
-    code = f"{secrets.randbelow(1_000_000):06d}"
-    EmailOTP.query.filter_by(user_id=user.id).delete(synchronize_session=False)
-    db.session.add(EmailOTP(user_id=user.id, purpose=purpose, code_hash=generate_password_hash(code), expires_at=datetime.utcnow()+timedelta(minutes=10)))
-    db.session.commit()
-    if not host:
-        current_app.logger.warning("Development OTP for %s (%s): %s", user.email, purpose, code)
-        session["otp_pending_user"] = user.id; session["otp_pending_purpose"] = purpose
-        return True
-    message = EmailMessage(); message["Subject"] = "Your LearnOrbit sign-in code"; message["From"] = os.getenv("SMTP_FROM", os.getenv("SMTP_USER", "")); message["To"] = user.email
-    message.set_content(f"Your LearnOrbit verification code is {code}. It expires in 10 minutes. If you did not request this, ignore this message.")
-    try:
-        with smtplib.SMTP(host, int(os.getenv("SMTP_PORT", "587")), timeout=15) as server:
-            server.starttls()
-            if os.getenv("SMTP_USER"): server.login(os.getenv("SMTP_USER"), os.getenv("SMTP_PASSWORD", ""))
-            server.send_message(message)
-        session["otp_pending_user"] = user.id; session["otp_pending_purpose"] = purpose
-        return True
-    except Exception:
-        EmailOTP.query.filter_by(user_id=user.id).delete(synchronize_session=False); db.session.commit()
-        raise
 
 
 @auth_bp.route("/register", methods=["GET", "POST"])
@@ -96,9 +66,6 @@ def register():
                 flash(e, "error")
             return render_template("auth/register.html")
 
-        if not os.getenv("SMTP_HOST") and not current_app.debug:
-            return jsonify({"success": False, "errors": ["Email verification is temporarily unavailable. Please try again later."]}), 503
-
         user = User(username=username, email=email)
         # Older SQLite databases can retain child rows after an interrupted or
         # manually deleted signup. Do not recycle an ID those rows still use.
@@ -115,13 +82,13 @@ def register():
             behavior = LearningBehavior(user_id=user.id)
             db.session.add(behavior)
         behavior.preferred_style = teaching_style
-        db.session.add(UserProfile(user_id=user.id, full_name=full_name[:120], date_of_birth=date_of_birth, grade=grade, teaching_style=teaching_style, desired_plan=desired_plan, email_verified=False))
+        db.session.add(UserProfile(user_id=user.id, full_name=full_name[:120], date_of_birth=date_of_birth, grade=grade, teaching_style=teaching_style, desired_plan=desired_plan, email_verified=True))
         db.session.commit()
-        try:
-            _send_otp(user, "register")
-            return jsonify({"success": True, "otp_required": True, "message": "Enter your six-digit email verification code. In local development, the code is printed in the server terminal."})
-        except Exception:
-            return jsonify({"success": False, "errors": ["Could not send verification code. Configure SMTP and try again."]}), 503
+        login_user(user)
+        return jsonify({
+            "success": True,
+            "redirect": url_for("dashboard.home"),
+        })
 
     return render_template("auth/register.html")
 
@@ -152,12 +119,6 @@ def login():
             flash("This account is currently unavailable. Contact support for help.", "error")
             return render_template("auth/login.html"), 403
 
-        try:
-            _send_otp(user, "login")
-            session["otp_remember"] = remember
-            return jsonify({"success": True, "otp_required": True, "message": "A six-digit sign-in code was sent to your email. In local development, check the server terminal."})
-        except Exception:
-            return jsonify({"success": False, "errors": ["Could not send the verification email. Check SMTP settings and try again."]}), 503
         user.last_login = datetime.utcnow()
         db.session.commit()
         login_user(user, remember=remember)
@@ -168,46 +129,6 @@ def login():
         return redirect(next_page or url_for("dashboard.home"))
 
     return render_template("auth/login.html")
-
-
-@auth_bp.route("/verify-otp", methods=["POST"])
-def verify_otp():
-    data = request.get_json() or {}
-    user_id = session.get("otp_pending_user"); purpose = session.get("otp_pending_purpose")
-    row = EmailOTP.query.filter_by(user_id=user_id, purpose=purpose).first() if user_id and purpose else None
-    if not row or row.expires_at < datetime.utcnow() or row.attempts >= 5:
-        session.pop("otp_pending_user", None); session.pop("otp_pending_purpose", None)
-        return jsonify({"error": "Code expired or attempts exceeded. Sign in again for a new code."}), 400
-    row.attempts += 1
-    if not check_password_hash(row.code_hash, str(data.get("code", ""))):
-        db.session.commit(); return jsonify({"error": "That code does not match."}), 400
-    user = User.query.get(user_id)
-    if not user or user.is_blocked:
-        session.pop("otp_pending_user", None)
-        session.pop("otp_pending_purpose", None)
-        return jsonify({"error": "This account is currently unavailable. Contact support for help."}), 403
-    profile = UserProfile.query.filter_by(user_id=user.id).first()
-    if profile: profile.email_verified = True
-    user.last_login = datetime.utcnow(); db.session.delete(row); db.session.commit()
-    completed_purpose = purpose
-    remember = bool(session.pop("otp_remember", False)); session.pop("otp_pending_user", None); session.pop("otp_pending_purpose", None)
-    if completed_purpose == "register":
-        return jsonify({"success": True, "registered": True, "redirect": url_for("auth.login"), "message": "Email verified. Please log in to start learning."})
-    login_user(user, remember=remember)
-    return jsonify({"success": True, "redirect": url_for("dashboard.home")})
-
-
-@auth_bp.route("/resend-otp", methods=["POST"])
-def resend_otp():
-    user_id = session.get("otp_pending_user"); purpose = session.get("otp_pending_purpose")
-    user = User.query.get(user_id) if user_id and purpose else None
-    if not user or (not os.getenv("SMTP_HOST") and not current_app.debug):
-        return jsonify({"error": "Start sign-in again to request a new code."}), 400
-    try:
-        _send_otp(user, purpose)
-        return jsonify({"success": True, "message": "A new code has been emailed. The previous code has expired."})
-    except Exception:
-        return jsonify({"error": "Could not send another code. Check SMTP settings and try again."}), 503
 
 
 @auth_bp.route("/logout")

@@ -1,4 +1,4 @@
-"""Restricted staff console with a separate password-plus-mobile-OTP session."""
+"""Restricted staff console with password-only authentication."""
 
 from datetime import datetime, timedelta
 from functools import wraps
@@ -48,15 +48,20 @@ def _admin_file():
 
 
 def _load_admins():
+    configured_path = os.getenv("ADMIN_REGISTRY_PATH")
     path = _admin_file()
     try:
-        if os.name == "posix" and stat.S_IMODE(os.stat(path).st_mode) & 0o077:
+        if (os.name == "posix" and not configured_path
+                and stat.S_IMODE(os.stat(path).st_mode) & 0o077):
             current_app.logger.error("Restricted admin allowlist permissions must be owner-only.")
             return []
         with open(path, encoding="utf-8") as source:
             payload = json.load(source)
     except FileNotFoundError:
-        current_app.logger.error("Restricted admin allowlist is missing from the private instance directory.")
+        current_app.logger.error(
+            "Restricted admin allowlist is missing. Set ADMIN_REGISTRY_PATH "
+            "in the running service environment and make sure the file is mounted."
+        )
         return []
     except (OSError, json.JSONDecodeError):
         current_app.logger.exception("Could not load the restricted admin allowlist.")
@@ -211,7 +216,12 @@ def login():
         return redirect(url_for("admin.dashboard"))
 
     if not _load_admins():
-        flash("Staff access is not provisioned on this server. Ask the system owner to configure the private allowlist.", "error")
+        flash(
+            "Staff access is unavailable. Check that ADMIN_REGISTRY_PATH is set "
+            "in the deployed service environment and that its admins.json file "
+            "is mounted with the required JSON structure.",
+            "error",
+        )
     return render_template("admin/login.html")
 
 

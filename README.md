@@ -95,7 +95,7 @@ Plan access is enforced in server routes for gated actions; hiding a button in t
 - **Database:** SQLite by default in development; PostgreSQL through `DATABASE_URL` for production.
 - **Frontend:** server-rendered Jinja templates, plain JavaScript, CSS, and third-party libraries loaded from CDNs. There is no npm build step.
 - **AI:** server-side provider adapters for OpenAI-compatible services, Google Gemini, Anthropic, xAI, and Hugging Face.
-- **External execution:** Judge0 CE for Practice Code; SMTP for user email verification and invoice email delivery.
+- **External execution:** Judge0 CE for Practice Code; optional SMTP for invoice email delivery.
 
 ```text
 learnorbit/
@@ -173,7 +173,7 @@ Never add real database credentials, API keys, admin passwords, OTP credentials,
 | `FLASK_ENV` | Production | Set to `production` to select production settings. |
 | `SECRET_KEY` | Production | Long, unique random value used to sign Flask sessions and related tokens. |
 | `DATABASE_URL` | Production | PostgreSQL connection URI. Required by production startup. |
-| `SMTP_HOST` | Production user registration/login OTP | SMTP server hostname. Production account verification/login requires email delivery. |
+| `SMTP_HOST` | Optional invoice email | SMTP server hostname. Student registration and login do not require email verification. |
 | `SMTP_PORT` | If SMTP is configured | SMTP port; defaults to `587`. |
 | `SMTP_FROM` | Recommended with SMTP | Sender address. Falls back to `SMTP_USER` when unset. |
 | `SMTP_USER` | If SMTP authentication is needed | SMTP account username. |
@@ -265,7 +265,7 @@ The default path is `instance/admins.json`. Keep the record private and use a pa
 }
 ```
 
-The email, password hash, and mobile number are used for authentication/delivery. The other profile fields support the staff profile UI. Use actual authorized staff details only, and collect/store only profile information you need.
+The email and password hash are used for authentication. The other profile fields support the staff profile UI. Use actual authorized staff details only, and collect/store only profile information you need.
 
 ### Generate and install a password hash
 
@@ -295,13 +295,13 @@ Copy the resulting hash into the private JSON record. Use a unique strong passwo
    ```
 
 3. Start the app with `FLASK_ENV=development`.
-4. Sign in through **Admin Panel** with the allowlisted email and password. Student email verification/login codes are printed in the terminal only in local debug mode when SMTP is not configured; production requires working SMTP.
+4. Sign in through **Admin Panel** with the allowlisted email and password. Student registration and login use passwords directly and do not require SMTP.
 
 The `instance/` directory is gitignored. Keep it private; do not commit it or copy it to a public artifact.
 
 ### Provision the allowlist in production
 
-Provision `admins.json` through a protected file/secret mechanism. For a host that supports secret files, upload the JSON as a secret file and set `ADMIN_REGISTRY_PATH` to the file's absolute runtime path. For example, Render mounts secret files under `/etc/secrets/`; upload `admins.json` there and set `ADMIN_REGISTRY_PATH=/etc/secrets/admins.json`. The current loader rejects POSIX files readable by group/others, so verify the mounted file has owner-only permissions (mode `0600`). If the provider does not support sufficiently restrictive permissions, do not weaken the check or enable admin login until a compatible secret-file mechanism is configured. Do not rely on a transient app filesystem for this file.
+Provision `admins.json` through a protected file/secret mechanism. The JSON file contains the `"admins"` array shown above; it must not contain the `ADMIN_REGISTRY_PATH` setting. For a host that supports secret files, upload the JSON as a secret file and set `ADMIN_REGISTRY_PATH` as a service environment variable to its absolute runtime path. For example, Render mounts secret files under `/etc/secrets/`; upload `admins.json` there and add `ADMIN_REGISTRY_PATH=/etc/secrets/admins.json` under the web service's **Environment** settings. A local `.env` file is not deployed to Render. Locally, the default `instance/admins.json` must have owner-only permissions (mode `0600`). For an explicitly configured mounted secret file, access control is provided by the host's secret-file mechanism. Do not rely on a transient app filesystem for this file.
 
 ## Deploy to Render
 
@@ -336,12 +336,12 @@ Render can host this Flask app as one Web Service: Flask renders the frontend an
    - `FLASK_ENV` = `production`
    - `SECRET_KEY` = a newly generated random value
    - `DATABASE_URL` = the managed PostgreSQL URI (with required SSL mode)
-   - SMTP variables for learner email verification/login OTP and invoice email, if enabled
+   - SMTP variables for optional invoice email, if enabled
    - `ADMIN_REGISTRY_PATH` = `/etc/secrets/admins.json` when using a secret file
    - Optional platform feedback synthesis keys: `GEMINI_API_KEY`/`GEMINI_FEEDBACK_MODEL`, or `HF_TOKEN`/`HF_FEEDBACK_MODEL`
-5. Under **Environment → Secret Files**, upload `admins.json` if enabling admins. Keep its contents private and ensure the configured path exactly matches the mounted file path. Confirm its permissions meet the app's owner-only file check before relying on staff login.
+5. Under **Environment → Secret Files**, upload `admins.json` if enabling admins. Keep its contents private, set `ADMIN_REGISTRY_PATH` under **Environment** to the exact mounted path, and ensure the JSON has the required `{"admins": [...]}` shape.
 6. Save settings and deploy. Inspect the build and startup logs for missing environment variables, database errors, or failed external-service configuration.
-7. Visit the HTTPS service URL. Verify the landing page, user registration email OTP, student login, a basic tutor/quiz flow with a learner-configured AI key, and admin password login if configured.
+7. Visit the HTTPS service URL. Verify the landing page, student registration and password login, a basic tutor/quiz flow with a learner-configured AI key, and admin password login if configured.
 8. Verify database backups and restores, log alerts, service availability, and upload persistence before inviting users.
 
 ### Free deployment caveats
@@ -361,7 +361,7 @@ Before treating a deployment as production:
 - Rotate exposed credentials and use unique values for all secrets.
 - Set `FLASK_ENV=production`; use a unique `SECRET_KEY` and PostgreSQL `DATABASE_URL`.
 - Require TLS to the database and HTTPS to browsers. Production sessions use secure cookies.
-- Configure SMTP for student account email verification/login OTP; test delivery and retry/error behavior.
+- Student registration and login are password-only; protect accounts with strong passwords and abuse controls at the hosting/proxy layer.
 - Limit admin allowlist entries and staff profile data to authorized personnel. Admin authentication currently uses password-only login, so require unique strong passwords and restrict access to the admin URL at the hosting/proxy layer where possible.
 - Add durable external storage for profile images and uploaded study documents; app-local paths are not durable on ephemeral hosts.
 - Configure database backups, retention, restore drills, monitoring, error reporting, and operational alerts.
@@ -399,7 +399,7 @@ Do not submit passwords, API keys, payment details, government identifiers, or o
 
 - AI requests: provider selected by the learner; admin feedback synthesis can use Gemini or Hugging Face.
 - Judge0 CE: Practice Code execution.
-- SMTP provider: user email verification/login OTP and optional invoice email.
+- SMTP provider: optional invoice email.
 - CDN libraries may include Chart.js, math.js, MathJax, Marked.js, Lucide, CodeMirror, Animate.css, and Google Fonts. CDN features require internet access.
 
 Third-party endpoints can change, be rate-limited, charge usage fees, or be unavailable. Confirm their current documentation and terms before production use.
