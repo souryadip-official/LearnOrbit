@@ -176,6 +176,46 @@ def join_room():
     return jsonify({"success": True, "room": {"id": room.id, "name": room.name}})
 
 
+@study_rooms_bp.route("/api/rooms/<int:room_id>/leave", methods=["POST"])
+@login_required
+def leave_room(room_id):
+    denied = _premium_required()
+    if denied:
+        return denied
+
+    room = StudyRoom.query.filter_by(id=room_id).first()
+    membership = StudyRoomMembership.query.filter_by(
+        room_id=room_id, user_id=current_user.id
+    ).first()
+    if room is None or membership is None:
+        return jsonify({"error": "Room not found or you are not a member."}), 404
+
+    was_owner = room.owner_id == current_user.id
+    db.session.delete(membership)
+    ownership_transferred = False
+    room_deleted = False
+    if was_owner:
+        successor = (
+            StudyRoomMembership.query.filter_by(room_id=room_id)
+            .order_by(StudyRoomMembership.joined_at.asc(), StudyRoomMembership.id.asc())
+            .first()
+        )
+        if successor:
+            room.owner_id = successor.user_id
+            ownership_transferred = True
+        else:
+            StudyRoomMessage.query.filter_by(room_id=room_id).delete(synchronize_session=False)
+            StudyRoom.query.filter_by(id=room_id).delete(synchronize_session=False)
+            room_deleted = True
+
+    db.session.commit()
+    return jsonify({
+        "success": True,
+        "room_deleted": room_deleted,
+        "ownership_transferred": ownership_transferred,
+    })
+
+
 @study_rooms_bp.route("/api/rooms/<int:room_id>/messages", methods=["GET"])
 @login_required
 def read_messages(room_id):
@@ -183,6 +223,9 @@ def read_messages(room_id):
     if denied:
         return denied
     if not _member_of(room_id):
+        return jsonify({"error": "Room not found or you are not a member."}), 404
+    room = StudyRoom.query.filter_by(id=room_id).first()
+    if room is None:
         return jsonify({"error": "Room not found or you are not a member."}), 404
 
     try:
@@ -203,6 +246,7 @@ def read_messages(room_id):
     return jsonify({
         "messages": [_message_json(message, username) for message, username in rows],
         "next_after": rows[-1][0].id if rows else after_id,
+        "is_owner": room.owner_id == current_user.id,
     })
 
 

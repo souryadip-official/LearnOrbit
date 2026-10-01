@@ -1,0 +1,19 @@
+{
+  "id": "/",
+  "name": "LearnOrbit — AI Learning Intelligence",
+  "short_name": "LearnOrbit",
+  "description": "Personalized AI tutoring, practice, and learning progress.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f8f8ff",
+  "theme_color": "#286b5b",
+  "icons": [
+    {
+      "src": "/static/img/pwa-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

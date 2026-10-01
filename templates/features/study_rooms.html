@@ -76,7 +76,10 @@
       <div class="chat-active" id="chat-active" hidden>
         <header class="chat-header">
           <div class="chat-title"><span class="chat-kicker"><i data-lucide="users-round"></i> Study room</span><h2 id="active-room-name"></h2></div>
-          <span class="chat-polling"><span aria-hidden="true"></span> Polling</span>
+          <div class="chat-header-actions">
+            <span class="chat-polling"><span aria-hidden="true"></span> Connected</span>
+            <button class="btn-secondary room-exit" id="leave-room" type="button"><i data-lucide="log-out" aria-hidden="true"></i><span>Leave room</span></button>
+          </div>
         </header>
         <div class="invite-share" id="invite-share" hidden>
           <span><i data-lucide="key-round"></i> Room invite</span>
@@ -106,6 +109,7 @@ window.studyRoomsConfig = {
   joinUrl: {{ url_for('study_rooms.join_room')|tojson }},
   messagesUrlTemplate: {{ url_for('study_rooms.read_messages', room_id=0)|tojson }},
   sendUrlTemplate: {{ url_for('study_rooms.send_message', room_id=0)|tojson }},
+  leaveUrlTemplate: {{ url_for('study_rooms.leave_room', room_id=0)|tojson }},
   rooms: [
     {% for room in rooms %}
     {id: {{ room.id }}, name: {{ room.name|tojson }}, inviteCode: {{ room.invite_code|tojson }}, isOwner: {{ (room.owner_id == current_user.id)|tojson }}}{% if not loop.last %},{% endif %}

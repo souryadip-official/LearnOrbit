@@ -356,6 +356,32 @@ textarea.admin-input { min-height: 105px; resize: vertical; line-height: 1.55; }
 @keyframes admin-analysis-bounce { to { transform: translateY(-4px); opacity: .5; } }
 @keyframes admin-analysis-sheen { 50% { background-position: 100% 0; } }
 
+.admin-page-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  background: var(--admin-bg);
+  color: var(--admin-text);
+  opacity: 1;
+  visibility: visible;
+  transition: opacity .65s ease, visibility .65s ease;
+}
+.admin-page-loader.is-hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+.admin-page-loader .loader-orbit { position: relative; width: 80px; height: 80px; animation: admin-loader-arrive .7s cubic-bezier(.2,.8,.2,1) both; }
+.admin-page-loader .orbit-ring { position: absolute; inset: 0; border: 3px solid color-mix(in srgb,var(--admin-teal) 45%,transparent); border-top-color: var(--admin-teal); border-radius: 50%; animation: admin-loader-spin 1.2s linear infinite; }
+.admin-page-loader .orbit-planet { position: absolute; top: -6px; left: 50%; width: 12px; height: 12px; border: 2px solid var(--admin-bg); border-radius: 50%; background: var(--admin-gold); transform: translateX(-50%); }
+.admin-page-loader .orbit-core { position: absolute; inset: 17px; display: grid; place-items: center; border: 1px solid var(--admin-border); border-radius: 50%; background: var(--admin-panel); color: var(--admin-teal); }
+.admin-page-loader .orbit-core svg { width: 26px; height: 26px; }
+.admin-loader-text { color: var(--admin-muted); font-size: .9rem; font-weight: 750; animation: admin-loader-text .6s .12s ease both; }
+@keyframes admin-loader-spin { to { transform: rotate(360deg); } }
+@keyframes admin-loader-arrive { from { opacity: 0; transform: scale(.78) rotate(-18deg); } to { opacity: 1; transform: scale(1) rotate(0); } }
+@keyframes admin-loader-text { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
 @media (max-width: 980px) {
   .admin-frame { padding-inline: 12px; }
   .admin-topbar { display: grid; grid-template-columns: minmax(0,1fr) auto auto; }

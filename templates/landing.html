@@ -6,6 +6,8 @@
   <script>try{const saved=localStorage.getItem('learnorbit-theme')||localStorage.getItem('lo-theme');if(saved==='dark'||saved==='light')document.documentElement.dataset.theme=saved}catch(e){}</script>
   <title>LearnOrbit — AI-Powered Adaptive Learning</title>
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/learnorbit-mark.svg') }}" />
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
+  <meta name="theme-color" content="#286b5b">
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -36,6 +38,7 @@
       </div>
       <div class="nav-actions">
         <button id="theme-btn" class="theme-btn-landing"><i data-lucide="moon" aria-hidden="true"></i><span>Theme</span></button>
+        <button class="pwa-install hidden" type="button" data-pwa-install><i data-lucide="download" aria-hidden="true"></i><span>Install app</span></button>
         <a href="{{ url_for('admin.login') }}" class="btn-ghost admin-panel-link"><i data-lucide="shield-user" aria-hidden="true"></i><span>Admin Panel</span></a>
         <a href="{{ url_for('auth.login') }}" class="btn-ghost">Log In</a>
         <a href="{{ url_for('auth.register') }}" class="btn-primary-landing">Start Free</a>
@@ -56,6 +59,7 @@
     <a href="{{ url_for('auth.login') }}">Log In</a>
     <a href="{{ url_for('auth.register') }}" class="btn-primary-landing">Start Free</a>
     <a href="{{ url_for('features.terms') }}">Terms &amp; Conditions</a>
+    <button class="pwa-install mobile-pwa-install hidden" type="button" data-pwa-install><i data-lucide="download" aria-hidden="true"></i><span>Install LearnOrbit</span></button>
     <button class="theme-btn-landing mobile-theme-btn" type="button"><i data-lucide="moon" aria-hidden="true"></i><span>Switch theme</span></button>
   </div>
 
@@ -397,6 +401,7 @@
 
   <script src="{{ url_for('static', filename='js/main.js') }}"></script>
   <script src="{{ url_for('static', filename='js/landing.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/pwa.js') }}" defer></script>
   <script>
     try { const accent=localStorage.getItem('learnorbit-accent'); if(accent) document.documentElement.dataset.accent=accent; } catch(e) {}
     window.refreshIcons = () => window.lucide?.createIcons();

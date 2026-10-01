@@ -42,7 +42,10 @@ POLICY_DEFAULTS = {
 
 
 def _admin_file():
-    return os.path.join(current_app.instance_path, "admins.json")
+    return os.getenv(
+        "ADMIN_REGISTRY_PATH",
+        os.path.join(current_app.instance_path, "admins.json"),
+    )
 
 
 def _load_admins():

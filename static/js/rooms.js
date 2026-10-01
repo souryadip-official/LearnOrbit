@@ -11,6 +11,7 @@
   const inviteShare = document.getElementById('invite-share');
   const inviteCode = document.getElementById('active-invite-code');
   const messageForm = document.getElementById('message-form');
+  const leaveButton = document.getElementById('leave-room');
   let selectedRoom = null;
   let latestId = 0;
   let pollTimer = null;
@@ -72,6 +73,9 @@
       const template = config.messagesUrlTemplate.replace(/0(?=\/messages(?:\?|$))/, String(room.id));
       const data = await requestJson(`${template}?after=${latestId}`);
       if (selectedRoom?.id !== room.id) return;
+      room.isOwner = data.is_owner;
+      inviteShare.hidden = !room.isOwner;
+      inviteCode.textContent = room.isOwner ? room.inviteCode : '';
       data.messages.forEach(appendMessage);
       latestId = data.next_after;
       if (data.messages.length) list.scrollTop = list.scrollHeight;
@@ -151,6 +155,68 @@
       setFeedback('Invite code copied.', 'success');
     } catch {
       setFeedback('Copy was unavailable. Select and copy the invite code.', 'error');
+    }
+  });
+
+  leaveButton.addEventListener('click', async () => {
+    if (!selectedRoom || leaveButton.disabled) return;
+    const room = selectedRoom;
+    const ownerNotice = room.isOwner
+      ? ' As the owner, you will pass ownership to the longest-standing member; if you are the last member, the room and its messages will be deleted.'
+      : '';
+    if (!window.confirm(`Leave "${room.name}"?${ownerNotice}`)) return;
+
+    leaveButton.disabled = true;
+    setFeedback('Leaving the room…');
+    clearInterval(pollTimer);
+    try {
+      const url = config.leaveUrlTemplate.replace(/0(?=\/leave(?:\?|$))/, String(room.id));
+      const data = await requestJson(url, {method: 'POST', body: JSON.stringify({})});
+      selectedRoom = null;
+      latestId = 0;
+      list.querySelectorAll('.room-message').forEach(node => node.remove());
+      empty.hidden = false;
+      messageForm.reset();
+      active.hidden = true;
+      placeholder.hidden = false;
+
+      const roomButton = document.querySelector(`.room-choice[data-room-id="${room.id}"]`);
+      roomButton?.remove();
+      config.rooms = config.rooms.filter(item => item.id !== room.id);
+      const count = document.querySelector('.rooms-count');
+      if (count) {
+        count.textContent = String(config.rooms.length);
+        count.setAttribute('aria-label', `${config.rooms.length} rooms`);
+      }
+      if (!config.rooms.length) {
+        const roomList = document.querySelector('.rooms-list');
+        if (roomList) {
+          const notice = document.createElement('div');
+          notice.className = 'rooms-empty';
+          const title = document.createElement('h3');
+          title.textContent = 'Your room list is empty';
+          const description = document.createElement('p');
+          description.textContent = 'Create a room or join one with a code to see your study circle here.';
+          notice.append(title, description);
+          roomList.replaceWith(notice);
+        }
+      }
+      setFeedback(
+        data.room_deleted
+          ? 'You left. The empty room and its messages were cleaned up.'
+          : data.ownership_transferred
+            ? 'You left and ownership passed to another member.'
+            : 'You left the study room.',
+        'success',
+      );
+    } catch (error) {
+      setFeedback(error.message, 'error');
+      if (selectedRoom?.id === room.id) {
+        pollMessages();
+        pollTimer = setInterval(pollMessages, 3000);
+      }
+    } finally {
+      leaveButton.disabled = false;
     }
   });
 

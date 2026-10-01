@@ -2,7 +2,7 @@
 LearnOrbit Application Factory
 """
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_migrate import Migrate
@@ -23,6 +23,15 @@ def create_app(config_name=None):
     from .config import config
     cfg = config.get(config_name or os.getenv("FLASK_ENV", "development"))
     app.config.from_object(cfg)
+    database_url = app.config.get("SQLALCHEMY_DATABASE_URI")
+    if not app.config.get("DEBUG") and not app.config.get("TESTING") and not database_url:
+        raise RuntimeError("Set DATABASE_URL to the production PostgreSQL connection string.")
+    if database_url:
+        if database_url.startswith("postgres://"):
+            database_url = database_url.replace("postgres://", "postgresql+psycopg://", 1)
+        elif database_url.startswith("postgresql://"):
+            database_url = database_url.replace("postgresql://", "postgresql+psycopg://", 1)
+        app.config["SQLALCHEMY_DATABASE_URI"] = database_url
     if (not app.config.get("DEBUG") and not app.config.get("TESTING")
             and app.config.get("SECRET_KEY") in {
                 None, "", "learnorbit-secret-change-in-prod-2024",
@@ -35,6 +44,17 @@ def create_app(config_name=None):
     login_manager.init_app(app)
     migrate.init_app(app, db)
     csrf.init_app(app)
+
+    @app.get("/service-worker.js")
+    def service_worker():
+        response = send_from_directory(
+            app.static_folder,
+            "service-worker.js",
+            mimetype="application/javascript",
+        )
+        response.headers["Service-Worker-Allowed"] = "/"
+        response.headers["Cache-Control"] = "no-cache"
+        return response
 
     @app.context_processor
     def inject_user_profile():
@@ -115,7 +135,7 @@ def create_app(config_name=None):
     def enforce_maintenance_mode():
         from .models import ApplicationSetting
 
-        if request.endpoint == "static" or request.path.startswith("/admin"):
+        if request.endpoint == "static" or request.path.startswith("/admin") or request.path == "/service-worker.js":
             return
         setting = ApplicationSetting.query.filter_by(setting_key="maintenance").first()
         if setting and setting.value == "on" and request.endpoint not in {"index", "auth.logout"}:
@@ -208,20 +228,20 @@ def _migrate_legacy_schema():
     migrations = {
         "users": (User, {
             "accent_theme": "VARCHAR(24) DEFAULT 'garden'",
-            "is_blocked": "BOOLEAN NOT NULL DEFAULT 0",
+            "is_blocked": "BOOLEAN NOT NULL DEFAULT FALSE",
         }),
         "user_profiles": (UserProfile, {
             "desired_plan": "VARCHAR(16) DEFAULT 'free'",
             "email_verified": "BOOLEAN DEFAULT 1",
             "avatar": "VARCHAR(64) DEFAULT 'orbit-1'",
             "picture_path": "VARCHAR(255)",
-            "updated_at": "DATETIME",
+            "updated_at": "TIMESTAMP",
         }),
         "session_documents": (SessionDocument, {
             "storage_path": "VARCHAR(500) NOT NULL DEFAULT ''",
             "embedding_provider": "VARCHAR(32)",
             "embeddings_json": "TEXT",
-            "created_at": "DATETIME",
+            "created_at": "TIMESTAMP",
         }),
         "product_feedback": (ProductFeedback, {
             "performance_rating": "INTEGER NOT NULL DEFAULT 3",

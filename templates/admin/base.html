@@ -5,11 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>{% block title %}Staff Console{% endblock %} · LearnOrbit</title>
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
+  <meta name="theme-color" content="#1a2330">
   <script>try{const theme=localStorage.getItem('learnorbit-admin-theme');if(theme==='light'||theme==='dark')document.documentElement.dataset.theme=theme}catch(e){}</script>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body class="admin-shell">
+  <div id="admin-page-loader" class="admin-page-loader" role="status" aria-live="polite" aria-label="Loading staff console">
+    <div class="loader-orbit" aria-hidden="true">
+      <div class="orbit-ring"></div>
+      <div class="orbit-planet"></div>
+      <div class="orbit-core"><i data-lucide="orbit"></i></div>
+    </div>
+    <p class="admin-loader-text" id="admin-loader-text">{% block loader_text %}Preparing the staff console…{% endblock %}</p>
+  </div>
   <div class="admin-frame">
     <header class="admin-topbar">
       <a class="admin-brand" href="{{ url_for('admin.dashboard') if admin is defined and admin else url_for('admin.login') }}">
@@ -42,7 +52,36 @@
     <footer class="admin-footer">Restricted staff area · Sign out when you’re finished · Access is recorded for operational audit.</footer>
   </div>
   <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => navigator.serviceWorker.register('/service-worker.js').catch(error => {
+        console.warn('LearnOrbit offline support could not be enabled.', error);
+      }));
+    }
     window.lucide?.createIcons();
+    (() => {
+      const loader = document.getElementById('admin-page-loader');
+      const showLoader = text => {
+        const label = document.getElementById('admin-loader-text');
+        if (label && text) label.textContent = text;
+        loader?.classList.remove('is-hidden');
+      };
+      window.addEventListener('load', () => window.setTimeout(() => loader?.classList.add('is-hidden'), 850), {once: true});
+      document.addEventListener('click', event => {
+        const link = event.target instanceof Element ? event.target.closest('a[href]') : null;
+        if (!link || link.target || link.hasAttribute('download') || event.defaultPrevented
+            || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        const target = new URL(link.href, location.href);
+        if (target.origin === location.origin && target.pathname !== location.pathname) {
+          showLoader('Opening the staff workspace…');
+        }
+      });
+      document.addEventListener('submit', event => {
+        if (event.target instanceof HTMLFormElement && !event.target.hasAttribute('data-analysis-form')) {
+          showLoader('Securely processing your request…');
+        }
+      });
+      if (document.readyState === 'complete') window.setTimeout(() => loader?.classList.add('is-hidden'), 850);
+    })();
     (() => {
       const root = document.documentElement;
       const button = document.getElementById('admin-theme-toggle');
